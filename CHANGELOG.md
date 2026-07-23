@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### ✨ New Features
+
+- **feat(autoCombo):** activate content-aware (complexity) routing on the `auto/*` path (#5811). Adds an `X-OmniRoute-Complexity` per-request header (Lever A) and a global `comboDefaults.complexityAwareRouting` toggle (Lever B) — both off by default. When enabled, the auto-combo scorer classifies the request's difficulty (`complexityRouter.ts`) and lifts the `tierAffinity`/`specificityMatch` factors to a decision-relevant weight (`complexityWeights.ts`), biasing selection toward a matching provider tier (cheap for trivial prompts, premium for hard coding/reasoning). Re-adds `complexityAwareRouting` as a first-class `comboRuntimeConfigSchema` key so it round-trips through combo/settings writes. No behavior change when disabled (scoring is byte-identical).
+
 ---
 
 ## [3.8.49] — TBD

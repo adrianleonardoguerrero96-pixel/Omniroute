@@ -197,6 +197,12 @@ export const comboRuntimeConfigSchema = z
     weights: scoringWeightsSchema.optional(),
     modePack: z.string().max(100).optional(),
     budgetCap: z.number().positive().optional(),
+    // #5811: content-aware routing. When true, the auto-combo scorer classifies
+    // the request's difficulty and biases selection toward a matching provider
+    // tier (cheap for trivial prompts, premium for hard coding/reasoning). Off by
+    // default; set on `comboDefaults` to make it the global auto-routing default,
+    // or override per-request via the X-OmniRoute-Complexity header.
+    complexityAwareRouting: z.boolean().optional(),
     explorationRate: z.number().min(0).max(1).optional(),
     routerStrategy: z.string().optional(),
     slaTargetP95Ms: z.coerce.number().int().positive().max(300000).optional(),

@@ -176,18 +176,19 @@ Notes:
   - **quality-first** → taskFit 0.37 + stability 0.15 (best model for the task, consistent)
   - **offline-friendly** → quota 0.37 + health 0.28 (max headroom regardless of speed/cost)
 
-### Per-Request Controls (headers) — #6023 / #6024 / #6025 / #3470
+### Per-Request Controls (headers) — #6023 / #6024 / #6025 / #3470 / #5811
 
-An `auto` combo can be steered **per request** via three headers, without mutating the
+An `auto` combo can be steered **per request** via four headers, without mutating the
 combo's stored config. These apply only to the `auto` strategy and only for the request
 that carries them; the combo's saved `modePack`/`budgetCap`/`budgetFallback` are used
 when the header is absent.
 
-| Header                        | Accepts                                                                                                                                                                                 | Effect                                                                                                                                                                                              |
-| :----------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `X-OmniRoute-Mode`            | a preset alias (`fast`, `balanced`, `quality`, `cheap`, `reliable`, `offline`) or a raw pack name (`ship-fast`, `cost-saver`, `quality-first`, `offline-friendly`, `reliability-first`) | Overrides the scoring weights for this request. `balanced`/`default` force the default weights (no pack). Unknown values are ignored (config preserved).                                            |
-| `X-OmniRoute-Budget`          | a positive number (max USD per request)                                                                                                                                                 | Hard cost ceiling: candidates whose estimated cost exceeds it are filtered before selection. What happens when **every** candidate exceeds it is controlled by `X-OmniRoute-Budget-Fallback` below. |
-| `X-OmniRoute-Budget-Fallback` | `cheapest` (default, aliases: `cheapest-viable`, `soft`) or `strict` (aliases: `block`, `hard`)                                                                                        | `cheapest`: falls back to the globally cheapest candidate even though it still exceeds the cap (legacy behavior). `strict`: refuses to select — the request fails fast with `HTTP 402` instead of silently overspending. Unknown values are ignored. |
+| Header                        | Accepts                                                                                                                                                                                 | Effect                                                                                                                                                                                                                                                                                                           |
+| :---------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `X-OmniRoute-Mode`            | a preset alias (`fast`, `balanced`, `quality`, `cheap`, `reliable`, `offline`) or a raw pack name (`ship-fast`, `cost-saver`, `quality-first`, `offline-friendly`, `reliability-first`) | Overrides the scoring weights for this request. `balanced`/`default` force the default weights (no pack). Unknown values are ignored (config preserved).                                                                                                                                                         |
+| `X-OmniRoute-Budget`          | a positive number (max USD per request)                                                                                                                                                 | Hard cost ceiling: candidates whose estimated cost exceeds it are filtered before selection. What happens when **every** candidate exceeds it is controlled by `X-OmniRoute-Budget-Fallback` below.                                                                                                              |
+| `X-OmniRoute-Budget-Fallback` | `cheapest` (default, aliases: `cheapest-viable`, `soft`) or `strict` (aliases: `block`, `hard`)                                                                                         | `cheapest`: falls back to the globally cheapest candidate even though it still exceeds the cap (legacy behavior). `strict`: refuses to select — the request fails fast with `HTTP 402` instead of silently overspending. Unknown values are ignored.                                                             |
+| `X-OmniRoute-Complexity`      | `1` / `true` / `on` / `yes`                                                                                                                                                             | Enables **content-aware routing** for this request: classifies the prompt's difficulty and biases selection toward a matching provider tier (cheap models for trivial prompts, premium for hard coding/reasoning). Anything else leaves the global `comboDefaults.complexityAwareRouting` setting authoritative. |
 
 ```bash
 # Force the fastest profile, cap this request at $0.05, and hard-block instead of overspending
@@ -203,6 +204,32 @@ Resolution is a pure function (`open-sse/services/autoCombo/requestControls.ts`)
 resolved values feed the engine's existing `config.modePack` / `config.budgetCap` /
 `config.budgetFallback` inputs. A combo's stored `config.budgetFallback` ("strict" |
 "cheapest") sets the persistent policy; the header overrides it for a single request.
+
+### Content-Aware (Complexity) Routing — #5811
+
+Opt-in tier routing driven by the **request's classified difficulty**. The auto-combo
+scorer already ships a difficulty classifier (`open-sse/services/autoCombo/complexityRouter.ts`,
+6 signals: code / math / reasoning / context-size / tool-calling / domain-specificity) and
+`tierAffinity` / `specificityMatch` scoring factors. When complexity routing is active, the
+scorer builds a routing hint from the prompt and lifts those two factors to a decision-relevant
+weight (`open-sse/services/autoCombo/complexityWeights.ts`), so trivial prompts favor
+cheaper-tier providers and hard prompts favor premium ones.
+
+Two ways to enable it (both **off by default**):
+
+- **Per request:** send `X-OmniRoute-Complexity: 1` (see the header table above).
+- **Global default:** set `complexityAwareRouting: true` on `comboDefaults` in Settings →
+  routing config. `resolveComboConfig` folds `comboDefaults` into every combo's effective
+  `config`, so this makes content-aware routing the default for all `auto/*` requests without
+  a header. A per-request header still applies on top.
+
+```bash
+# One request, content-aware: a trivial prompt can downshift to a cheaper tier
+curl -sS http://localhost:20128/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "X-OmniRoute-Complexity: 1" \
+  -d '{"model":"auto/best-coding","messages":[{"role":"user","content":"reverse a string in python"}]}'
+```
 
 ## All Routing Strategies
 

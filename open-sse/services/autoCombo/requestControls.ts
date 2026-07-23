@@ -7,6 +7,7 @@
  *   X-OmniRoute-Mode:            fast | balanced | quality | <raw mode-pack name>  (#6024/#6025)
  *   X-OmniRoute-Budget:          <max USD per request>                             (#6023)
  *   X-OmniRoute-Budget-Fallback: cheapest | strict                                 (#3470)
+ *   X-OmniRoute-Complexity:      1 | true | on   — content-aware tier routing      (#5811)
  *
  * All resolvers are pure so they can be unit-tested and reused by the entry
  * handler (src/sse/handlers/chat.ts) and the combo router (open-sse/services/combo.ts).
@@ -71,11 +72,7 @@ export function resolveRequestModePack(input: unknown): RequestModePack {
  */
 export function parseRequestBudgetCap(input: unknown): number | undefined {
   const n =
-    typeof input === "number"
-      ? input
-      : typeof input === "string"
-        ? Number(input.trim())
-        : NaN;
+    typeof input === "number" ? input : typeof input === "string" ? Number(input.trim()) : NaN;
   if (!Number.isFinite(n) || n <= 0) return undefined;
   return n;
 }
@@ -96,11 +93,27 @@ export function parseRequestBudgetFallback(input: unknown): RequestBudgetFallbac
   return undefined;
 }
 
+/**
+ * Parse the `X-OmniRoute-Complexity` header into a per-request content-aware
+ * routing toggle (#5811). When true, the auto-combo scorer classifies the
+ * request's difficulty and biases selection toward a tier that matches (cheap
+ * models for trivial prompts, premium for hard coding/reasoning). Accepts the
+ * usual truthy tokens; anything else (including absent) returns false so the
+ * global `comboDefaults.complexityAwareRouting` setting stays authoritative.
+ */
+export function parseRequestComplexity(input: unknown): boolean {
+  if (typeof input !== "string") return false;
+  const key = input.trim().toLowerCase();
+  return key === "1" || key === "true" || key === "on" || key === "yes";
+}
+
 /** Aggregated per-request auto-combo overrides resolved from request headers (#3470). */
 export interface PerRequestAutoControls {
   mode?: string;
   budgetCap?: number;
   budgetFallback?: RequestBudgetFallback;
+  /** Per-request content-aware routing toggle (X-OmniRoute-Complexity) — #5811. */
+  complexity?: boolean;
 }
 
 /**
@@ -116,14 +129,17 @@ export function resolveRequestAutoControls(headers: {
   const modeHeader = headers.get("x-omniroute-mode")?.trim() || null;
   const budgetHeader = headers.get("x-omniroute-budget")?.trim() || null;
   const budgetFallbackHeader = headers.get("x-omniroute-budget-fallback")?.trim() || null;
+  const complexityHeader = headers.get("x-omniroute-complexity")?.trim() || null;
 
   const mode = resolveRequestModePack(modeHeader);
   const budgetCap = parseRequestBudgetCap(budgetHeader);
   const budgetFallback = parseRequestBudgetFallback(budgetFallbackHeader);
+  const complexity = parseRequestComplexity(complexityHeader);
 
   return {
     ...(mode.override && modeHeader ? { mode: modeHeader } : {}),
     ...(budgetCap !== undefined ? { budgetCap } : {}),
     ...(budgetFallback !== undefined ? { budgetFallback } : {}),
+    ...(complexity ? { complexity: true } : {}),
   };
 }
