@@ -4,6 +4,7 @@
 
 ### ✨ New Features
 
+- **feat(dashboard):** expose content-aware routing in the combo editor (#5811). The Intelligent Routing builder step and the live Intelligent combo panel now render a "Content-aware routing" toggle (default off) alongside the mode-pack / router-strategy knobs, shown for `strategy: "auto"` combos. Lets a user create/edit a custom scoring combo — auto strategy over their own `candidatePool` with `complexityAwareRouting` — without hand-editing config JSON. `IntelligentRoutingConfig` gains a normalized `complexityAwareRouting` field. Docs: `AUTO-COMBO.md` gains a "Custom scoring combos" section explaining that `strategy: "auto"` _is_ the scoring path and why deterministic strategies intentionally don't score.
 - **feat(autoCombo):** activate content-aware (complexity) routing on the `auto/*` path (#5811). Adds an `X-OmniRoute-Complexity` per-request header (Lever A) and a global `comboDefaults.complexityAwareRouting` toggle (Lever B) — both off by default. When enabled, the auto-combo scorer classifies the request's difficulty (`complexityRouter.ts`) and lifts the `tierAffinity`/`specificityMatch` factors to a decision-relevant weight (`complexityWeights.ts`), biasing selection toward a matching provider tier (cheap for trivial prompts, premium for hard coding/reasoning). Re-adds `complexityAwareRouting` as a first-class `comboRuntimeConfigSchema` key so it round-trips through combo/settings writes. No behavior change when disabled (scoring is byte-identical).
 
 ---

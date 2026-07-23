@@ -220,6 +220,29 @@ export default function BuilderIntelligentStep({
         </Card.Section>
       </div>
 
+      <Card.Section>
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={normalizedConfig.complexityAwareRouting}
+            onChange={(event) => updateConfig({ complexityAwareRouting: event.target.checked })}
+            className="mt-0.5"
+          />
+          <span>
+            <span className="text-xs font-semibold text-text-main block">
+              {getI18nOrFallback(t, "complexityAwareRoutingLabel", "Content-aware routing")}
+            </span>
+            <span className="text-[11px] text-text-muted mt-1 block">
+              {getI18nOrFallback(
+                t,
+                "complexityAwareRoutingHint",
+                "Classify each request's difficulty and bias selection toward a matching provider tier (cheaper models for trivial prompts, premium for hard coding/reasoning). Off by default; a per-request X-OmniRoute-Complexity header still applies on top."
+              )}
+            </span>
+          </span>
+        </label>
+      </Card.Section>
+
       {isSlaAwareStrategy && (
         <Card.Section>
           <div className="flex items-start justify-between gap-3">

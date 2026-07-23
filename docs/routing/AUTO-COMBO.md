@@ -231,6 +231,45 @@ curl -sS http://localhost:20128/v1/chat/completions \
   -d '{"model":"auto/best-coding","messages":[{"role":"user","content":"reverse a string in python"}]}'
 ```
 
+### Custom scoring combos
+
+The scoring engine is not limited to the built-in `auto/*` virtual combos — it is the
+`auto` **strategy**. Any persisted combo you create with `strategy: "auto"` runs through
+the exact same scorer and reads all of its scoring knobs from the combo's own stored
+`config`:
+
+| Config key                             | Effect                                                      |
+| :------------------------------------- | :---------------------------------------------------------- |
+| `candidatePool`                        | which models to score (defaults to the combo's own targets) |
+| `weights`                              | per-factor scoring weights                                  |
+| `modePack`                             | a preset weight profile (`quality-first`, `cost-saver`, …)  |
+| `routerStrategy`                       | `rules` (default scorer), `lkgp`, `cost`, …                 |
+| `complexityAwareRouting`               | content-aware tier routing (this section) — off by default  |
+| `explorationRate`, `budgetCap`, `sla*` | exploration, cost ceiling, SLA constraints                  |
+
+```bash
+# Create a custom scoring combo over your own model list, content-aware by default
+curl -sS http://localhost:20128/api/combos \
+  -H "Content-Type: application/json" \
+  -d '{
+        "name": "my-scoring-combo",
+        "strategy": "auto",
+        "models": ["openai/gpt-4o-mini", "anthropic/claude-3.5-sonnet"],
+        "config": { "modePack": "quality-first", "complexityAwareRouting": true }
+      }'
+```
+
+The dashboard combo builder exposes these knobs (mode pack, router strategy, candidate
+pool, and the content-aware toggle) whenever the strategy is `auto`, so no raw JSON is
+required.
+
+> **Why only `auto`?** The other strategies are deterministic by contract —
+> `priority` is a fixed ordered list, `round-robin` cycles, `weighted` is weighted-random
+> by static per-target weight. They have no per-request scoring pass, so there is nothing
+> for a difficulty hint to bias, and injecting one would break the predictability those
+> strategies exist to provide. If you want scoring over a custom model list, use
+> `strategy: "auto"` with a `candidatePool` — that _is_ the custom-scoring-combo path.
+
 ## All Routing Strategies
 
 OmniRoute's combo engine supports **18 routing strategies** (declared in `src/shared/constants/routingStrategies.ts` → `ROUTING_STRATEGY_VALUES`). The Auto Combo engine itself is exposed under the `auto` strategy; the others are available for persisted combos.
