@@ -102,9 +102,7 @@ export async function getCachedPricing(): Promise<Record<string, unknown>> {
 export async function getCachedProviderConnections(
   filter?: Record<string, unknown>
 ): Promise<unknown[]> {
-  const cacheKey = filter && Object.keys(filter).length > 0
-    ? JSON.stringify(filter)
-    : "all";
+  const cacheKey = filter && Object.keys(filter).length > 0 ? JSON.stringify(filter) : "all";
 
   const cached = connectionsCache.get(cacheKey);
   if (cached) return cached;
@@ -136,8 +134,11 @@ export async function getCachedRawProviderConnections(
   return rows;
 }
 
-const connectionByIdCache = new TTLCache<Record<string, unknown> | null>(CONNECTIONS_TTL_MS, 10_000);
-const nodesCache = new TTLCache<unknown[]>(CONNECTIONS_TTL_MS);
+const connectionByIdCache = new TTLCache<Record<string, unknown> | null>(
+  CONNECTIONS_TTL_MS,
+  10_000
+);
+const nodesCache = new TTLCache<(Record<string, unknown> | null)[]>(CONNECTIONS_TTL_MS);
 
 /**
  * Cached wrapper for getProviderConnectionById.
@@ -164,7 +165,7 @@ export async function getCachedProviderConnectionById(
  */
 export async function getCachedProviderNodes(
   filter?: Record<string, unknown>
-): Promise<unknown[]> {
+): Promise<(Record<string, unknown> | null)[]> {
   const cacheKey = filter ? JSON.stringify(filter) : "all";
   const cached = nodesCache.get(cacheKey);
   if (cached) return cached;

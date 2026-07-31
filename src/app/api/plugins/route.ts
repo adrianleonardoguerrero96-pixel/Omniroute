@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
   const authError = await requireManagementAuth(request);
   if (authError) return authError;
   const url = new URL(request.url);
-  const statusResult = StatusSchema.safeParse(url.searchParams.get("status"));
+  const statusResult = StatusSchema.safeParse(url.searchParams.get("status") ?? undefined);
   if (!statusResult.success) {
     return NextResponse.json(
       { error: "Invalid status value", details: statusResult.error.issues },
@@ -47,10 +47,14 @@ export async function POST(request: NextRequest) {
   if (authError) return authError;
   const body = await request.json();
   const schema = z.object({
-    path: z.string().min(1).regex(/^\/[^]*$/, "Path must be absolute").refine(
-      (p) => !p.includes("\0") && !p.includes(".."),
-      "Path must not contain traversal patterns or null bytes"
-    ),
+    path: z
+      .string()
+      .min(1)
+      .regex(/^\/[^]*$/, "Path must be absolute")
+      .refine(
+        (p) => !p.includes("\0") && !p.includes(".."),
+        "Path must not contain traversal patterns or null bytes"
+      ),
   });
 
   const parsed = schema.safeParse(body);

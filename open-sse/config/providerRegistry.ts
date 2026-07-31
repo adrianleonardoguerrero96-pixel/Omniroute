@@ -226,7 +226,23 @@ export function getUnsupportedParams(provider: string, modelId: string): readonl
     if (bare) return bare;
   }
 
+  // 4. Provider-wide fallback for providers whose limitation applies to every
+  // model they serve, not just the ones statically catalogued (e.g. AI Horde's
+  // `passthroughModels: true` roster changes as workers come and go, but no
+  // model it hosts supports tool calling — see RegistryEntry.unsupportedParams).
+  if (entry?.unsupportedParams) return entry.unsupportedParams;
+
   return [];
+}
+
+/**
+ * True for providers whose OpenAI-compatible facade rejects a single-text-part
+ * content array and only accepts the equivalent plain string (RegistryEntry.
+ * requiresPlainStringContent). Used by the Responses→Chat translator to scope
+ * its content-collapse workaround to just these providers.
+ */
+export function requiresPlainStringContent(provider: string): boolean {
+  return getRegistryEntry(provider)?.requiresPlainStringContent === true;
 }
 
 /**
@@ -242,11 +258,12 @@ export function getProviderCategory(provider: string): "oauth" | "apikey" {
 }
 
 /**
- * Derive the latest opus/sonnet/haiku model IDs from the `claude` registry entry.
+ * Derive the latest fable/opus/sonnet/haiku model IDs from the `claude` registry entry.
  * Picks the first model whose ID matches each family pattern — registry order
  * determines precedence, so newer models should be listed first.
  */
 export function getClaudeCodeDefaultModels(): {
+  fable: string;
   opus: string;
   sonnet: string;
   haiku: string;
@@ -254,6 +271,7 @@ export function getClaudeCodeDefaultModels(): {
   const models = REGISTRY.claude?.models ?? [];
   const find = (pattern: RegExp) => models.find((m) => pattern.test(m.id))?.id ?? "";
   return {
+    fable: find(/fable/i),
     opus: find(/opus/i),
     sonnet: find(/sonnet/i),
     haiku: find(/haiku/i),

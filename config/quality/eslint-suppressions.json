@@ -4,21 +4,6 @@
       "count": 1
     }
   },
-  "open-sse/executors/claude-web-with-auto-refresh.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 2
-    }
-  },
-  "open-sse/executors/claude-web.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 3
-    }
-  },
-  "open-sse/executors/claudeIdentity.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 2
-    }
-  },
   "open-sse/executors/cliproxyapi.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 1
@@ -60,11 +45,6 @@
     }
   },
   "open-sse/executors/vertex.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 3
-    }
-  },
-  "open-sse/handlers/imageGeneration.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 3
     }
@@ -315,6 +295,11 @@
       "count": 1
     }
   },
+  "src/app/(dashboard)/dashboard/settings/components/ProviderAccountRoutingCard.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    }
+  },
   "src/app/(dashboard)/dashboard/settings/components/SessionInfoCard.tsx": {
     "react-hooks/exhaustive-deps": {
       "count": 1
@@ -426,11 +411,6 @@
     }
   },
   "src/shared/components/CursorAuthModal.tsx": {
-    "react-hooks/exhaustive-deps": {
-      "count": 1
-    }
-  },
-  "src/shared/components/KiroSocialOAuthModal.tsx": {
     "react-hooks/exhaustive-deps": {
       "count": 1
     }
@@ -690,11 +670,6 @@
       "count": 3
     }
   },
-  "tests/unit/antigravity-tool-cloaking.test.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 4
-    }
-  },
   "tests/unit/api-key-reveal-route.test.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 8
@@ -908,11 +883,6 @@
   "tests/unit/claude-to-openai-image-toolresult.test.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 8
-    }
-  },
-  "tests/unit/claude-to-openai-think-close-5123.test.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 2
     }
   },
   "tests/unit/cli-a2a-invoke-commands.test.ts": {
@@ -1187,7 +1157,7 @@
   },
   "tests/unit/combo-routing-engine.test.ts": {
     "@typescript-eslint/no-explicit-any": {
-      "count": 269
+      "count": 267
     }
   },
   "tests/unit/combo-same-provider-cascade.test.ts": {
@@ -1620,11 +1590,6 @@
       "count": 4
     }
   },
-  "tests/unit/image-generation-route.test.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 11
-    }
-  },
   "tests/unit/inspector-agent-bridge-hook.test.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 3
@@ -1865,11 +1830,6 @@
       "count": 3
     }
   },
-  "tests/unit/prompt-required-routes.test.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 2
-    }
-  },
   "tests/unit/provider-connection-apikey-dedup.test.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 1
@@ -1977,7 +1937,7 @@
   },
   "tests/unit/proxy-registry.test.ts": {
     "@typescript-eslint/no-explicit-any": {
-      "count": 55
+      "count": 54
     }
   },
   "tests/unit/proxy-resolution-status-filter.test.ts": {
@@ -2297,7 +2257,7 @@
   },
   "tests/unit/translator-claude-to-gemini.test.ts": {
     "@typescript-eslint/no-explicit-any": {
-      "count": 14
+      "count": 17
     }
   },
   "tests/unit/translator-claude-to-openai.test.ts": {
@@ -2317,7 +2277,7 @@
   },
   "tests/unit/translator-openai-to-gemini.test.ts": {
     "@typescript-eslint/no-explicit-any": {
-      "count": 70
+      "count": 74
     }
   },
   "tests/unit/translator-openai-to-kiro.test.ts": {

@@ -86,12 +86,9 @@ test("successful GLM quota refresh clears transient rate-limit state", async () 
   const connection = await createGlmConnectionWithTransientCooldown();
   const connectionId = (connection as { id: string }).id;
 
-  await withMockedFetch(
-    (() => glmQuotaResponse()) as typeof fetch,
-    async () => {
-      await providerLimits.fetchAndPersistProviderLimits(connectionId, "manual");
-    }
-  );
+  await withMockedFetch((() => glmQuotaResponse()) as typeof fetch, async () => {
+    await providerLimits.fetchAndPersistProviderLimits(connectionId, "manual");
+  });
 
   const updated = (await providersDb.getProviderConnectionById(connectionId)) as Record<
     string,
@@ -122,12 +119,9 @@ test("successful quota refresh does not clear terminal credits_exhausted status"
   const connection = await createGlmConnectionWithStatus("credits_exhausted");
   const connectionId = (connection as { id: string }).id;
 
-  await withMockedFetch(
-    (() => glmQuotaResponse()) as typeof fetch,
-    async () => {
-      await providerLimits.fetchAndPersistProviderLimits(connectionId, "manual");
-    }
-  );
+  await withMockedFetch((() => glmQuotaResponse()) as typeof fetch, async () => {
+    await providerLimits.fetchAndPersistProviderLimits(connectionId, "manual");
+  });
 
   const updated = (await providersDb.getProviderConnectionById(connectionId)) as Record<
     string,
@@ -141,12 +135,9 @@ test("successful quota refresh does not clear terminal banned status", async () 
   const connection = await createGlmConnectionWithStatus("banned");
   const connectionId = (connection as { id: string }).id;
 
-  await withMockedFetch(
-    (() => glmQuotaResponse()) as typeof fetch,
-    async () => {
-      await providerLimits.fetchAndPersistProviderLimits(connectionId, "manual");
-    }
-  );
+  await withMockedFetch((() => glmQuotaResponse()) as typeof fetch, async () => {
+    await providerLimits.fetchAndPersistProviderLimits(connectionId, "manual");
+  });
 
   const updated = (await providersDb.getProviderConnectionById(connectionId)) as Record<
     string,
@@ -159,12 +150,9 @@ test("successful quota refresh does not clear terminal expired status", async ()
   const connection = await createGlmConnectionWithStatus("expired");
   const connectionId = (connection as { id: string }).id;
 
-  await withMockedFetch(
-    (() => glmQuotaResponse()) as typeof fetch,
-    async () => {
-      await providerLimits.fetchAndPersistProviderLimits(connectionId, "manual");
-    }
-  );
+  await withMockedFetch((() => glmQuotaResponse()) as typeof fetch, async () => {
+    await providerLimits.fetchAndPersistProviderLimits(connectionId, "manual");
+  });
 
   const updated = (await providersDb.getProviderConnectionById(connectionId)) as Record<
     string,
@@ -237,6 +225,37 @@ test("error-only quota response does not clear transient state", async () => {
   assert.equal(updated.lastErrorType, "rate_limited");
 });
 
+test("partial quota refresh does not clear a quota cooldown before its reset", async () => {
+  const resetAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+  const created = await providersDb.createProviderConnection({
+    provider: "kimi-coding",
+    authType: "oauth",
+    accessToken: "kimi-access-token",
+    refreshToken: "kimi-refresh-token",
+    testStatus: "unavailable",
+    isActive: true,
+    lastError: "usage limit reached",
+    lastErrorType: "quota_exhausted",
+    errorCode: 403,
+    rateLimitedUntil: resetAt,
+    backoffLevel: 1,
+  });
+  const connectionId = (created as { id: string }).id;
+  const connection = await providersDb.getProviderConnectionById(connectionId);
+
+  await providerLimits.maybeClearRecoveredQuotaState(connection, {
+    quotas: {
+      Ratelimit: { remainingPercentage: 0 },
+      Weekly: { remainingPercentage: 62 },
+    },
+  });
+  const after = await providersDb.getProviderConnectionById(connectionId);
+
+  assert.equal(after.testStatus, "unavailable");
+  assert.equal(after.lastErrorType, "quota_exhausted");
+  assert.equal(after.rateLimitedUntil, resetAt);
+});
+
 test("CAS primitive clears when expected state matches", async () => {
   const created = await createGlmConnectionWithTransientCooldown();
   const connectionId = (created as { id: string }).id;
@@ -299,9 +318,10 @@ test("CAS primitive aborts when state changed concurrently", async () => {
 test("quota recovery path does NOT overwrite a concurrent mark (TOCTOU closed)", async () => {
   const created = await createGlmConnectionWithTransientCooldown();
   const connectionId = (created as { id: string }).id;
-  const snapshotBeforeClear = (await providersDb.getProviderConnectionById(
-    connectionId
-  )) as Record<string, unknown>;
+  const snapshotBeforeClear = (await providersDb.getProviderConnectionById(connectionId)) as Record<
+    string,
+    unknown
+  >;
   const expectedLastErrorAt = (snapshotBeforeClear.lastErrorAt as string) ?? null;
 
   // Mock fetch so that DURING the quota fetch (between read and clear), a

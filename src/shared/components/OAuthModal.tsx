@@ -5,8 +5,11 @@ import { useTranslations } from "next-intl";
 import Modal from "./Modal";
 import Button from "./Button";
 import Input from "./Input";
-import LinkifiedText from "./LinkifiedText";
-import { OAuthDeviceCodePanel, OAuthManualInputPanel } from "./OAuthModalPanels";
+import {
+  OAuthDeviceCodePanel,
+  OAuthLoopbackMismatchPanel,
+  OAuthManualInputPanel,
+} from "./OAuthModalPanels";
 import { parseResponseBody, getErrorMessage } from "@/shared/utils/api";
 import { isCredentialBlob, submitCredentialBlob } from "@/shared/components/oauthBlobSubmit";
 import {
@@ -14,6 +17,15 @@ import {
   parseCodexSessionJson,
 } from "@/lib/oauth/utils/codexSessionImport";
 import GheConfigStep from "@/shared/components/oauthModal/GheConfigStep";
+import GitlabDuoSetupStep from "@/shared/components/oauthModal/GitlabDuoSetupStep";
+import OAuthErrorStep from "@/shared/components/oauthModal/OAuthErrorStep";
+import OAuthWaitingStep from "@/shared/components/oauthModal/OAuthWaitingStep";
+import { parseGrokCliPasteToken } from "@/lib/oauth/utils/grokCliAuthJson";
+import { buildGoogleLoopbackHint } from "@/lib/oauth/utils/googleLoopbackHint";
+import {
+  buildPkceLoopbackMismatchHint,
+  type PkceLoopbackMismatchHint,
+} from "@/lib/oauth/utils/pkceLoopbackWarning";
 
 export { formatDeviceCodeRemaining } from "./OAuthModalPanels";
 
@@ -145,6 +157,9 @@ export default function OAuthModal({
   // DEVICE_CODE_PROVIDERS); flipping this to true routes startOAuthFlow through
   // the browser PKCE / PKCE_CALLBACK_SERVER_PROVIDERS branch instead.
   const [grokBrowserMode, setGrokBrowserMode] = useState(false);
+  // #8046 follow-up: structured diagnosis for the LAN-IP loopback mismatch, rendered
+  // by its own step instead of as prose inside the generic red error step.
+  const [loopbackHint, setLoopbackHint] = useState<PkceLoopbackMismatchHint | null>(null);
 
   const supportsTokenPaste = TOKEN_PASTE_PROVIDERS.has(provider);
   const importTokenOnly = IMPORT_TOKEN_ONLY_PROVIDERS.has(provider);
@@ -160,6 +175,7 @@ export default function OAuthModal({
         isLocalhost: false,
         isTrueLocalhost: false,
         placeholderUrl: "/callback?code=...",
+        loopbackLocation: { hostname: "", port: "", protocol: "http:" },
       };
     }
 
@@ -176,10 +192,15 @@ export default function OAuthModal({
       isLocalhost: isLocal,
       isTrueLocalhost: isTrulyLocal,
       placeholderUrl: `${window.location.origin}/callback?code=...`,
+      loopbackLocation: {
+        hostname,
+        port: window.location.port,
+        protocol: window.location.protocol,
+      },
     };
   }, []);
 
-  const { isLocalhost, isTrueLocalhost, placeholderUrl } = runtimeLocation;
+  const { isLocalhost, isTrueLocalhost, placeholderUrl, loopbackLocation } = runtimeLocation;
   const callbackProcessedRef = useRef(false);
   const flowStartedRef = useRef(false);
 
@@ -261,15 +282,24 @@ export default function OAuthModal({
     [authData, provider, onSuccess, reauthConnection]
   );
 
-  // Save a raw API token directly (windsurf / devin-cli import-token path)
+  // Save a raw API token directly (windsurf / devin-cli import-token path).
+  // For grok-cli, require the full auth.json object so refresh_token is persisted (#7610).
   const handleSaveToken = useCallback(async () => {
-    const token = pasteToken.trim();
-    if (!token || !provider) return;
+    const raw = pasteToken.trim();
+    if (!raw || !provider) return;
     setSavingToken(true);
     setError(null);
     try {
-      // POST to /exchange with a synthetic "import_token" payload.
-      // The windsurf provider's mapTokens() handles a bare accessToken/apiKey field.
+      let token: string | Record<string, unknown> = raw;
+      if (provider === "grok-cli") {
+        const parsed = parseGrokCliPasteToken(raw);
+        if (parsed.ok === false) {
+          setError(parsed.error);
+          return;
+        }
+        token = parsed.token;
+      }
+      // POST to /import-token. Grok accepts full auth.json; windsurf/devin accept bare keys.
       const res = await fetch(`/api/oauth/${provider}/import-token`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -441,10 +471,8 @@ export default function OAuthModal({
           forceManual = true;
         }
 
-        // PKCE callback server providers (Codex, Windsurf, Devin CLI):
-        // On localhost, spin up a local callback server and poll for the result.
-        // Codex uses a fixed port 1455; Windsurf/Devin CLI use a random OS-assigned port.
-        // On remote the server is unreachable — fall through to standard manual flow.
+        // PKCE callback server providers (Codex, Windsurf, Devin CLI): true localhost spins
+        // up a callback server + polls; a LAN IP warns (#8046); remote falls through below.
         if (PKCE_CALLBACK_SERVER_PROVIDERS.has(provider)) {
           if (isTrueLocalhost) {
             try {
@@ -498,21 +526,22 @@ export default function OAuthModal({
               setPolling(false);
               forceManual = true;
             }
+          } else if (isLocalhost) {
+            setLoopbackHint(buildPkceLoopbackMismatchHint(provider, loopbackLocation));
+            setStep("loopback-mismatch");
+            return;
           }
-          // Remote: fall through to standard auth code flow below
+          // Remote (non-LAN): fall through to standard auth code flow below
         }
 
         // Authorization code flow
         // Redirect URI strategy:
         // - Codex/OpenAI: always port 1455 (registered in OAuth app)
-        // - Windsurf/Devin CLI (remote fallback): use localhost with OmniRoute port + /auth/callback
-        //   (on true localhost the callback server handles it; this is only reached on remote)
-        // - Google OAuth providers (antigravity/agy): default to loopback so the
-        //   bundled native/desktop credentials keep working. Prefer 127.0.0.1 over
-        //   localhost for the Google native-app handoff; Google documents that localhost
-        //   can run into local firewall/name-resolution edge cases. The authorize route
-        //   upgrades this to the public callback when custom Google web credentials plus
-        //   NEXT_PUBLIC_BASE_URL or OMNIROUTE_PUBLIC_BASE_URL are configured.
+        // - Windsurf/Devin CLI (remote fallback; true localhost handled above): localhost:port
+        // - Google OAuth providers (antigravity/agy): default to loopback (127.0.0.1 preferred —
+        //   Google docs flag localhost firewall/name-resolution edge cases) so bundled
+        //   native/desktop credentials keep working; the authorize route upgrades this to the
+        //   public callback when custom Google web credentials + a public base URL are configured.
         // - Other providers on remote: use actual origin (supports PUBLIC_URL env var)
         // - Localhost: use localhost:port
         let redirectUri: string;
@@ -588,6 +617,7 @@ export default function OAuthModal({
       provider,
       isLocalhost,
       isTrueLocalhost,
+      loopbackLocation,
       startPolling,
       onSuccess,
       reauthConnection,
@@ -639,6 +669,8 @@ export default function OAuthModal({
     if (!isOpen || !provider || flowStartedRef.current) return;
     flowStartedRef.current = true;
     const startsInPasteMode = IMPORT_TOKEN_ONLY_PROVIDERS.has(provider);
+    // #8688: show GitLab Duo OAuth app / env setup before authorize error.
+    const startsInGitlabDuoSetup = provider === "gitlab-duo";
     setShowPasteToken(startsInPasteMode);
     setGrokBrowserMode(false);
     setAuthData(null);
@@ -647,6 +679,10 @@ export default function OAuthModal({
     setIsDeviceCode(false);
     setDeviceData(null);
     setPolling(false);
+    if (startsInGitlabDuoSetup) {
+      setStep("gitlab-duo-setup");
+      return;
+    }
     if (!startsInPasteMode) startOAuthFlow();
   }, [isOpen, provider, startOAuthFlow]);
 
@@ -938,7 +974,7 @@ export default function OAuthModal({
               className={`text-sm px-3 py-1 rounded-t ${showPasteToken ? "font-semibold border-b-2 border-primary text-primary" : "text-text-muted"}`}
               onClick={handlePasteMode}
             >
-              {provider === "grok-cli" ? "JWT Token" : "Paste API Key"}
+              {provider === "grok-cli" ? "Import auth.json" : "Paste API Key"}
             </button>
           </div>
         )}
@@ -950,16 +986,26 @@ export default function OAuthModal({
               {provider === "windsurf"
                 ? 'In the Windsurf / VS Code IDE, run the "Windsurf: Provide Auth Token" command from the command palette (or click the Jupyter "Get Windsurf Authentication Token" button), then copy the shown token and paste it below. Opening windsurf.com/show-auth-token directly only shows a "Redirecting" page — the IDE must initiate the flow.'
                 : provider === "grok-cli"
-                  ? 'Paste your Grok Build JWT token from ~/.grok/auth.json (the "key" field value). You can get it by running `grok login` in your terminal.'
+                  ? 'Paste the FULL contents of ~/.grok/auth.json (not just the JWT "key" field). A bare JWT has no refresh_token, so the connection dies after expiry (#7610). Prefer the dedicated Import auth.json modal when available.'
                   : 'Provide your WINDSURF_API_KEY (obtained via `devin auth login`, or via the Windsurf IDE "Windsurf: Provide Auth Token" command).'}
             </p>
-            <Input
-              value={pasteToken}
-              onChange={(e) => setPasteToken(e.target.value)}
-              placeholder={provider === "grok-cli" ? "eyJ..." : "ws-..."}
-              type="password"
-              label={provider === "grok-cli" ? "JWT Token" : "API Key / Token"}
-            />
+            {provider === "grok-cli" ? (
+              <textarea
+                className="w-full h-32 p-3 text-sm font-mono bg-input border border-border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                value={pasteToken}
+                onChange={(e) => setPasteToken(e.target.value)}
+                placeholder='{"https://auth.x.ai::clientId": {"key": "eyJ...", "refresh_token": "..."}}'
+                aria-label="Grok Build auth.json"
+              />
+            ) : (
+              <Input
+                value={pasteToken}
+                onChange={(e) => setPasteToken(e.target.value)}
+                placeholder="ws-..."
+                type="password"
+                label="API Key / Token"
+              />
+            )}
             {error && <p className="text-sm text-red-500">{error}</p>}
             <div className="flex gap-2">
               <Button
@@ -990,21 +1036,18 @@ export default function OAuthModal({
               />
             )}
 
-            {/* Waiting Step (Localhost - popup mode) */}
+            {provider === "gitlab-duo" && step === "gitlab-duo-setup" && (
+              <GitlabDuoSetupStep onContinue={() => void startOAuthFlow()} onClose={handleClose} />
+            )}
+
             {step === "waiting" && !isDeviceCode && (
-              <div className="text-center py-6">
-                <div className="size-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-3xl text-primary animate-spin">
-                    progress_activity
-                  </span>
-                </div>
-                <h3 className="text-lg font-semibold mb-2">{t("waiting")}</h3>
-                <p className="text-sm text-text-muted mb-2">{t("completeAuthInPopup")}</p>
-                <p className="text-xs text-text-muted mb-4 opacity-70">{t("popupClosedHint")}</p>
-                <Button variant="ghost" onClick={() => setStep("input")}>
-                  {t("popupBlocked")}
-                </Button>
-              </div>
+              <OAuthWaitingStep
+                waitingLabel={t("waiting")}
+                completeAuthLabel={t("completeAuthInPopup")}
+                popupClosedHint={t("popupClosedHint")}
+                popupBlockedLabel={t("popupBlocked")}
+                onManualInput={() => setStep("input")}
+              />
             )}
 
             {/* Device Code Flow - Waiting */}
@@ -1023,6 +1066,11 @@ export default function OAuthModal({
                 provider={provider}
                 isGoogleOAuth={GOOGLE_OAUTH_PROVIDERS.has(provider)}
                 isTrueLocalhost={isTrueLocalhost}
+                googleHint={
+                  GOOGLE_OAUTH_PROVIDERS.has(provider)
+                    ? buildGoogleLoopbackHint(provider, loopbackLocation)
+                    : null
+                }
                 authUrl={typeof authData?.authUrl === "string" ? authData.authUrl : ""}
                 callbackUrl={callbackUrl}
                 placeholderUrl={placeholderUrl}
@@ -1053,25 +1101,29 @@ export default function OAuthModal({
           </div>
         )}
 
-        {/* Error Step — OAuth errors only; paste-token errors shown inline */}
+        {/* LAN-IP loopback mismatch (#8046) — dedicated panel; retrying this origin cannot succeed. */}
+        {step === "loopback-mismatch" && loopbackHint && !showPasteToken && (
+          <OAuthLoopbackMismatchPanel
+            providerName={providerInfo.name}
+            hint={loopbackHint}
+            onClose={handleClose}
+          />
+        )}
+
         {step === "error" && !showPasteToken && (
-          <div className="text-center py-6">
-            <div className="size-16 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-              <span className="material-symbols-outlined text-3xl text-red-600">error</span>
-            </div>
-            <h3 className="text-lg font-semibold mb-2">{t("error")}</h3>
-            <p className="text-sm text-red-600 mb-4">
-              <LinkifiedText text={error} />
-            </p>
-            <div className="flex gap-2">
-              <Button onClick={startOAuthFlow} variant="secondary" fullWidth>
-                {t("tryAgain")}
-              </Button>
-              <Button onClick={handleClose} variant="ghost" fullWidth>
-                {t("cancel")}
-              </Button>
-            </div>
-          </div>
+          <OAuthErrorStep
+            error={error}
+            errorTitle={t("error")}
+            tryAgainLabel={t("tryAgain")}
+            cancelLabel={t("cancel")}
+            returnToGitlabDuoSetup={provider === "gitlab-duo"}
+            onReturnToGitlabDuoSetup={() => {
+              setError(null);
+              setStep("gitlab-duo-setup");
+            }}
+            onTryAgain={() => void startOAuthFlow()}
+            onClose={handleClose}
+          />
         )}
       </div>
     </Modal>

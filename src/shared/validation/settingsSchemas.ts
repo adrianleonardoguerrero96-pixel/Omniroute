@@ -68,6 +68,7 @@ const transformInjectBillingHeaderSchema = z.object({
   versionFormat: z.enum(["ex-machina", "omniroute-daystamp"]),
   cchAlgo: z.enum(["sha256-first-user", "xxhash64-body", "static-zero"]),
   version: z.string().max(50).optional(),
+  buildRevision: z.string().min(1).max(20).optional(),
 });
 
 const commonSystemTransformOperationSchemas = [
@@ -91,6 +92,8 @@ const transformObfuscateWordsSchema = z.object({
 });
 
 export const updateSettingsSchema = z.object({
+  /** #7784: opt-in optimistic concurrency — must match GET settingsRevision / ETag. */
+  expectedRevision: z.number().int().nonnegative().optional(),
   newPassword: z.string().min(1).max(200).optional(),
   currentPassword: z.string().max(200).optional(),
   credentialRedactionEnabled: z.boolean().optional(),
@@ -218,12 +221,16 @@ export const updateSettingsSchema = z.object({
     .optional(),
   // #6168: global session-stickiness opt-out (per-combo config overrides this).
   disableSessionStickiness: z.boolean().optional(),
+  /** Keep eligible combo targets close to the provider-side prompt cache. */
+  promptCacheAffinityEnabled: z.boolean().optional(),
   /**
    * Per-operator quota row visibility on the usage dashboard, keyed by
    * provider id. Independent of the model catalog's isHidden/isDeleted flags.
    * Ported from upstream decolua/9router#2371.
    */
-  quotaVisibility: z.record(z.string().trim().min(1), z.object({ hidden: z.array(z.string()).max(500).optional() })).optional(),
+  quotaVisibility: z
+    .record(z.string().trim().min(1), z.object({ hidden: z.array(z.string()).max(500).optional() }))
+    .optional(),
   requestRetry: z.number().int().min(0).max(10).optional(),
   maxRetryIntervalSec: z.number().int().min(0).max(300).optional(),
   maxBodySizeMb: z
@@ -400,6 +407,7 @@ export const databaseSettingsSchema = z
       promptCacheEnabled: z.boolean(),
       promptCacheStrategy: z.literal("auto").or(z.literal("system-only")).or(z.literal("manual")),
       alwaysPreserveClientCache: z.literal("auto").or(z.literal("always")).or(z.literal("never")),
+      modelCatalogCacheTtlMs: z.number().int().min(500).max(60000),
     }),
 
     // Retention settings

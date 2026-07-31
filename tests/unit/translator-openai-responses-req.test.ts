@@ -360,22 +360,26 @@ test("Chat -> Responses converts messages, tool calls, tool outputs, tools and p
         { type: "input_image", image_url: "https://example.com/cat.png", detail: "high" },
         { type: "input_file", file_data: "abc", filename: "doc.txt" },
       ],
+      status: "completed",
     },
     {
       type: "message",
       role: "assistant",
       content: [{ type: "output_text", text: "Done" }],
+      status: "completed",
     },
     {
       type: "function_call",
       call_id: "call_1",
       name: "read_file",
       arguments: '{"path":"/tmp/a"}',
+      status: "completed",
     },
     {
       type: "function_call_output",
       call_id: "call_1",
       output: [{ type: "input_text", text: "ok" }],
+      status: "completed",
     },
   ]);
   assert.deepEqual((result as any).tools, [
@@ -520,6 +524,7 @@ test("Chat -> Responses converts assistant image_url history parts to output_tex
         { type: "output_text", text: "I inspected the screenshot." },
         { type: "output_text", text: "[Image: https://example.com/scope.png]" },
       ],
+      status: "completed",
     },
   ]);
   assert.equal(JSON.stringify(result).includes('"image_url"'), false);
@@ -920,7 +925,12 @@ test("Responses -> Chat: tool_search is mapped to a Chat function tool, not drop
       input: [{ role: "user", content: [{ type: "input_text", text: "hello" }] }],
       tools: [
         { type: "tool_search", name: "search" },
-        { type: "function", name: "foo", description: "A function", parameters: { type: "object" } },
+        {
+          type: "function",
+          name: "foo",
+          description: "A function",
+          parameters: { type: "object" },
+        },
       ],
     },
     false,
@@ -929,7 +939,11 @@ test("Responses -> Chat: tool_search is mapped to a Chat function tool, not drop
 
   const tools = result.tools as any[];
   assert.ok(Array.isArray(tools), "tools array must be present");
-  assert.equal(tools.some((t) => t.type === "tool_search"), false, "raw tool_search type must not survive");
+  assert.equal(
+    tools.some((t) => t.type === "tool_search"),
+    false,
+    "raw tool_search type must not survive"
+  );
   assert.equal(tools.length, 2, "mapped tool_search function + the function tool must remain");
   const toolSearch = tools.find((t) => t.function?.name === "search");
   assert.ok(toolSearch, "tool_search must be mapped to a Chat function tool named after it");

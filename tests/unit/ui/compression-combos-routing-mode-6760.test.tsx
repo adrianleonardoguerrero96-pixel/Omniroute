@@ -94,9 +94,8 @@ function setupFetchMock() {
 
 describe("CompressionCombosPageClient — routing-combo compression mode selector (#6760)", () => {
   async function render() {
-    const { default: CompressionCombosPageClient } = await import(
-      "../../../src/app/(dashboard)/dashboard/context/combos/CompressionCombosPageClient"
-    );
+    const { default: CompressionCombosPageClient } =
+      await import("../../../src/app/(dashboard)/dashboard/context/combos/CompressionCombosPageClient");
     let container!: HTMLElement;
     await act(async () => {
       container = mount(<CompressionCombosPageClient />);
@@ -112,10 +111,11 @@ describe("CompressionCombosPageClient — routing-combo compression mode selecto
     expect(container.textContent).toContain("Routing Bravo");
     const selects = Array.from(container.querySelectorAll("select")) as HTMLSelectElement[];
     // one per routing combo (2) — the shared ComboCompressionModeSelect renders exactly
-    // the 6-option Default/Off/Lite/Standard/Aggressive/Ultra set.
+    // the 7-option Default/Off/Lite/Standard/Aggressive/Ultra/Responses-tool-output set
+    // (#8010 added "codex-responses", unrelated to this file's original #6760 scope).
     const modeSelects = selects.filter((s) => {
       const values = Array.from(s.options).map((o) => o.value);
-      return values.join(",") === ",off,lite,standard,aggressive,ultra";
+      return values.join(",") === ",off,lite,standard,aggressive,ultra,codex-responses";
     });
     expect(modeSelects).toHaveLength(2);
     expect(modeSelects[0].value).toBe("lite");
@@ -128,7 +128,7 @@ describe("CompressionCombosPageClient — routing-combo compression mode selecto
     const selects = Array.from(container.querySelectorAll("select")) as HTMLSelectElement[];
     const modeSelects = selects.filter((s) => {
       const values = Array.from(s.options).map((o) => o.value);
-      return values.join(",") === ",off,lite,standard,aggressive,ultra";
+      return values.join(",") === ",off,lite,standard,aggressive,ultra,codex-responses";
     });
     await act(async () => {
       modeSelects[0].value = "ultra";
@@ -136,17 +136,13 @@ describe("CompressionCombosPageClient — routing-combo compression mode selecto
     });
     await flush();
 
-    const putCalls = calls.filter(
-      (c) => c.url === "/api/combos/rc1" && c.init?.method === "PUT"
-    );
+    const putCalls = calls.filter((c) => c.url === "/api/combos/rc1" && c.init?.method === "PUT");
     expect(putCalls).toHaveLength(1);
     const body = JSON.parse(putCalls[0].init?.body as string);
     expect(body).toEqual({ config: { compressionMode: "ultra" } });
 
     // The assignment checkbox for the same routing combo still toggles independently.
-    const checkbox = container.querySelector(
-      'input[type="checkbox"]'
-    ) as HTMLInputElement | null;
+    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement | null;
     expect(checkbox).toBeTruthy();
     const before = checkbox!.checked;
     await act(async () => {

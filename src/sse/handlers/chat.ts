@@ -23,7 +23,9 @@ import { errorResponse } from "@omniroute/open-sse/utils/error.ts";
 import { getImageModelEntry } from "@omniroute/open-sse/config/imageRegistry.ts";
 import { acceptHeaderForcesStream } from "@omniroute/open-sse/utils/aiSdkCompat.ts";
 import { applyNoThinkingAlias } from "@omniroute/open-sse/utils/noThinkingAlias.ts";
+import { resolveCcDiscoveryAliasStrip } from "@/lib/ccDiscoveryAliasResolve";
 import { handleComboChat, shouldSkipConnDisable } from "@omniroute/open-sse/services/combo.ts";
+import { mergeAbortSignals } from "@omniroute/open-sse/executors/base.ts";
 import { resolveRequestAutoControls } from "@omniroute/open-sse/services/autoCombo/requestControls.ts";
 import { resolveComboConfig } from "@omniroute/open-sse/services/comboConfig.ts";
 import { injectHandoffIntoBody } from "@omniroute/open-sse/services/contextHandoff.ts";
@@ -72,6 +74,11 @@ import {
   withSelectedConnectionHeader,
   withCorrelationId,
 } from "./chatHelpers";
+import {
+  isAntigravityMissingProjectError,
+  PROVIDER_BREAKER_FAILURE_STATUSES,
+  shouldTripProviderBreakerForResult,
+} from "./chatPredicates";
 import { connectionHasExtraKeys } from "@omniroute/open-sse/services/apiKeyRotator.ts";
 import {
   extractReasoningIntent,
@@ -84,10 +91,11 @@ import {
   filterReasoningCombo,
 } from "./reasoningRouting";
 import { createVirtualAutoCombo, resolveAutoRoutingState } from "./autoRouting";
-import { getComboFailureLogError, isRequestScopedUpstreamFailure } from "./comboFailureLogging";
+import { getComboFailureLogError } from "./comboFailureLogging";
 
 // Pipeline integration — wired modules
 import { classify429FromError, type FailureKind } from "@/shared/utils/classify429";
+import { isSubscriptionQuotaText } from "@omniroute/open-sse/services/quotaTextCooldowns.ts";
 import { resolveUseUpstream429BreakerHints } from "@/shared/utils/providerHints";
 import { getCircuitBreaker, isLocalStreamLifecycleError } from "../../shared/utils/circuitBreaker";
 import { markAccountExhaustedFrom429 } from "../../domain/quotaCache";
@@ -96,7 +104,7 @@ import { generateRequestId } from "../../shared/utils/requestId";
 import { logAuditEvent } from "../../lib/compliance/index";
 import { enforceApiKeyPolicy } from "../../shared/utils/apiKeyPolicy";
 import { hasProviderQuotaBypassScope } from "../../shared/constants/apiKeyPolicyScopes";
-import { cloneLogPayload } from "@/lib/logPayloads";
+import { cloneBoundedForLog } from "@omniroute/open-sse/utils/requestLogger.ts";
 import { handleInternalUsageCommand } from "@/lib/usage/internalUsageCommand";
 import {
   applyTaskAwareRouting,
@@ -128,9 +136,11 @@ import { registerCrofUsageFetcher } from "@omniroute/open-sse/services/crofUsage
 import { registerDeepseekQuotaFetcher } from "@omniroute/open-sse/services/deepseekQuotaFetcher.ts";
 import { registerOpenrouterQuotaFetcher } from "@omniroute/open-sse/services/openrouterQuotaFetcher.ts";
 import { registerOpencodeQuotaFetcher } from "@omniroute/open-sse/services/opencodeQuotaFetcher.ts";
+import { registerGrokWebQuotaFetcher } from "@omniroute/open-sse/services/grokQuotaFetcher.ts";
 import { registerGenericQuotaFetchers } from "@omniroute/open-sse/services/genericQuotaFetcher.ts";
 import "@omniroute/open-sse/services/quotaTrackersBatch.ts";
 import {
+  disableCooldownAwareRetry,
   getCooldownAwareRetryDecision,
   resolveCooldownAwareRetrySettings,
   waitForCooldownAwareRetry,
@@ -158,6 +168,14 @@ registerOpenrouterQuotaFetcher();
 // Surfaces the $12/5h, $30/wk, $60/mo windows in the limits page and enables
 // quota-aware preflight switching between connections. (#2852)
 registerOpencodeQuotaFetcher();
+
+// Register Grok Web quota fetcher.
+// Reads account-level OIDC tokens from ~/.grok/auth.json (the local Grok CLI
+// login) to surface the weekly credit-usage percentage in the dashboard.
+// This runs before registerGenericQuotaFetchers so the bespoke fetcher takes
+// precedence over the generic path (which can't resolve grok OIDC auth from
+// cookie-based connections).
+registerGrokWebQuotaFetcher();
 
 // Register the generic quota fetcher for every other provider that has a
 // usage implementation in usage.ts but no bespoke preflight fetcher. This is
@@ -209,26 +227,9 @@ function intersectAllowedConnectionIds(primary: unknown, secondary: unknown): st
   return first || second || null;
 }
 
-const PROVIDER_BREAKER_FAILURE_STATUSES = new Set([408, 500, 502, 503, 504]);
 const comboPromoteDeps = { updateCombo, info: log.info, warn: log.warn };
 
-// #7907/#7908: single-model breaker trip bypasses the `isFailure` option (only applies
-// inside `breaker.execute()`), so it needs its own `isLocalStreamLifecycleError` guard —
-// otherwise a client abort (502 default, error='request_signal_aborted') trips the
-// provider-wide breaker. Pure predicate, unit-testable without the full request path.
-export function shouldTripProviderBreakerForResult(
-  result: { status: number; errorCode?: string | null; errorType?: string | null; error?: unknown },
-  isCombo: boolean,
-  forceLiveComboTest: boolean
-): boolean {
-  return (
-    !forceLiveComboTest &&
-    !isCombo &&
-    !isRequestScopedUpstreamFailure({ code: result.errorCode, type: result.errorType }) &&
-    !isLocalStreamLifecycleError(result.error) &&
-    PROVIDER_BREAKER_FAILURE_STATUSES.has(Number(result.status))
-  );
-}
+export { shouldTripProviderBreakerForResult } from "./chatPredicates";
 
 /**
  * Handle chat completion request
@@ -393,6 +394,17 @@ export async function handleChat(
   // resolveRoutingModel). The resolved model still passes through
   // enforceApiKeyPolicy below, so it cannot bypass per-key allowlists.
   let modelStr = resolveRoutingModel(request, body);
+
+  // cc discovery alias (`claude/<provider>/<model>`, `claude/combo/<name>`):
+  // resolve back to the real id before any combo lookup / resolveModelOrError()
+  // sees it — see resolveCcDiscoveryAliasStrip. A genuine claude/ model id (the
+  // real Claude OAuth provider namespace) is always left untouched.
+  const ccAliasStrip = await resolveCcDiscoveryAliasStrip(modelStr);
+  if (ccAliasStrip.stripped) {
+    log.debug("CC_DISCOVERY", `Resolved cc discovery alias: ${modelStr} → ${ccAliasStrip.model}`);
+    modelStr = ccAliasStrip.model;
+  }
+
   // Freeze the client-facing model and reasoning intent before automatic routers
   // mutate the working request. Reasoning policies always match this stable input.
   const reasoningIntent = extractReasoningIntent(modelStr, body);
@@ -778,6 +790,7 @@ export async function handleChat(
           failoverBeforeRetry?: boolean;
           providerId?: string | null;
           effectiveComboStrategy?: string | null;
+          modelAbortSignal?: AbortSignal | null;
         }
       ) =>
         handleSingleModelChat(
@@ -808,6 +821,16 @@ export async function handleChat(
             reasoningDecision,
             reasoningIntent,
             reasoningRequestTags: requestRoutingTags.tags,
+            // #7360 follow-up: without this, a target dispatch abandoned by
+            // targetTimeoutRunner.ts's per-target timeout (comboTargetTimeoutMs)
+            // never learns it was abandoned — it only watches the ORIGINAL
+            // client's request.signal (see clientRawRequest below), which stays
+            // open for as long as the overall combo keeps retrying elsewhere.
+            // The abandoned dispatch then hangs forever inside withRateLimit/
+            // acquireAccountSemaphore, leaking a permanent "pending" dashboard
+            // entry (trackPendingRequest(false) never runs) — live incident,
+            // log id 1784418258231-14961a.
+            modelAbortSignal: target?.modelAbortSignal ?? null,
           },
           target?.effectiveComboStrategy ?? combo.strategy,
           true
@@ -885,12 +908,13 @@ export async function handleChat(
     // (success:false) so gate/breaker-rejected traffic is counted per key — support-mesh 2026-07-08.
     if (!response.ok) {
       try {
-        const { recordRejectedRequestUsage } = await import("./rejectedRequestUsage");
+        const { recordRejectedRequestUsage, resolveRejectedComboProvider } =
+          await import("./rejectedRequestUsage");
         await recordRejectedRequestUsage({
           status: response.status,
           model: body?.model || resolvedModelStr,
           requestedModel: body?.model || resolvedModelStr,
-          provider: "-",
+          provider: resolveRejectedComboProvider(body?.model || resolvedModelStr, combo.name),
           endpoint: clientRawRequest?.endpoint,
           error: await getComboFailureLogError(response, combo.name),
           comboName: combo.name,
@@ -898,6 +922,7 @@ export async function handleChat(
           apiKeyName: apiKeyInfo?.name ?? null,
           correlationId: reqId,
           startTime: telemetry?.startTime,
+          requestBody: clientRawRequest?.body ?? null,
         });
       } catch {}
     }
@@ -946,15 +971,10 @@ export async function handleChat(
   return withCorrelationId(withSessionHeader(response, sessionId), reqId);
 }
 
-export function buildClientRawRequest(request: Request, body: unknown) {
-  const url = new URL(request.url);
-  return {
-    endpoint: url.pathname,
-    body: cloneLogPayload(body),
-    headers: Object.fromEntries(request.headers.entries()),
-    signal: request.signal ?? null,
-  };
-}
+// The clientRawRequest envelope lives in ./chat/clientRawRequest.ts. Imported for local use
+// below and re-exported for the historical public surface.
+import { buildClientRawRequest, resolveDispatchClientRawRequest } from "./chat/clientRawRequest.ts";
+export { buildClientRawRequest, resolveDispatchClientRawRequest };
 
 /**
  * Handle single model chat request
@@ -991,6 +1011,13 @@ async function handleSingleModelChat(
     reasoningDecision?: ReasoningRuleDecision | null;
     reasoningIntent?: ExtractedReasoningIntent | null;
     reasoningRequestTags?: string[];
+    /**
+     * Per-target abort signal from combo.ts's targetTimeoutRunner
+     * (comboTargetTimeoutMs) — see the #7360 follow-up comment at the
+     * handleSingleModel call site above for why this must be merged into
+     * the signal used for the actual dispatch, not left unused.
+     */
+    modelAbortSignal?: AbortSignal | null;
   } = {},
   comboStrategy: string | null = null,
   isCombo: boolean = false
@@ -1029,6 +1056,7 @@ async function handleSingleModelChat(
           allowRateLimitedConnection?: boolean;
           providerId?: string | null;
           effectiveComboStrategy?: string | null;
+          modelAbortSignal?: AbortSignal | null;
         }
       ) =>
         handleSingleModelChat(
@@ -1050,6 +1078,8 @@ async function handleSingleModelChat(
             allowRateLimitedConnection: target?.allowRateLimitedConnection === true,
             providerId: target?.providerId ?? null,
             correlationId: runtimeOptions?.correlationId ?? null,
+            // #7360 follow-up — see the primary handleSingleModel closure above.
+            modelAbortSignal: target?.modelAbortSignal ?? null,
           },
           target?.effectiveComboStrategy ?? redirectCombo.strategy ?? "priority",
           false
@@ -1177,18 +1207,18 @@ async function handleSingleModelChat(
   const baseRetrySettings = resolveCooldownAwareRetrySettings(
     runtimeOptions.cachedSettings ?? (await getCachedSettings().catch(() => ({})))
   );
-  const disableCooldownAwareRetry =
-    isCombo || forceLiveComboTest || runtimeOptions.emergencyFallbackTried === true;
-  const retrySettings = disableCooldownAwareRetry
-    ? {
-        ...baseRetrySettings,
-        enabled: false,
-        maxRetries: 0,
-        maxRetryWaitSec: 0,
-        maxRetryWaitMs: 0,
-      }
-    : baseRetrySettings;
+  const retrySettings = disableCooldownAwareRetry(
+    baseRetrySettings,
+    provider === "claude-web" ||
+      isCombo ||
+      forceLiveComboTest ||
+      runtimeOptions.emergencyFallbackTried === true
+  );
   const requestSignal = request?.signal ?? null;
+  // Cumulative cap across all waits for this request (#7360 follow-up) — mirrors
+  // combo.ts's comboCooldownBudgetLeftMs. Declared outside requestAttemptLoop so
+  // it persists (and only decreases) across `continue requestAttemptLoop` retries.
+  let requestRetryBudgetLeftMs = retrySettings.budgetMs;
 
   if (Array.isArray(effectiveAllowedConnections) && effectiveAllowedConnections.length === 0) {
     log.debug("AUTH", `${provider}/${model} filtered out by connection-level routing constraints`);
@@ -1252,6 +1282,7 @@ async function handleSingleModelChat(
             retryAfter: credentials.retryAfter,
             settings: retrySettings,
             attempt: requestRetryAttempt,
+            budgetLeftMs: requestRetryBudgetLeftMs,
           });
 
           if (retryDecision.shouldRetry) {
@@ -1271,6 +1302,7 @@ async function handleSingleModelChat(
             }
 
             requestRetryAttempt += 1;
+            requestRetryBudgetLeftMs = Math.max(0, requestRetryBudgetLeftMs - retryDecision.waitMs);
             log.info(
               "COOLDOWN_RETRY",
               `${provider}/${model} cooldown elapsed — restarting request attempt ${requestRetryAttempt}/${retrySettings.maxRetries}`
@@ -1388,6 +1420,10 @@ async function handleSingleModelChat(
 
       // 4. Execute chat via core after breaker gate checks (with optional TLS tracking)
       if (telemetry) telemetry.startPhase("connect");
+      const dispatchClientRawRequest = resolveDispatchClientRawRequest(
+        clientRawRequest,
+        runtimeOptions.modelAbortSignal
+      );
       const { result, tlsFingerprintUsed } = await executeChatWithBreaker({
         bypassCircuitBreaker: forceLiveComboTest || hasForcedConnection,
         breaker,
@@ -1398,7 +1434,7 @@ async function handleSingleModelChat(
         proxyInfo,
         appliedProxySink,
         log,
-        clientRawRequest,
+        clientRawRequest: dispatchClientRawRequest,
         credentials,
         apiKeyInfo,
         userAgent,
@@ -1452,6 +1488,14 @@ async function handleSingleModelChat(
         if (telemetry) telemetry.startPhase("finalize");
         if (telemetry) telemetry.endPhase();
         return result.response;
+      }
+
+      // Missing Cloud Code project assignment is an account configuration error, not a
+      // transient upstream/account failure. Preserve the executor's typed fail-closed 422;
+      // marking the connection unavailable here would trigger cooldown redispatch and repeat
+      // bootstrap within the same logical request.
+      if (isAntigravityMissingProjectError(provider, result)) {
+        return withSelectedConnectionHeader(result.response, credentials.connectionId);
       }
 
       const isAntigravityStreamReadinessFailure =
@@ -1675,10 +1719,16 @@ async function handleSingleModelChat(
       // Check if it's a daily quota exhausted error (e.g., ModelScope/Kimi "today's quota for model")
       // Daily quota lockout overrides subsequent rate_limited lockout, ensuring lockout until tomorrow 0:00
       let dailyQuotaExhausted = false;
-      const errorStr = String(result.error || "");
+      // #7360: prefer the full un-sanitized upstream text over result.error
+      // (truncated to its first line for the client response body) — Gemini's
+      // TPM/RPD metric name and retry hint live on lines 2-3, after the
+      // generic "quota exceeded" preamble on line 1.
+      const errorStr = String(result.rawMessage ?? result.error ?? "");
       const failureKind =
         result.status === 429
-          ? classify429FromError({ status: result.status, message: errorStr })
+          ? isSubscriptionQuotaText(errorStr.toLowerCase(), provider)
+            ? "quota_exhausted"
+            : classify429FromError({ status: result.status, message: errorStr })
           : undefined;
       if (result.status === 429 && isDailyQuotaExhausted(errorStr)) {
         // Parse which model is quota-limited
@@ -1741,7 +1791,7 @@ async function handleSingleModelChat(
         : await markAccountUnavailable(
             credentials.connectionId,
             result.status,
-            result.error,
+            errorStr,
             provider,
             model,
             providerProfile,

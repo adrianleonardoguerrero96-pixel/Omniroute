@@ -28,6 +28,8 @@ import {
   buildManualComboModelStep,
   buildPrecisionComboModelStep,
   canAccessComboBuilderStage,
+  computeBatchAddModelSteps,
+  computeBatchDeselectModelSteps,
   findNextSuggestedConnectionId,
   getComboBuilderStageChecks,
   getComboBuilderStages,
@@ -2529,6 +2531,26 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
     setBuilderError("");
   };
 
+  // Batch add for ModelSelectModal "Select all" — delegates to the pure
+  // computeBatchAddModelSteps (src/lib/combos/builderDraft.ts) which applies
+  // every candidate against a growing list in one pass, otherwise N× onSelect
+  // would each close over the same stale `models` snapshot and keep only the
+  // last entry. Extracted so tests exercise this real implementation instead
+  // of a hand-maintained mirror (#8526).
+  const handleAddModels = (selected) => {
+    const { next, addedAny } = computeBatchAddModelSteps(models, selected, builderProviders);
+    if (!addedAny) return;
+    setModels(next);
+    setBuilderError("");
+  };
+
+  const handleDeselectModels = (toRemove) => {
+    const next = computeBatchDeselectModelSteps(models, toRemove);
+    if (next === models) return;
+    setModels(next);
+    setBuilderError("");
+  };
+
   const handleWeightChange = (index, weight) => {
     const newModels = [...models];
     newModels[index] = {
@@ -2597,7 +2619,7 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
   };
 
   const FREE_STACK_PRESET_MODELS = [
-    { model: "agy/gemini-3.5-flash-medium", weight: 0 },
+    { model: "agy/gemini-3.5-flash-low", weight: 0 },
     { model: "kr/claude-sonnet-4.5", weight: 0 },
     { model: "if/kimi-k2-thinking", weight: 0 },
     { model: "if/qwen3-coder-plus", weight: 0 },
@@ -2610,8 +2632,7 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
     { model: "cu/claude-4.6-opus-high", weight: 0 },
     { model: "antigravity/claude-sonnet-4-6", weight: 0 },
     { model: "cu/claude-4.6-sonnet-high", weight: 0 },
-    { model: "antigravity/gemini-3.1-pro-high", weight: 0 },
-    { model: "antigravity/gemini-3-pro-high", weight: 0 },
+    { model: "antigravity/gemini-pro-agent", weight: 0 },
   ];
 
   const applyTemplate = (template) => {
@@ -4610,6 +4631,8 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
         onClose={() => setShowModelSelect(false)}
         onSelect={handleAddModel}
         onDeselect={handleDeselectModel}
+        onSelectMany={handleAddModels}
+        onDeselectMany={handleDeselectModels}
         activeProviders={activeProviders}
         modelAliases={modelAliases}
         title={t("addModelToCombo")}

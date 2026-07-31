@@ -91,10 +91,7 @@ export async function ensureDbReadyForBoot(
       // get the real root cause into stdout/app.log — without it, the
       // process keeps its HTTP listener up while every DB-touching route
       // 500s forever with a permanently empty log (#7773).
-      console.error(
-        "[STARTUP] Fatal: Database driver initialization failed:",
-        normalized.message
-      );
+      console.error("[STARTUP] Fatal: Database driver initialization failed:", normalized.message);
       throw normalized;
     }
     console.warn(
@@ -215,6 +212,36 @@ export async function warmModelCatalogCache(): Promise<void> {
   }
 }
 
+/**
+ * #8530: enumerate existing combos whose name shadows a real model id and
+ * log a startup warning. Never rejects/throws — #6940 documents a combo
+ * named after a bare model id as the supported mechanism for per-model
+ * provider fallback, so a collision here is expected in some deployments;
+ * this only gives operators who hit it accidentally a signal.
+ *
+ * Exported (rather than left inline in registerNodejs()) so it can be unit
+ * tested directly without exercising the rest of the startup sequence.
+ */
+export async function scanComboModelNameCollisionsAtBoot(): Promise<void> {
+  try {
+    const [{ getCombos }, { scanCombosForModelCollisions }] = await Promise.all([
+      import("@/lib/db/combos"),
+      import("@/lib/combos/modelNameCollision"),
+    ]);
+    const collisions = scanCombosForModelCollisions(await getCombos());
+    if (collisions.length > 0) {
+      console.warn(
+        `[STARTUP] ${collisions.length} combo(s) share a name with a real model id (#8530) — ` +
+          "intentional per #6940 bare-model-id fallback, but confirm each is expected: " +
+          collisions.map((c) => `${c.comboName}→${c.providerId}/${c.modelId}`).join(", ")
+      );
+    }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn("[STARTUP] Could not scan combos for model-name collisions (non-fatal):", msg);
+  }
+}
+
 export async function registerNodejs(): Promise<void> {
   markServerStarting();
 
@@ -243,7 +270,9 @@ export async function registerNodejs(): Promise<void> {
   await Promise.all([
     import("@/lib/env/runtimeEnv").then(({ enforceWebRuntimeEnv }) => enforceWebRuntimeEnv()),
     import("@/lib/usage/migrations"),
-    import("@/lib/consoleInterceptor").then(({ initConsoleInterceptor }) => initConsoleInterceptor()),
+    import("@/lib/consoleInterceptor").then(({ initConsoleInterceptor }) =>
+      initConsoleInterceptor()
+    ),
   ]);
 
   // Clear stale transient connection cooldowns persisted from an unclean crash.
@@ -264,6 +293,8 @@ export async function registerNodejs(): Promise<void> {
     const msg = err instanceof Error ? err.message : String(err);
     console.warn("[STARTUP] Could not clear stale crash cooldowns (non-fatal):", msg);
   }
+
+  await scanComboModelNameCollisionsAtBoot();
 
   const [
     { initGracefulShutdown },
@@ -371,9 +402,20 @@ export async function registerNodejs(): Promise<void> {
       console.log("[STARTUP] Thinking-Budget config restored from settings");
     }
 
+    // Restore the Task-Aware Smart Routing config (#8601). It lives in
+    // `settings.taskRouting` (written as a JSON string by PUT /api/settings/task-routing)
+    // and is NOT covered by applyRuntimeSettings, so without this the feature silently
+    // reverts to disabled + the default model map on every restart. Same shape as the
+    // Thinking-Budget restore above; must live here, not in the unused server-init.ts.
+    const { hydrateTaskRoutingConfig } =
+      await import("@omniroute/open-sse/services/taskAwareRouter.ts");
+    if (hydrateTaskRoutingConfig(settings)) {
+      console.log("[STARTUP] Task-Aware Routing config restored from settings");
+    }
+
     const seededModelAliases = await seedDefaultModelAliases();
     console.log(
-      `[STARTUP] Model alias seed: applied=${seededModelAliases.applied.length}, skipped=${seededModelAliases.skipped.length}, failed=${seededModelAliases.failed.length}`
+      `[STARTUP] Model alias seed: applied=${seededModelAliases.applied.length}, skipped=${seededModelAliases.skipped.length}, removed=${seededModelAliases.removed.length}, failed=${seededModelAliases.failed.length}`
     );
     startSessionAccountAffinityCleanup();
 
@@ -455,21 +497,25 @@ export async function registerNodejs(): Promise<void> {
   if (!isBackgroundServicesDisabled()) {
     // All services are independent — run in parallel for faster cold start.
     await Promise.allSettled([
-      import("@/lib/services/bootstrap").then(async (m) => {
-        await m.bootstrapEmbeddedServices();
-        console.log("[STARTUP] Embedded services bootstrap complete");
-      }).catch((err: unknown) => {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.warn("[STARTUP] Embedded services bootstrap failed (non-fatal):", msg);
-      }),
+      import("@/lib/services/bootstrap")
+        .then(async (m) => {
+          await m.bootstrapEmbeddedServices();
+          console.log("[STARTUP] Embedded services bootstrap complete");
+        })
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn("[STARTUP] Embedded services bootstrap failed (non-fatal):", msg);
+        }),
 
-      import("@/lib/services/embedWsProxy").then((m) => m.initEmbedWsProxy())
+      import("@/lib/services/embedWsProxy")
+        .then((m) => m.initEmbedWsProxy())
         .catch((err: unknown) => {
           const msg = err instanceof Error ? err.message : String(err);
           console.warn("[STARTUP] Embed WS proxy failed to start (non-fatal):", msg);
         }),
 
-      import("@omniroute/open-sse/services/autoRefreshDaemon").then((m) => m.autoRefreshDaemon.start())
+      import("@omniroute/open-sse/services/autoRefreshDaemon")
+        .then((m) => m.autoRefreshDaemon.start())
         .catch((err: unknown) => {
           const msg = err instanceof Error ? err.message : String(err);
           console.warn("[STARTUP] Auto-refresh daemon failed to start (non-fatal):", msg);
@@ -478,7 +524,8 @@ export async function registerNodejs(): Promise<void> {
       // Proactive connection-cooldown recovery (#8): re-validate connections whose
       // transient `rate_limited_until` window has elapsed OUTSIDE the request hot path,
       // so the first request after a cooldown does not pay the probe latency.
-      import("@/lib/quota/connectionRecovery").then((m) => m.initConnectionRecoveryScheduler())
+      import("@/lib/quota/connectionRecovery")
+        .then((m) => m.initConnectionRecoveryScheduler())
         .catch((err: unknown) => {
           const msg = err instanceof Error ? err.message : String(err);
           console.warn("[STARTUP] Connection recovery scheduler failed to start (non-fatal):", msg);
@@ -486,17 +533,20 @@ export async function registerNodejs(): Promise<void> {
 
       // Arena ELO sync: model intelligence from the Arena AI leaderboard, powering the
       // Free Provider Rankings page. On by default; non-blocking, never fatal.
-      import("@/lib/arenaEloSync").then(async (m) => {
-        const started = await m.initArenaEloSync();
-        if (started) console.log("[STARTUP] Arena ELO sync initialized");
-      }).catch((err: unknown) => {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.warn("[STARTUP] Arena ELO sync failed to start (non-fatal):", msg);
-      }),
+      import("@/lib/arenaEloSync")
+        .then(async (m) => {
+          const started = await m.initArenaEloSync();
+          if (started) console.log("[STARTUP] Arena ELO sync initialized");
+        })
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn("[STARTUP] Arena ELO sync failed to start (non-fatal):", msg);
+        }),
 
       // Pricing sync: opt-in external pricing data (self-gated by PRICING_SYNC_ENABLED inside
       // initPricingSync). Non-blocking, never fatal.
-      import("@/lib/pricingSync").then((m) => m.initPricingSync())
+      import("@/lib/pricingSync")
+        .then((m) => m.initPricingSync())
         .catch((err: unknown) => {
           const msg = err instanceof Error ? err.message : String(err);
           console.warn("[STARTUP] Pricing sync failed to start (non-fatal):", msg);
@@ -504,7 +554,8 @@ export async function registerNodejs(): Promise<void> {
 
       // models.dev capability sync: opt-in via Settings > AI (self-gated by
       // settings.modelsDevSyncEnabled inside initModelsDevSync). Non-blocking, never fatal.
-      import("@/lib/modelsDevSync").then((m) => m.initModelsDevSync())
+      import("@/lib/modelsDevSync")
+        .then((m) => m.initModelsDevSync())
         .catch((err: unknown) => {
           const msg = err instanceof Error ? err.message : String(err);
           console.warn("[STARTUP] models.dev sync failed to start (non-fatal):", msg);
@@ -512,7 +563,8 @@ export async function registerNodejs(): Promise<void> {
 
       // Context-window self-correction (5004): periodically reconcile provider-declared
       // windows (from /models discovery) into auto:discovery overrides. Never fatal.
-      import("@/lib/contextWindowResolver").then((m) => m.startContextWindowReconcile())
+      import("@/lib/contextWindowResolver")
+        .then((m) => m.startContextWindowReconcile())
         .catch((err: unknown) => {
           const msg = err instanceof Error ? err.message : String(err);
           console.warn("[STARTUP] context-window reconcile failed to start (non-fatal):", msg);
@@ -521,21 +573,38 @@ export async function registerNodejs(): Promise<void> {
       // TV6 typed memory decay: optional periodic sweep of decayed episodic memories.
       // Doubly opt-in (no-op unless MEMORY_TYPED_DECAY_ENABLED=true AND
       // MEMORY_TYPED_DECAY_SWEEP_INTERVAL>0). Never deletes by default. Never fatal.
-      import("@/lib/memory/typedDecay").then((m) => m.startMemoryDecaySweep())
+      import("@/lib/memory/typedDecay")
+        .then((m) => m.startMemoryDecaySweep())
         .catch((err: unknown) => {
           const msg = err instanceof Error ? err.message : String(err);
           console.warn("[STARTUP] memory decay sweep failed to start (non-fatal):", msg);
         }),
 
+      // Backup schedule (#8513): execute `backup-schedule.json` cron server-side.
+      // Reads the schedule written by `omniroute backup auto enable` and fires
+      // `runBackupCommand` when the cron expression matches. Self-gated: no-op
+      // when no schedule file exists or the schedule is disabled. Never fatal.
+      import("@/lib/jobs/backupScheduleJob")
+        .then((m) => m.startBackupScheduleJob())
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn("[STARTUP] backup schedule job failed to start (non-fatal):", msg);
+        }),
+
       // Real-time dashboard WebSocket daemon (port 20132): powers Combo Studio Live,
       // the Home live-pulse, and Live Compression. Side-effect import triggers the
       // flag-gated auto-start (OMNIROUTE_ENABLE_LIVE_WS, default ON).
-      import("@/server/ws/liveServer").then(() => {
-        console.log("[STARTUP] Live dashboard WebSocket daemon bootstrap invoked");
-      }).catch((err: unknown) => {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.warn("[STARTUP] Live dashboard WebSocket daemon failed to start (non-fatal):", msg);
-      }),
+      import("@/server/ws/liveServer")
+        .then(() => {
+          console.log("[STARTUP] Live dashboard WebSocket daemon bootstrap invoked");
+        })
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn(
+            "[STARTUP] Live dashboard WebSocket daemon failed to start (non-fatal):",
+            msg
+          );
+        }),
     ]);
   }
 

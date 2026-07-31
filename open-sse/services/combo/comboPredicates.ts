@@ -10,6 +10,8 @@ import { errorResponse } from "../../utils/error.ts";
 import { parseModel } from "../model.ts";
 import { isSelfInflictedUpstreamTimeout } from "../../handlers/chatCore/cooldownClassification.ts";
 import { isLocalStreamLifecycleError } from "@/shared/utils/circuitBreaker";
+import { CONTEXT_OVERFLOW_PATTERNS, MODEL_ACCESS_DENIED_PATTERNS } from "../accountFallback.ts";
+import { isResourceNotFoundResponse } from "../errorClassifier.ts";
 import type { ResolvedComboTarget } from "./types.ts";
 
 // Status codes that should mark round-robin target semaphores as cooling down.
@@ -140,7 +142,12 @@ const PROVIDER_BREAKER_FAILURE_STATUSES = new Set([408, 500, 502, 503, 504]);
  *   this intentionally differs from `isProviderFailureCode` (accountFallback.ts), which
  *   INCLUDES 429 for connection-cooldown purposes and must not be changed here.
  * - When the next combo target is on the SAME provider, don't trip the provider breaker:
- *   a different model on that provider may still succeed.
+ *   a different model on that provider may still succeed. #8376: EXCEPT when the failure
+ *   itself is a transport-level "proxy unreachable" event (`isProxyUnreachable`) — a dead
+ *   upstream proxy poisons every account on that provider identically, so a different
+ *   model on the same provider will fail the exact same way. Without this override a
+ *   homogeneous same-provider combo pool never trips the breaker and instead burns every
+ *   attempt against the same dead proxy until it hits the 503 max-retry limit.
  * - G-02 / #2743: when the fallback result carries `skipProviderBreaker` (an embedded
  *   service supervisor outage signalled via `X-Omni-Fallback-Hint: connection_cooldown`)
  *   apply connection cooldown ONLY — never trip the whole-provider breaker.
@@ -161,11 +168,14 @@ export function shouldRecordProviderBreakerFailure(args: {
   skipProviderBreaker?: boolean;
   requestScopedFailure?: boolean;
   error?: unknown;
+  /** #8376: transport-level "proxy unreachable" signal — overrides the `sameProviderNext`
+   * exemption only; every other AND-term still gates the trip. */
+  isProxyUnreachable?: boolean;
 }): boolean {
   return (
     !args.isStreamReadinessFailure &&
     PROVIDER_BREAKER_FAILURE_STATUSES.has(args.status) &&
-    !args.sameProviderNext &&
+    (!args.sameProviderNext || args.isProxyUnreachable === true) &&
     !args.skipProviderBreaker &&
     !args.requestScopedFailure &&
     !isLocalStreamLifecycleError(args.error)
@@ -186,6 +196,35 @@ export function isRequestScopedUpstreamFailure(error?: {
   const code = typeof error?.code === "string" ? error.code.toLowerCase() : "";
   const type = typeof error?.type === "string" ? error.type.toLowerCase() : "";
   return REQUEST_SCOPED_UPSTREAM_ERROR_CODES.has(code) || type === "context_length_exceeded";
+}
+
+/** Request-scoped classification that also has access to the HTTP body. */
+export function isComboRequestScopedFailure(
+  status: number,
+  errorText: string,
+  error?: { code?: string | null; type?: string | null }
+): boolean {
+  return (
+    isRequestScopedUpstreamFailure(error) ||
+    (status === 404 && isResourceNotFoundResponse(errorText))
+  );
+}
+
+const INPUT_BOUND_ERROR_CODES = new Set(["context_length_exceeded", "context_window_exceeded"]);
+
+/**
+ * #8375: Whether an upstream error is input-bound — i.e. determined solely by the
+ * request content, not by the provider/account state. A context_length_exceeded
+ * for a 159K-token input will fail on every account of that same model, so the
+ * combo loop should propagate the error immediately instead of retrying.
+ */
+export function isInputBoundRequestFailure(error?: {
+  code?: string | null;
+  type?: string | null;
+}): boolean {
+  const code = typeof error?.code === "string" ? error.code.toLowerCase() : "";
+  const type = typeof error?.type === "string" ? error.type.toLowerCase() : "";
+  return INPUT_BOUND_ERROR_CODES.has(code) || type === "context_length_exceeded";
 }
 
 /**
@@ -292,4 +331,100 @@ export function toRecordedTarget(target: ResolvedComboTarget) {
     connectionId: target.connectionId,
     label: target.label,
   };
+}
+
+export function clampPercent(value: number): number {
+  if (!Number.isFinite(value)) return 100;
+  return Math.max(0, Math.min(100, value));
+}
+
+export function quotaRemainingPercentFromQuota(quota: unknown): number {
+  if (!quota || typeof quota !== "object") return 100;
+  const record = quota as Record<string, unknown>;
+  if (record.limitReached === true) return 0;
+
+  const windows = record.windows;
+  if (windows && typeof windows === "object" && !Array.isArray(windows)) {
+    let minRemaining: number | null = null;
+    for (const windowInfo of Object.values(windows as Record<string, unknown>)) {
+      if (!windowInfo || typeof windowInfo !== "object") continue;
+      const percentUsed = Number((windowInfo as Record<string, unknown>).percentUsed);
+      if (!Number.isFinite(percentUsed)) continue;
+      const remaining = clampPercent((1 - percentUsed) * 100);
+      minRemaining = minRemaining === null ? remaining : Math.min(minRemaining, remaining);
+    }
+    if (minRemaining !== null) return minRemaining;
+  }
+
+  const percentUsed = Number(record.percentUsed);
+  if (Number.isFinite(percentUsed)) return clampPercent((1 - percentUsed) * 100);
+  return 100;
+}
+
+export const QUOTA_BLOCKING_CONNECTION_STATUSES = new Set([
+  "banned",
+  "credits_exhausted",
+  "deactivated",
+  "expired",
+  "rate_limited",
+]);
+
+export function normalizeConnectionStatus(value: unknown): string {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+export function hasFutureRateLimitUntil(value: unknown): boolean {
+  if (value == null || value === "") return false;
+  const time = new Date(String(value)).getTime();
+  return Number.isFinite(time) && time > Date.now();
+}
+
+export function getConnectionStatusQuotaCutoffReason(
+  connection: Record<string, unknown> | undefined
+): string | undefined {
+  if (!connection) return undefined;
+  const status = normalizeConnectionStatus(connection.testStatus);
+  if (QUOTA_BLOCKING_CONNECTION_STATUSES.has(status)) return status;
+  if (status === "unavailable" && hasFutureRateLimitUntil(connection.rateLimitedUntil)) {
+    return "rate_limited";
+  }
+  return undefined;
+}
+
+/** @param {string} errorText */
+export function isContextOverflow400(errorText: string | null | undefined): boolean {
+  const text = String(errorText || "");
+  if (!text) return false;
+  return (
+    /\bcontext.*(?:length_exceeded|too long|overflow|exceeded|window|limit)\b/i.test(text) ||
+    /exceeds.*context/i.test(text) ||
+    /your input exceeds/i.test(text) ||
+    CONTEXT_OVERFLOW_PATTERNS.some((p) => p.test(text))
+  );
+}
+
+/** @param {string} errorText */
+export function isParamValidation400(errorText: string | null | undefined): boolean {
+  const text = String(errorText || "");
+  if (!text) return false;
+  return (
+    /\bmax_tokens\b.*(?:illegal|must|range|invalid)/i.test(text) ||
+    /\bparameter is illegal\b/i.test(text) ||
+    /\bis illegal.*range\b/i.test(text)
+  );
+}
+
+/**
+ * #5249 / #2101: model-scoped 400s must NEVER stop the combo.
+ */
+export function isModelScoped400(errorText: string | null | undefined): boolean {
+  const text = String(errorText || "");
+  if (!text) return false;
+  if (MODEL_ACCESS_DENIED_PATTERNS.some((p) => p.test(text))) return true;
+  return (
+    /\bmodel\b[\s\S]{0,80}?\b(?:not\s+supported|unsupported|unknown|unavailable)\b/i.test(text) ||
+    /\b(?:not\s+supported|unsupported|unknown)\b[\s\S]{0,80}?\bmodel\b/i.test(text) ||
+    /\bunsupported_api_for_model\b/i.test(text) ||
+    /\bdoes\s+not\s+support\s+(?:the\s+)?responses\s+api\b/i.test(text)
+  );
 }

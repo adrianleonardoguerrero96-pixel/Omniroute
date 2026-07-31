@@ -16,6 +16,7 @@ export type IntelligentRoutingWeights = {
   tierAffinity: number;
   specificityMatch: number;
   contextAffinity: number;
+  cacheAffinity: number;
   resetWindowAffinity: number;
 };
 
@@ -56,6 +57,7 @@ export const DEFAULT_INTELLIGENT_WEIGHTS: IntelligentRoutingWeights = {
   tierAffinity: 0.05,
   specificityMatch: 0.05,
   contextAffinity: 0.08,
+  cacheAffinity: 0,
   resetWindowAffinity: 0,
 };
 
@@ -85,6 +87,7 @@ export const FACTOR_LABELS: Record<keyof IntelligentRoutingWeights, string> = {
   tierAffinity: "Tier Affinity",
   specificityMatch: "Specificity",
   contextAffinity: "Context Affinity",
+  cacheAffinity: "Cache Hit Affinity",
   resetWindowAffinity: "Reset Window",
 };
 
@@ -159,6 +162,8 @@ export function normalizeIntelligentRoutingConfig(config: unknown): IntelligentR
         toFiniteNumber(rawWeights.specificityMatch) ?? DEFAULT_INTELLIGENT_WEIGHTS.specificityMatch,
       contextAffinity:
         toFiniteNumber(rawWeights.contextAffinity) ?? DEFAULT_INTELLIGENT_WEIGHTS.contextAffinity,
+      cacheAffinity:
+        toFiniteNumber(rawWeights.cacheAffinity) ?? DEFAULT_INTELLIGENT_WEIGHTS.cacheAffinity,
       resetWindowAffinity:
         toFiniteNumber(rawWeights.resetWindowAffinity) ??
         DEFAULT_INTELLIGENT_WEIGHTS.resetWindowAffinity,

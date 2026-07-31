@@ -17,8 +17,9 @@ import { handleDashscopeVideoGeneration } from "./videoGeneration/dashscopeHandl
 import { handleNovitaVideoGeneration } from "./videoGeneration/novitaHandler.ts";
 import { handleXaiVideoGeneration } from "./videoGeneration/xaiGrokImagineHandler.ts";
 import { handleSegmindVideoGeneration } from "./videoGeneration/providers/segmind.ts";
+import { handleAdobeFireflyVideoGeneration } from "./videoGeneration/adobeFireflyHandler.ts";
 import { getExecutor } from "../executors/index.ts";
-import { isJsonObject, parseKieResultJson } from "../utils/kieTask.ts";
+import { getKieTaskId, isJsonObject, parseKieResultJson } from "../utils/kieTask.ts";
 import {
   buildRunwayApiUrl,
   buildRunwayHeaders,
@@ -147,6 +148,16 @@ export async function handleVideoGeneration({ body, credentials, log }) {
   if (providerConfig.format === "xai-video") {
     return handleXaiVideoGeneration({ model, provider, providerConfig, body, credentials, log });
   }
+  if (providerConfig.format === "adobe-firefly-video") {
+    return handleAdobeFireflyVideoGeneration({
+      model,
+      provider,
+      providerConfig,
+      body,
+      credentials,
+      log,
+    });
+  }
 
   return {
     success: false,
@@ -242,9 +253,34 @@ async function handleVeoAiFreeVideoGeneration({ model, provider, body, credentia
     };
   }
 
+  const payload = await upstreamResponse.json().catch(() => null);
+  const item = Array.isArray(payload?.data) ? payload.data[0] : null;
+  if (
+    !payload ||
+    !Array.isArray(payload.data) ||
+    payload.data.length !== 1 ||
+    !item ||
+    typeof item.b64_json !== "string" ||
+    item.b64_json.trim().length === 0 ||
+    item.format !== "mp4" ||
+    typeof item.url === "string"
+  ) {
+    return {
+      success: false,
+      status: 502,
+      error: {
+        error: {
+          message: "Veo AI Free did not return a valid MP4 artifact",
+          type: "upstream_error",
+          code: "VIDEO_ARTIFACT_UNAVAILABLE",
+        },
+      },
+    };
+  }
+
   return {
     success: true,
-    data: await upstreamResponse.json(),
+    data: payload,
   };
 }
 
@@ -529,7 +565,7 @@ async function handleKieVideoGeneration({
 
   try {
     const createData = await kieExecutor.createTask({ baseUrl, token, payload });
-    const taskId = createData?.data?.taskId || createData?.taskId;
+    const taskId = getKieTaskId(createData);
     if (!taskId) {
       const errorMessage =
         createData?.msg ||

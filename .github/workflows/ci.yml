@@ -35,7 +35,7 @@ jobs:
       workflow: ${{ steps.classify.outputs.workflow }}
       testsOnly: ${{ steps.classify.outputs.testsOnly }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -449,6 +449,36 @@ jobs:
     # UI keys move with dashboard code OR message catalogs.
     if: ${{ github.event_name != 'pull_request' || (github.event.pull_request.draft == false && (needs.changes.outputs.i18n == 'true' || needs.changes.outputs.code == 'true')) }}
     steps:
+      # fetch-depth: 0 — the value-drift gate diffs en.json against the merge base to
+      # find rewritten English strings. On a shallow clone the base ref is missing and
+      # the gate self-skips (base-unresolved), so it would never actually run.
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.CI_NODE_VERSION }}
+          cache: npm
+      - uses: ./.github/actions/npm-ci-retry
+      - run: node scripts/i18n/check-ui-keys-coverage.mjs --threshold=65
+      # #8463: a rewritten English value used to leave its 39 translations behind
+      # silently (googleOAuthWarning shipped wrong copy in 39 locales for months).
+      # Key parity above cannot see it — a stale translation counts as covered.
+      - name: i18n UI value drift (stale translations)
+        env:
+          BASE_REF: ${{ github.base_ref && format('origin/{0}', github.base_ref) || '' }}
+        run: node scripts/i18n/check-ui-value-drift.mjs
+
+  # #8038: cheap single-locale glossary/protected-terms consistency gate —
+  # complements i18n-ui-coverage (key parity) and the ICU `i18n` job below
+  # without needing app-boot/Playwright infra. Same gating as i18n-ui-coverage.
+  i18n-glossary-zhcn:
+    name: i18n Glossary (zh-CN)
+    runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ github.event_name != 'pull_request' || (github.event.pull_request.draft == false && (needs.changes.outputs.i18n == 'true' || needs.changes.outputs.code == 'true')) }}
+    steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
@@ -457,7 +487,8 @@ jobs:
           node-version: ${{ env.CI_NODE_VERSION }}
           cache: npm
       - uses: ./.github/actions/npm-ci-retry
-      - run: node scripts/i18n/check-ui-keys-coverage.mjs --threshold=65
+      - run: node scripts/i18n/check-glossary-consistency.mjs --locale=zh-CN
+      - run: node scripts/i18n/check-glossary-consistency.mjs --locale=zh-TW
 
   # D4 (plano mestre testes+CI): a matrix de ~40 jobs de <1min por idioma saturava sozinha
   # a concorrência de jobs da conta (Free = 20 slots, compartilhados entre TODOS os repos)
@@ -477,7 +508,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Validate all languages
@@ -888,7 +919,7 @@ jobs:
       # (if-no-files-found: warn) — Sonar consumes the same file.
       - name: Upload coverage to Codecov (informational)
         if: always()
-        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           files: coverage/lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -1095,7 +1126,8 @@ jobs:
           if FILES=$(node scripts/quality/balance-e2e-shards.mjs "$SHARD" 9); then
             if [ -z "$FILES" ]; then echo "[e2e-balance] shard $SHARD has no files"; exit 0; fi
             echo "[e2e-balance] shard $SHARD runs:"; echo "$FILES"
-            # shellcheck disable=SC2086 — FILES is our own newline-separated path list
+            # FILES is our own newline-separated path list, so word-splitting is intended
+            # shellcheck disable=SC2086,SC2046
             npx playwright test $(echo "$FILES" | tr '\n' ' ') --reporter=line,junit
           else
             echo "[e2e-balance] balancer unavailable — plain --shard fallback"
@@ -1172,6 +1204,7 @@ jobs:
       - lint
       - docs-sync-strict
       - i18n-ui-coverage
+      - i18n-glossary-zhcn
       - i18n
       - pr-test-policy
       - build
@@ -1217,6 +1250,7 @@ jobs:
           echo "| Lint | $(status '${{ needs.lint.result }}') |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Docs Sync (Strict) | $(status '${{ needs.docs-sync-strict.result }}') |" >> "$GITHUB_STEP_SUMMARY"
           echo "| i18n UI Coverage | $(status '${{ needs.i18n-ui-coverage.result }}') |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| i18n Glossary (zh-CN) | $(status '${{ needs.i18n-glossary-zhcn.result }}') |" >> "$GITHUB_STEP_SUMMARY"
           echo "| PR Test Policy | $(status '${{ needs.pr-test-policy.result }}') |" >> "$GITHUB_STEP_SUMMARY"
           echo "| SonarQube | $(status '${{ needs.sonarqube.result }}') |" >> "$GITHUB_STEP_SUMMARY"
 

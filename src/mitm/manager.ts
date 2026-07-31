@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from "child_process";
 import path from "path";
 import fs from "fs";
 import { resolveMitmDataDir } from "./dataDir.ts";
-import { removeDNSEntry, removeDNSEntries } from "./dns/dnsConfig.ts";
+import { removeDNSEntry, removeDNSEntries, checkDNSEntryForAgent } from "./dns/dnsConfig.ts";
 import { provisionDnsEntries } from "./dns/provision.ts";
 import { generateCert } from "./cert/generate.ts";
 import { installCertResult, installCaCert } from "./cert/install.ts";
@@ -353,9 +353,16 @@ export async function handleExitCleanup(
 }
 
 /**
- * Get MITM status
+ * Get MITM status.
+ *
+ * @param agentId - Optional agent whose hosts should be checked in DNS. When
+ * omitted, preserves the legacy Antigravity-only check (unchanged behavior
+ * for the existing no-agentId call sites: state/route.ts, server/route.ts,
+ * settings/mitm/route.ts, cli-tools/antigravity-mitm/route.ts). When
+ * provided (e.g. by the diagnose route), checks that agent's own hosts
+ * instead of always checking the Antigravity host set (#8466).
  */
-export async function getMitmStatus(): Promise<{
+export async function getMitmStatus(agentId?: string): Promise<{
   running: boolean;
   pid: number | null;
   dnsConfigured: boolean;
@@ -387,11 +394,17 @@ export async function getMitmStatus(): Promise<{
     }
   }
 
-  // Check DNS configuration
+  // Check DNS configuration. When an agentId is provided, check THAT agent's
+  // own hosts (#8466) instead of always checking the Antigravity host set —
+  // callers that don't pass agentId keep the legacy Antigravity-only check.
   let dnsConfigured = false;
   try {
-    const hostsContent = fs.readFileSync("/etc/hosts", "utf-8");
-    dnsConfigured = /\bdaily-cloudcode-pa\.googleapis\.com\b/.test(hostsContent);
+    if (agentId) {
+      dnsConfigured = checkDNSEntryForAgent(agentId);
+    } else {
+      const hostsContent = fs.readFileSync("/etc/hosts", "utf-8");
+      dnsConfigured = /\bdaily-cloudcode-pa\.googleapis\.com\b/.test(hostsContent);
+    }
   } catch {
     // Ignore
   }
@@ -539,7 +552,10 @@ async function startMitmInternal(
           );
         }
       } catch (err) {
-        log.error({ err }, "installCertResult threw unexpectedly (continuing without trusted cert)");
+        log.error(
+          { err },
+          "installCertResult threw unexpectedly (continuing without trusted cert)"
+        );
       }
     }
   );
@@ -586,6 +602,7 @@ async function startMitmInternal(
   }
 
   serverProcess = spawn(process.execPath, [MITM_SERVER_PATH], {
+    windowsHide: true,
     env: {
       ...process.env,
       ROUTER_API_KEY: apiKey,

@@ -14,6 +14,7 @@ import {
 import { parseVscodeServiceTierVariantModelId } from "@/app/api/v1/vscode/raw/[token]/serviceTierVariants";
 import { getFamilyFirstModelCandidates } from "@/app/api/v1/vscode/raw/[token]/familyFirstModelIds";
 import { withPathTokenApiKey } from "@/app/api/v1/vscode/raw/[token]/tokenizedRequest";
+import { isUsableChatModel } from "@/app/api/v1/vscode/[token]/usableChatModel";
 
 type OpenAiCatalogModel = {
   id?: string;
@@ -31,41 +32,16 @@ type OpenAiCatalogModel = {
   supported_endpoints?: string[];
 };
 
-function isUsableChatModel(model: OpenAiCatalogModel) {
-  if (typeof model.owned_by === "string" && model.owned_by.trim().toLowerCase() === "combo") {
-    return false;
-  }
-  if (typeof model.parent === "string" && model.parent.length > 0) return false;
-  if (typeof model.type === "string" && model.type !== "chat") return false;
-
-  const apiFormat = typeof model.api_format === "string" ? model.api_format : "chat-completions";
-  if (apiFormat !== "chat-completions") return false;
-
-  if (
-    Array.isArray(model.supported_endpoints) &&
-    model.supported_endpoints.length > 0 &&
-    !model.supported_endpoints.includes("chat")
-  ) {
-    return false;
-  }
-
-  if (
-    Array.isArray(model.output_modalities) &&
-    model.output_modalities.length > 0 &&
-    !model.output_modalities.includes("text")
-  ) {
-    return false;
-  }
-
-  return true;
-}
-
 function getCatalogModelId(model: OpenAiCatalogModel) {
   return model.id || model.name || model.root || "unknown";
 }
 
 function normalizeArchitectureKey(value: string) {
-  const normalized = value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
   return normalized || "model";
 }
 
@@ -86,7 +62,9 @@ function getRequestedModelName(payload: unknown): string | null {
 function getOllamaModelFamily(model: OpenAiCatalogModel, canonicalFamily?: string | null) {
   const rawModelId = getCatalogModelId(model).trim();
   const { baseModelId } = parseVscodeServiceTierVariantModelId(rawModelId);
-  const modelFamily = baseModelId.includes("/") ? baseModelId.split("/").slice(1).join("/") : baseModelId;
+  const modelFamily = baseModelId.includes("/")
+    ? baseModelId.split("/").slice(1).join("/")
+    : baseModelId;
 
   if (modelFamily) {
     return modelFamily;
@@ -136,13 +114,14 @@ function buildShowPayload(model: OpenAiCatalogModel, responseModelId?: string) {
   });
   const family = getOllamaModelFamily(model, canonicalMetadata?.metadata.family || null);
   const modelId = responseModelId || actualModelId;
-  const architectureSource =
-    normalizeArchitectureSource(
-      canonicalMetadata?.providerAlias || canonicalMetadata?.provider || model.owned_by || family || "model"
-    );
-  const architecture = normalizeArchitectureKey(
-    architectureSource
+  const architectureSource = normalizeArchitectureSource(
+    canonicalMetadata?.providerAlias ||
+      canonicalMetadata?.provider ||
+      model.owned_by ||
+      family ||
+      "model"
   );
+  const architecture = normalizeArchitectureKey(architectureSource);
   const reasoningEffortValues = getReasoningEffortValues(model as VscodeCatalogModel);
   const selectedReasoningEffort = reasoningEffortValues
     ? inferSelectedReasoningEffort(model as VscodeCatalogModel, reasoningEffortValues) || "none"
@@ -302,7 +281,7 @@ export async function POST(
     : [];
 
   const model = Array.isArray(expandedModels)
-  ? expandedModels.find((entry) => matchesRequestedModel(entry, requestedName))
+    ? expandedModels.find((entry) => matchesRequestedModel(entry, requestedName))
     : undefined;
 
   if (!model) {

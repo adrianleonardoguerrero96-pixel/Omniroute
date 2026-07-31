@@ -19,10 +19,7 @@
  */
 
 import { ERROR_CODES } from "@/shared/constants/errorCodes";
-import {
-  attachRequestIdToResponse,
-  getRequestId,
-} from "@/shared/utils/requestId";
+import { attachRequestIdToResponse, getRequestId } from "@/shared/utils/requestId";
 
 export type ComboErrorCode =
   | "COMBO_001" // request body is not valid JSON
@@ -32,6 +29,7 @@ export type ComboErrorCode =
   | "COMBO_005" // DAG cycle / depth overflow
   | "COMBO_006" // managed by Quota Share (409)
   | "COMBO_007" // not found (404)
+  | "COMBO_008" // provider / model family invariant violation
   | "VALID_001" // generic invalid body
   | "VALID_002" // missing required field
   | "INTERNAL_001"; // fallback
@@ -46,10 +44,7 @@ export interface ComboErrorBody {
   };
 }
 
-export function buildComboErrorBody(
-  code: ComboErrorCode,
-  details?: unknown
-): ComboErrorBody {
+export function buildComboErrorBody(code: ComboErrorCode, details?: unknown): ComboErrorBody {
   const def = ERROR_CODES[code] ?? ERROR_CODES.INTERNAL_001;
   const requestId = getRequestId();
   return {

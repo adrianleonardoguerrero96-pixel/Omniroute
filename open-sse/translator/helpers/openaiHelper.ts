@@ -31,7 +31,16 @@ const CLAUDE_TOOL_CHOICE_REQUIRED = "an" + "y";
 // Filter messages to OpenAI standard format
 // Remove: redacted_thinking, and other non-OpenAI blocks
 // Convert: thinking blocks → reasoning_content on the message
-export function filterToOpenAIFormat(body, opts = {}) {
+export interface FilterToOpenAIFormatOptions {
+  /** Keep `cache_control` on content blocks (providers that honor OpenAI-format breakpoints). */
+  preserveCacheControl?: boolean;
+  /** Keep Moonshot's non-standard `video_url` content block. */
+  preserveVideoUrl?: boolean;
+  /** Keep `reasoning_content` on tool-call assistant turns (reasoning-replay providers). */
+  preserveReasoningContent?: boolean;
+}
+
+export function filterToOpenAIFormat(body, opts: FilterToOpenAIFormatOptions = {}) {
   // #2069 — when the routed provider honors OpenAI-format cache_control
   // breakpoints (DashScope/alibaba, Xiaomi MiMo, etc.) and preservation was
   // requested upstream, keep the `cache_control` field on each content block
@@ -95,9 +104,7 @@ export function filterToOpenAIFormat(body, opts = {}) {
           // honors OpenAI-format cache breakpoints and preservation was requested (#2069).
           const { signature, cache_control, ...rest } = block;
           const cleanBlock =
-            preserveCacheControl && cache_control !== undefined
-              ? { ...rest, cache_control }
-              : rest;
+            preserveCacheControl && cache_control !== undefined ? { ...rest, cache_control } : rest;
           if (
             cleanBlock.type === "text" &&
             typeof cleanBlock.text === "string" &&

@@ -35,6 +35,7 @@ import { bedrockProvider } from "./registry/bedrock/index.ts";
 import { inner_aiProvider } from "./registry/inner-ai/index.ts";
 import { qoderProvider } from "./registry/qoder/index.ts";
 import { xiaomi_mimoProvider } from "./registry/xiaomi-mimo/index.ts";
+import { xiaomi_mimo_token_planProvider } from "./registry/xiaomi-mimo-token-plan/index.ts";
 import { codestralProvider } from "./registry/codestral/index.ts";
 import { wandbProvider } from "./registry/wandb/index.ts";
 import { predibaseProvider } from "./registry/predibase/index.ts";
@@ -101,6 +102,7 @@ import { t3_webProvider } from "./registry/t3-web/index.ts";
 import { iflytekProvider } from "./registry/iflytek/index.ts";
 import { crofProvider } from "./registry/crof/index.ts";
 import { moonshotProvider } from "./registry/moonshot/index.ts";
+import { poeProvider } from "./registry/poe/index.ts";
 import { bazaarlinkProvider } from "./registry/bazaarlink/index.ts";
 import { perplexityProvider } from "./registry/perplexity/index.ts";
 import { perplexity_webProvider } from "./registry/perplexity/web/index.ts";
@@ -171,6 +173,14 @@ import { chenzkProvider } from "./registry/chenzk/index.ts";
 import { factoryProvider } from "./registry/factory/index.ts";
 import { databricksProvider } from "./registry/databricks/index.ts";
 import { rekaProvider } from "./registry/reka/index.ts";
+import { typhoonProvider } from "./registry/typhoon/index.ts";
+import { inceptionProvider } from "./registry/inception/index.ts";
+import { sarvamProvider } from "./registry/sarvam/index.ts";
+import { writerProvider } from "./registry/writer/index.ts";
+import { plamoProvider } from "./registry/plamo/index.ts";
+import { clova_studioProvider } from "./registry/clova-studio/index.ts";
+import { internlmProvider } from "./registry/internlm/index.ts";
+import { ant_lingProvider } from "./registry/ant-ling/index.ts";
 import { vercel_ai_gatewayProvider } from "./registry/vercel-ai-gateway/index.ts";
 import { v0_vercelProvider } from "./registry/v0-vercel/index.ts";
 import { opencode_zenProvider } from "./registry/opencode/zen/index.ts";
@@ -209,6 +219,7 @@ import { routewayProvider } from "./registry/routeway/index.ts";
 import { digitaloceanProvider } from "./registry/digitalocean/index.ts";
 import { hcnsecProvider } from "./registry/hcnsec/index.ts";
 import { promptqlProvider } from "./registry/promptql/index.ts";
+import { hyperagentProvider } from "./registry/hyperagent/index.ts";
 
 export const REGISTRY: Record<string, RegistryEntry> = {
   aimlapi: aimlapiProvider,
@@ -244,6 +255,7 @@ export const REGISTRY: Record<string, RegistryEntry> = {
   "inner-ai": inner_aiProvider,
   qoder: qoderProvider,
   "xiaomi-mimo": xiaomi_mimoProvider,
+  "xiaomi-mimo-token-plan": xiaomi_mimo_token_planProvider,
   codestral: codestralProvider,
   wandb: wandbProvider,
   predibase: predibaseProvider,
@@ -310,6 +322,7 @@ export const REGISTRY: Record<string, RegistryEntry> = {
   iflytek: iflytekProvider,
   crof: crofProvider,
   moonshot: moonshotProvider,
+  poe: poeProvider,
   bazaarlink: bazaarlinkProvider,
   perplexity: perplexityProvider,
   "perplexity-web": perplexity_webProvider,
@@ -379,6 +392,14 @@ export const REGISTRY: Record<string, RegistryEntry> = {
   factory: factoryProvider,
   databricks: databricksProvider,
   reka: rekaProvider,
+  typhoon: typhoonProvider,
+  inception: inceptionProvider,
+  sarvam: sarvamProvider,
+  writer: writerProvider,
+  plamo: plamoProvider,
+  "clova-studio": clova_studioProvider,
+  internlm: internlmProvider,
+  "ant-ling": ant_lingProvider,
   "vercel-ai-gateway": vercel_ai_gatewayProvider,
   "v0-vercel": v0_vercelProvider,
   "opencode-zen": opencode_zenProvider,
@@ -420,4 +441,5 @@ export const REGISTRY: Record<string, RegistryEntry> = {
   digitalocean: digitaloceanProvider,
   hcnsec: hcnsecProvider,
   promptql: promptqlProvider,
+  hyperagent: hyperagentProvider,
 };

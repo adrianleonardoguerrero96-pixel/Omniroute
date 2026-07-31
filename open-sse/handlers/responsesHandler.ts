@@ -40,7 +40,7 @@ export async function handleResponsesCore({
   const customToolNames = collectResponsesCustomToolNames(body?.tools, inputItems);
 
   // Convert Responses API format to Chat Completions format
-  const convertedBody = convertResponsesApiFormat(body, credentials);
+  const convertedBody = convertResponsesApiFormat(body, credentials, modelInfo?.provider);
 
   // Ensure stream is enabled
   convertedBody.stream = true;
@@ -60,6 +60,13 @@ export async function handleResponsesCore({
     comboName: null,
   });
 
+  // handleChatCore's union includes a bare Response (early returns that never
+  // reach the {success, response} envelope). Peel it off first so the envelope
+  // checks below are reading a shape that actually has those fields — the
+  // outcome is unchanged, a bare Response was already returned as-is.
+  if (result instanceof Response) {
+    return result;
+  }
   if (!result.success || !result.response) {
     return result;
   }

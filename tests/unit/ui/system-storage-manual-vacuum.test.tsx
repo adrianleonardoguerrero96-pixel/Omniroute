@@ -8,10 +8,10 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key,
-  useLocale: () => "en",
-}));
+// next-intl: no local mock — falls through to the real-EN-text default mock in
+// tests/_setup/vitestUiPolyfills.ts. The button text is found by literal
+// `textContent.includes("Manual VACUUM")` below, which the previous `(key) => key`
+// mock never satisfied (it rendered the raw "manualVacuum" key).
 
 import SystemStorageTab from "@/app/(dashboard)/dashboard/settings/components/SystemStorageTab";
 
@@ -31,7 +31,11 @@ beforeEach(() => {
       // test): a non-ok GET leaves dbSettings null, so the `!dbSettingsLoading &&
       // dbSettings` form block is skipped while the Maintenance card stays rendered.
       if (method === "GET" && /\/api\/settings\/database$/.test(url)) {
-        return Promise.resolve({ ok: false, status: 404, json: async () => ({}) } as unknown as Response);
+        return Promise.resolve({
+          ok: false,
+          status: 404,
+          json: async () => ({}),
+        } as unknown as Response);
       }
       return Promise.resolve({
         ok: true,

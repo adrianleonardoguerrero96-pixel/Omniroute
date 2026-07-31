@@ -1,6 +1,31 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import * as generator from "../../../src/lib/cli-helper/config-generator/index.ts";
+
+// The UI's HERMES_ROLES catalog (HermesAgentToolCard.tsx) is a "use client" component
+// module — importing it in the Node test runner would pull in React/JSX. Instead we
+// extract the id list straight from source text, which is enough to diff catalogs
+// without executing the component.
+function readUiHermesRoleIds(): string[] {
+  const uiFilePath = fileURLToPath(
+    new URL(
+      "../../../src/app/(dashboard)/dashboard/cli-code/components/HermesAgentToolCard.tsx",
+      import.meta.url
+    )
+  );
+  const source = readFileSync(uiFilePath, "utf-8");
+  const arrayMatch = source.match(/const HERMES_ROLES: Role\[\] = \[([\s\S]*?)\n\];/);
+  assert.ok(arrayMatch, "could not locate HERMES_ROLES array in HermesAgentToolCard.tsx");
+  const body = arrayMatch[1];
+  return Array.from(body.matchAll(/id:\s*"([a-z0-9_]+)"/g)).map((m) => m[1]);
+}
+
+function readEnMessages(): { cliTools?: Record<string, string> } {
+  const enJsonPath = fileURLToPath(new URL("../../../src/i18n/messages/en.json", import.meta.url));
+  return JSON.parse(readFileSync(enJsonPath, "utf-8"));
+}
 
 describe("config-generator", () => {
   describe("validateBaseUrl", () => {
@@ -22,9 +47,8 @@ describe("config-generator", () => {
 
   describe("assertSafeCatalogUrl (SSRF guard, CodeQL #326)", () => {
     it("allows the loopback OmniRoute target (the legitimate default) and returns a URL", async () => {
-      const { assertSafeCatalogUrl } = await import(
-        "../../../src/lib/cli-helper/config-generator/opencode.ts"
-      );
+      const { assertSafeCatalogUrl } =
+        await import("../../../src/lib/cli-helper/config-generator/opencode.ts");
       // The catalog source IS the user's own OmniRoute — localhost must stay allowed.
       assert.doesNotThrow(() => assertSafeCatalogUrl("http://localhost:20128/v1/models"));
       assert.doesNotThrow(() => assertSafeCatalogUrl("http://127.0.0.1:20128/v1/models"));
@@ -35,26 +59,21 @@ describe("config-generator", () => {
     });
 
     it("allows a public OmniRoute Cloud target", async () => {
-      const { assertSafeCatalogUrl } = await import(
-        "../../../src/lib/cli-helper/config-generator/opencode.ts"
-      );
+      const { assertSafeCatalogUrl } =
+        await import("../../../src/lib/cli-helper/config-generator/opencode.ts");
       assert.doesNotThrow(() => assertSafeCatalogUrl("https://api.omniroute.online/v1/models"));
     });
 
     it("blocks the cloud-metadata SSRF→IAM pivot (169.254.169.254)", async () => {
-      const { assertSafeCatalogUrl } = await import(
-        "../../../src/lib/cli-helper/config-generator/opencode.ts"
-      );
+      const { assertSafeCatalogUrl } =
+        await import("../../../src/lib/cli-helper/config-generator/opencode.ts");
       assert.throws(() => assertSafeCatalogUrl("http://169.254.169.254/v1/models"));
-      assert.throws(() =>
-        assertSafeCatalogUrl("http://metadata.google.internal/v1/models")
-      );
+      assert.throws(() => assertSafeCatalogUrl("http://metadata.google.internal/v1/models"));
     });
 
     it("blocks non-http(s) protocols and embedded credentials", async () => {
-      const { assertSafeCatalogUrl } = await import(
-        "../../../src/lib/cli-helper/config-generator/opencode.ts"
-      );
+      const { assertSafeCatalogUrl } =
+        await import("../../../src/lib/cli-helper/config-generator/opencode.ts");
       assert.throws(() => assertSafeCatalogUrl("file:///etc/passwd"));
       assert.throws(() => assertSafeCatalogUrl("http://user:pass@example.com/v1/models"));
     });
@@ -133,6 +152,95 @@ describe("config-generator", () => {
       assert.ok(ids.includes("delegation"));
       assert.ok(ids.includes("vision"));
       assert.ok(ids.includes("approval"));
+      // Full catalog, including the 11 auxiliary roles added alongside HERMES_AGENT_ROLES
+      // (mcp, title_generation, memory_query_rewrite, tts_audio_tags, triage_specifier,
+      // kanban_decomposer, profile_describer, goal_judge, curator, monitor,
+      // background_review). Listed explicitly (not just parity-diffed against the UI
+      // below) so a role dropped from BOTH catalogs at once still fails this test.
+      const expectedIds = [
+        "default",
+        "delegation",
+        "vision",
+        "web_extract",
+        "compression",
+        "skills_hub",
+        "approval",
+        "mcp",
+        "title_generation",
+        "memory_query_rewrite",
+        "tts_audio_tags",
+        "triage_specifier",
+        "kanban_decomposer",
+        "profile_describer",
+        "goal_judge",
+        "curator",
+        "monitor",
+        "background_review",
+      ];
+      assert.deepStrictEqual([...ids].sort(), [...expectedIds].sort());
+    });
+
+    it("keeps the backend HERMES_AGENT_ROLES catalog in sync with the UI's HERMES_ROLES catalog", async () => {
+      // The UI (HermesAgentToolCard.tsx) maintains its own parallel role catalog for
+      // rendering the role dropdowns. Nothing at the type level keeps the two catalogs
+      // in sync, so a role added to one and not the other would ship silently (the
+      // backend would accept a role the UI never offers, or the UI would offer a role
+      // the backend config generator doesn't know how to place in the YAML). Diffing
+      // the id lists turns that drift into a CI failure instead.
+      const hermesAgent =
+        await import("../../../src/lib/cli-helper/config-generator/hermes-agent.ts");
+      const backendIds: string[] = hermesAgent.HERMES_AGENT_ROLES.map((r) => r.id);
+      const uiIds = readUiHermesRoleIds();
+
+      const missingFromUi = backendIds.filter((id) => !uiIds.includes(id));
+      const missingFromBackend = uiIds.filter((id) => !backendIds.includes(id));
+
+      assert.deepStrictEqual(
+        missingFromUi,
+        [],
+        `role ids present in backend HERMES_AGENT_ROLES but missing from UI HERMES_ROLES: ${missingFromUi.join(", ")}`
+      );
+      assert.deepStrictEqual(
+        missingFromBackend,
+        [],
+        `role ids present in UI HERMES_ROLES but missing from backend HERMES_AGENT_ROLES: ${missingFromBackend.join(", ")}`
+      );
+    });
+
+    it("resolves labelKey/descriptionKey for every HERMES_AGENT_ROLES id in en.json's cliTools namespace", async () => {
+      // Generalizes the exact bug class the contributor had to hand-fix in their 2nd
+      // commit (missing vi/pt-BR translations for the new roles): every role's
+      // labelKey/descriptionKey must exist as a real key under cliTools in en.json,
+      // the source-of-truth locale, or the UI silently renders the raw key string.
+      const uiFilePath = fileURLToPath(
+        new URL(
+          "../../../src/app/(dashboard)/dashboard/cli-code/components/HermesAgentToolCard.tsx",
+          import.meta.url
+        )
+      );
+      const source = readFileSync(uiFilePath, "utf-8");
+      const arrayMatch = source.match(/const HERMES_ROLES: Role\[\] = \[([\s\S]*?)\n\];/);
+      assert.ok(arrayMatch, "could not locate HERMES_ROLES array in HermesAgentToolCard.tsx");
+      const body = arrayMatch[1];
+      const roleEntries = Array.from(
+        body.matchAll(
+          /id:\s*"([a-z0-9_]+)"[\s\S]*?labelKey:\s*"([A-Za-z0-9]+)"[\s\S]*?descriptionKey:\s*"([A-Za-z0-9]+)"/g
+        )
+      ).map((m) => ({ id: m[1], labelKey: m[2], descriptionKey: m[3] }));
+      assert.ok(roleEntries.length > 0, "expected at least one role entry to be parsed");
+
+      const en = readEnMessages();
+      const cliTools = en.cliTools || {};
+      const missing: string[] = [];
+      for (const { id, labelKey, descriptionKey } of roleEntries) {
+        if (typeof cliTools[labelKey] !== "string") {
+          missing.push(`${id}: labelKey "${labelKey}"`);
+        }
+        if (typeof cliTools[descriptionKey] !== "string") {
+          missing.push(`${id}: descriptionKey "${descriptionKey}"`);
+        }
+      }
+      assert.deepStrictEqual(missing, [], `missing en.json cliTools keys: ${missing.join("; ")}`);
     });
 
     it("getCurrentHermesAgentRoles returns an object", async () => {
@@ -236,10 +344,20 @@ describe("config-generator", () => {
     }
 
     const SAMPLE_CATALOG: unknown[] = [
-      { id: "ds/deepseek-v4-flash", owned_by: "deepseek", context_length: 1_000_000, max_input_tokens: 1_000_000 },
+      {
+        id: "ds/deepseek-v4-flash",
+        owned_by: "deepseek",
+        context_length: 1_000_000,
+        max_input_tokens: 1_000_000,
+      },
       { id: "llama3", owned_by: "llama", max_context_window_tokens: 8192 },
       { id: "MASTER", owned_by: "combo", context_length: 131072, max_input_tokens: 131072 },
-      { id: "Opencode FREE Omni", owned_by: "combo", context_length: 200000, max_input_tokens: 160000 },
+      {
+        id: "Opencode FREE Omni",
+        owned_by: "combo",
+        context_length: 200000,
+        max_input_tokens: 160000,
+      },
       // Combo whose targets have no known context — generator must NOT
       // fabricate a default. The model is emitted without limit.context.
       { id: "NO_CTX_COMBO", owned_by: "combo" },
@@ -267,9 +385,8 @@ describe("config-generator", () => {
     it("emits limit.context from the catalog (no hardcoded fallback)", async () => {
       const stub = stubFetchOnce(makeCatalogResponse(SAMPLE_CATALOG));
       try {
-        const { generateOpencodeConfig } = await import(
-          "../../../src/lib/cli-helper/config-generator/opencode.ts"
-        );
+        const { generateOpencodeConfig } =
+          await import("../../../src/lib/cli-helper/config-generator/opencode.ts");
         const out = await generateOpencodeConfig({
           baseUrl: "http://localhost:20128",
           apiKey: "sk-test",
@@ -289,9 +406,8 @@ describe("config-generator", () => {
     it("does NOT fabricate a default context when the catalog has no entry", async () => {
       const stub = stubFetchOnce(makeCatalogResponse(SAMPLE_CATALOG));
       try {
-        const { generateOpencodeConfig } = await import(
-          "../../../src/lib/cli-helper/config-generator/opencode.ts"
-        );
+        const { generateOpencodeConfig } =
+          await import("../../../src/lib/cli-helper/config-generator/opencode.ts");
         const out = await generateOpencodeConfig({
           baseUrl: "http://localhost:20128",
           apiKey: "sk-test",
@@ -315,9 +431,8 @@ describe("config-generator", () => {
     it("prefers max_context_window_tokens when context_length is absent", async () => {
       const stub = stubFetchOnce(makeCatalogResponse(SAMPLE_CATALOG));
       try {
-        const { generateOpencodeConfig } = await import(
-          "../../../src/lib/cli-helper/config-generator/opencode.ts"
-        );
+        const { generateOpencodeConfig } =
+          await import("../../../src/lib/cli-helper/config-generator/opencode.ts");
         const out = await generateOpencodeConfig({
           baseUrl: "http://localhost:20128",
           apiKey: "sk-test",
@@ -340,9 +455,8 @@ describe("config-generator", () => {
         throw new Error("ECONNREFUSED");
       }) as typeof fetch;
       try {
-        const { generateOpencodeConfig } = await import(
-          "../../../src/lib/cli-helper/config-generator/opencode.ts"
-        );
+        const { generateOpencodeConfig } =
+          await import("../../../src/lib/cli-helper/config-generator/opencode.ts");
         let threw = false;
         try {
           await generateOpencodeConfig({
@@ -365,9 +479,8 @@ describe("config-generator", () => {
     it("writes a top-level model prefixed with provider id when options.model is supplied", async () => {
       const stub = stubFetchOnce(makeCatalogResponse(SAMPLE_CATALOG));
       try {
-        const { generateOpencodeConfig } = await import(
-          "../../../src/lib/cli-helper/config-generator/opencode.ts"
-        );
+        const { generateOpencodeConfig } =
+          await import("../../../src/lib/cli-helper/config-generator/opencode.ts");
         const out = await generateOpencodeConfig({
           baseUrl: "http://localhost:20128",
           apiKey: "sk-test",
@@ -386,9 +499,8 @@ describe("config-generator", () => {
       // the catalog's actual value.
       const stub = stubFetchOnce(makeCatalogResponse(SAMPLE_CATALOG));
       try {
-        const { generateOpencodeConfig } = await import(
-          "../../../src/lib/cli-helper/config-generator/opencode.ts"
-        );
+        const { generateOpencodeConfig } =
+          await import("../../../src/lib/cli-helper/config-generator/opencode.ts");
         const out = await generateOpencodeConfig({
           baseUrl: "http://localhost:20128",
           apiKey: "sk-test",

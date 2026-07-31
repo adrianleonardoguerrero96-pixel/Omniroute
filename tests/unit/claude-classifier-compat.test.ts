@@ -25,9 +25,8 @@ process.env.DATA_DIR = TEST_DATA_DIR;
 const core = await import("../../src/lib/db/core.ts");
 const { updateSettings } = await import("../../src/lib/db/settings.ts");
 const { handleChatCore } = await import("../../open-sse/handlers/chatCore.ts");
-const { shouldDefaultAllowClassifier, buildDefaultAllowClaudeMessage } = await import(
-  "../../open-sse/handlers/chatCore/claudeClassifierCompat.ts"
-);
+const { shouldDefaultAllowClassifier, buildDefaultAllowClaudeMessage } =
+  await import("../../open-sse/handlers/chatCore/claudeClassifierCompat.ts");
 const { FORMATS } = await import("../../open-sse/translator/formats.ts");
 
 const originalFetch = globalThis.fetch;
@@ -90,9 +89,13 @@ test("detector: auto fires on the security-monitor system-prompt marker", () => 
   assert.equal(shouldDefaultAllowClassifier(FORMATS.CLAUDE, body, "auto"), true);
 });
 
-test("detector: auto fires on the </block> stop_sequence token", () => {
+test("detector: auto does NOT fire on the </block> stop_sequence token alone (#8189 — over-broad trigger fix)", () => {
   const body = { system: [{ type: "text", text: "unrelated" }], stop_sequences: ["</block>"] };
-  assert.equal(shouldDefaultAllowClassifier(FORMATS.CLAUDE, body, "auto"), true);
+  assert.equal(
+    shouldDefaultAllowClassifier(FORMATS.CLAUDE, body, "auto"),
+    false,
+    "stop_sequences=['</block>'] alone must not short-circuit without the security-monitor marker"
+  );
 });
 
 test("detector: auto does NOT fire on a regular Claude request (no marker, no </block>)", () => {

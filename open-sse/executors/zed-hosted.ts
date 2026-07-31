@@ -38,7 +38,12 @@ import { openaiToOpenAIResponsesRequest } from "../translator/request/openai-res
 import { claudeToOpenAIResponse } from "../translator/response/claude-to-openai.ts";
 import { geminiToOpenAIResponse } from "../translator/response/gemini-to-openai.ts";
 import { openaiResponsesToOpenAIResponse } from "../translator/response/openai-responses.ts";
-import { ZED_HEADERS, resolveZedModels, zedLlmFetch, type ZedCredentials } from "../shared/zedAuth.ts";
+import {
+  ZED_HEADERS,
+  resolveZedModels,
+  zedLlmFetch,
+  type ZedCredentials,
+} from "../shared/zedAuth.ts";
 import { resolveSuppressThinkClose, THINKING_MARKER_HEADER } from "../utils/thinkCloseMarker.ts";
 
 const ZED_PROVIDER = {
@@ -117,8 +122,18 @@ function createErrorChunk(model: string, message: string): Record<string, unknow
   };
 }
 
+/**
+ * The single controller capability these SSE helpers use. They only ever enqueue —
+ * never `close()`, never read `desiredSize` — so typing them by that one method lets
+ * the same code serve both stream kinds. The wider
+ * `ReadableStreamDefaultController` annotation rejected every call site, because the
+ * helpers are driven from a TransformStream and `TransformStreamDefaultController`
+ * has no `close()`.
+ */
+type SseEnqueueTarget = Pick<ReadableStreamDefaultController<Uint8Array>, "enqueue">;
+
 function enqueueSseObject(
-  controller: ReadableStreamDefaultController<Uint8Array>,
+  controller: SseEnqueueTarget,
   encoder: TextEncoder,
   chunk: unknown
 ): void {
@@ -202,7 +217,7 @@ function wrapZedCompletionStream(
   let buffer = "";
   let done = false;
 
-  const finish = (controller: ReadableStreamDefaultController<Uint8Array>) => {
+  const finish = (controller: SseEnqueueTarget) => {
     if (done) return;
     const finalChunk = convertProviderEvent(provider, null, state);
     enqueueSseObject(controller, encoder, finalChunk);
@@ -210,7 +225,7 @@ function wrapZedCompletionStream(
     done = true;
   };
 
-  const processLine = (line: string, controller: ReadableStreamDefaultController<Uint8Array>) => {
+  const processLine = (line: string, controller: SseEnqueueTarget) => {
     if (done) return;
     const payload = unwrapZedLine(line);
     if (!payload) return;
@@ -335,7 +350,8 @@ export class ZedHostedExecutor extends BaseExecutor {
           "Content-Type": "application/json",
           Accept: "application/x-ndjson, text/event-stream, */*",
           "User-Agent": `OmniRoute/zed-hosted`,
-          "x-zed-version": (this.config as Record<string, unknown>)?.appVersion?.toString() || "0.200.0",
+          "x-zed-version":
+            (this.config as Record<string, unknown>)?.appVersion?.toString() || "0.200.0",
           [ZED_HEADERS.clientSupportsStatus]: "true",
           [ZED_HEADERS.clientSupportsStreamEnded]: "true",
         },
@@ -371,7 +387,10 @@ export class ZedHostedExecutor extends BaseExecutor {
     const errorObj = (parsed?.error as Record<string, unknown>) || undefined;
     const code = (parsed?.code as string) || (errorObj?.code as string) || "";
     const rawMessage =
-      (parsed?.message as string) || (errorObj?.message as string) || bodyText || response.statusText;
+      (parsed?.message as string) ||
+      (errorObj?.message as string) ||
+      bodyText ||
+      response.statusText;
     if (code === "trial_blocked") {
       return {
         status: response.status,

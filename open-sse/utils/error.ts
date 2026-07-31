@@ -3,6 +3,7 @@ import { unwrapClinepassEnvelope } from "./clinepassEnvelope.ts";
 import { getDefaultErrorMessage, getErrorInfo } from "../config/errorConfig.ts";
 import { normalizePayloadForLog } from "@/lib/logPayloads";
 import type { ModelCooldownErrorPayload } from "@/types";
+import { buildPassthroughErrorResponse } from "./upstreamErrorPassthrough.ts";
 
 /**
  * Sanitize an error message to prevent stack trace exposure in API responses.
@@ -38,6 +39,20 @@ function looksLikeAbsolutePath(tok: string): boolean {
   return (SOURCE_EXT as readonly string[]).includes(ext);
 }
 
+function redactSensitiveErrorText(value: string): string {
+  return value
+    .replace(/data:[^,\s]+;base64,[A-Za-z0-9+/=_-]+/gi, "[REDACTED_DATA_URL]")
+    .replace(/\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi, "$1 [REDACTED]")
+    .replace(
+      /(["']?(?:api[_-]?key|access[_-]?token|authorization|cookie|secret)["']?\s*[:=]\s*["'])[^"']*(["'])/gi,
+      "$1[REDACTED]$2"
+    )
+    .replace(
+      /(["']?(?:api[_-]?key|access[_-]?token|authorization|cookie|secret)["']?\s*[:=]\s*)[^"',\s}]+/gi,
+      "$1[REDACTED]"
+    );
+}
+
 /**
  * Strip stack-trace tail and absolute source paths from error messages.
  *
@@ -55,10 +70,11 @@ export function sanitizeErrorMessage(message: unknown): string {
   for (let i = 0; i < parts.length; i++) {
     if (looksLikeAbsolutePath(parts[i])) parts[i] = "<path>";
   }
-  return parts.join("");
+  return redactSensitiveErrorText(parts.join(""));
 }
 
-const BLOCKED_KEYS = /stack|trace|path|file|cwd|dir|password|secret|token|key/i;
+const BLOCKED_KEYS =
+  /stack|trace|path|file|cwd|dir|password|secret|token|key|authorization|cookie/i;
 const MAX_DEPTH = 4;
 
 /**
@@ -88,16 +104,25 @@ export function sanitizeUpstreamDetails(value: unknown, depth = 0): unknown {
   return null;
 }
 
+/** Optional caller classification; when set, wins over status-derived defaults. */
+export type ErrorBodyClassification = {
+  type?: string;
+  code?: string;
+};
+
 /**
  * Build OpenAI-compatible error response body. Message is always sanitized
  * so callers do not need to remember to strip stack traces themselves.
  * Optional third argument `upstreamDetails` (raw parsed provider body) is
  * sanitized by sanitizeUpstreamDetails before inclusion as `upstream_details`.
+ * Optional fourth argument `classification` preserves an explicit type/code
+ * instead of re-deriving both from the status-code table.
  */
 export function buildErrorBody(
   statusCode: number,
   message: string,
-  upstreamDetails?: unknown
+  upstreamDetails?: unknown,
+  classification?: ErrorBodyClassification
 ): ErrorResponseBody {
   const errorInfo = getErrorInfo(statusCode);
   const safeMessage = sanitizeErrorMessage(message) || getDefaultErrorMessage(statusCode);
@@ -105,8 +130,8 @@ export function buildErrorBody(
   const body: ErrorResponseBody = {
     error: {
       message: safeMessage,
-      type: errorInfo.type,
-      code: errorInfo.code,
+      type: classification?.type ?? errorInfo.type,
+      code: classification?.code ?? errorInfo.code,
     },
   };
 
@@ -505,7 +530,8 @@ export function createErrorResult(
   retryAfterMs: number | null = null,
   errorCode?: string,
   errorType?: string,
-  upstreamDetails?: unknown
+  upstreamDetails?: unknown,
+  opts?: { passthrough?: boolean }
 ) {
   const body = buildErrorBody(statusCode, message, upstreamDetails);
   if (errorCode) {
@@ -519,6 +545,18 @@ export function createErrorResult(
     success: false;
     status: number;
     error: string;
+    /**
+     * #7360: the FULL, un-sanitized upstream message — `error` above is
+     * truncated to its first line by sanitizeErrorMessage() (correctly, for
+     * the client-facing response body). Server-side classification
+     * (checkFallbackError / Gemini TPM-vs-RPD metric detection) needs the
+     * complete multi-line text — e.g. Google's metric name and retry hint
+     * live on lines 2-3, after the generic "quota exceeded" preamble on
+     * line 1. This field NEVER reaches the HTTP response body (`response`
+     * below is already built from the sanitized `body`); it exists purely
+     * for internal callers that inspect the returned object.
+     */
+    rawMessage: string;
     errorType?: string;
     errorCode?: string;
     response: Response;
@@ -527,6 +565,7 @@ export function createErrorResult(
     success: false,
     status: statusCode,
     error: body.error.message,
+    rawMessage: message,
     errorType,
     errorCode,
     response: new Response(JSON.stringify(body), {
@@ -538,6 +577,22 @@ export function createErrorResult(
   // Add retryAfterMs if available (for Antigravity quota errors)
   if (retryAfterMs) {
     result.retryAfterMs = retryAfterMs;
+  }
+
+  // Opt-in relay of the verbatim upstream error body (Claude Code auto-recover
+  // contract — see upstreamErrorPassthrough.ts). Only swaps `result.response`;
+  // `result.error`/`rawMessage`/`errorType`/`errorCode` stay untouched so
+  // server-side classification (checkFallbackError, combo retry logic, etc.)
+  // never sees a different value depending on this flag.
+  if (opts?.passthrough) {
+    const passthroughResponse = buildPassthroughErrorResponse(
+      statusCode,
+      upstreamDetails,
+      retryAfterMs ? { "Retry-After": String(Math.ceil(retryAfterMs / 1000)) } : undefined
+    );
+    if (passthroughResponse) {
+      result.response = passthroughResponse;
+    }
   }
 
   return result;
