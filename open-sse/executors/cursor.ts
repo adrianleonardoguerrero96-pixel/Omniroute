@@ -185,7 +185,11 @@ function buildExecRejection(event: ExecServerEvent): Buffer | null {
   }
 }
 
-const CURSOR_AGENT_HOST = "agentn.global.api5.cursor.sh";
+// Regional AgentService host. cursor-agent resolves this per-account region
+// (captured live as agentn.us.api5.cursor.sh for this deployment). The older
+// `agentn.global.*` host is rejected by current Cursor backends. Overridable
+// via CURSOR_AGENT_HOST for accounts homed in a different region.
+const CURSOR_AGENT_HOST = process.env.CURSOR_AGENT_HOST?.trim() || "agentn.us.api5.cursor.sh";
 const CURSOR_AGENT_PATH = "/agent.v1.AgentService/Run";
 const CURSOR_AGENT_URL = `https://${CURSOR_AGENT_HOST}${CURSOR_AGENT_PATH}`;
 
@@ -707,10 +711,12 @@ export class CursorExecutor extends BaseExecutor {
     const requestId = crypto.randomUUID();
     const traceParent = `00-${crypto.randomBytes(16).toString("hex")}-${crypto.randomBytes(8).toString("hex")}-01`;
 
-    // Mirrors cursor-agent's actual headers for agent.v1.AgentService/Run.
-    // Notably: no x-cursor-checksum, no machineId, no x-amzn-trace-id.
-    // Only advertise gzip (not brotli) — our Connect-RPC frame decoder
-    // only handles gzip-compressed message bodies.
+    // Header set verified against a live cursor-agent 2026.07.23 capture of
+    // POST agentn.<region>.api5.cursor.sh/agent.v1.AgentService/Run (HTTP/2).
+    // The CLI sends NO x-cursor-checksum here — the session JWT itself is the
+    // credential. Client-version must track the installed CLI (a stale pin is
+    // rejected upstream). We keep accept-encoding=gzip only: our Connect-RPC
+    // frame decoder can't inflate brotli response bodies.
     return {
       authorization: `Bearer ${cleanToken}`,
       "backend-traceparent": traceParent,
