@@ -44,10 +44,7 @@ function extractJobBlock(yaml: string, jobName: string): string {
 }
 
 test("#8090 compat-build-26 uses the webpack fallback (OMNIROUTE_USE_TURBOPACK=0) to avoid Node 26 OOM", () => {
-  const wf = fs.readFileSync(
-    path.join(repoRoot, ".github/workflows/nightly-compat.yml"),
-    "utf-8"
-  );
+  const wf = fs.readFileSync(path.join(repoRoot, ".github/workflows/nightly-compat.yml"), "utf-8");
   const jobBlock = extractJobBlock(wf, "compat-build-26");
 
   assert.match(

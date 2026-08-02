@@ -188,7 +188,11 @@ test("invalidateBufferTokensCache — still resets to null (returns DEFAULT on n
   // Client-visible prompt_tokens stays real (#8331); only the internal context_budget_*
   // field carries the DEFAULT=2000 margin during the race window.
   invalidateBufferTokensCache();
-  const afterInvalidate = addBufferToUsage({ prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 });
+  const afterInvalidate = addBufferToUsage({
+    prompt_tokens: 10,
+    completion_tokens: 5,
+    total_tokens: 15,
+  });
   assert.equal(afterInvalidate.prompt_tokens, 10);
   assert.equal(afterInvalidate.context_budget_prompt_tokens, 2010); // DEFAULT=2000 applied (race window)
 

@@ -1,9 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-  clearLatestVersionCache,
-  resolveLatestVersionCached,
-} from "@/lib/system/versionCheck";
+import { clearLatestVersionCache, resolveLatestVersionCached } from "@/lib/system/versionCheck";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;

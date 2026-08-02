@@ -6,15 +6,17 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 const mod = await import("../../open-sse/executors/notion-web.ts");
-const { __setTlsFetchOverrideForTesting } = await import(
-  "../../open-sse/services/notionTlsClient.ts"
-);
+const { __setTlsFetchOverrideForTesting } =
+  await import("../../open-sse/services/notionTlsClient.ts");
 
 const COOKIE_WITH_SPACE = "token_v2=xyz; space_id=space-1; notion_user_id=user-1";
 
 /** Mock the Chrome-JA3 path used by sendNotionInferenceRequest (not global fetch). */
 function installNotionTlsMock(
-  handler: (url: string, opts: { headers?: Record<string, string>; body?: string }) => Promise<{
+  handler: (
+    url: string,
+    opts: { headers?: Record<string, string>; body?: string }
+  ) => Promise<{
     status: number;
     text: string;
   }>
@@ -67,10 +69,7 @@ describe("Notion thread session continuity", () => {
   } = mod;
 
   it("first user turn has no prior assistant history (lookup misses)", () => {
-    assert.deepEqual(
-      conversationPrefixBeforeLastUser([{ role: "user", content: "hi" }]),
-      []
-    );
+    assert.deepEqual(conversationPrefixBeforeLastUser([{ role: "user", content: "hi" }]), []);
     // System-only prefix is fine — still no stored thread for a first user turn
     const withSys = [
       { role: "system", content: "sys" },
@@ -153,18 +152,15 @@ describe("Notion thread session continuity", () => {
 
   it("sticky root survives a failed first request (no second createThread)", async () => {
     __resetNotionThreadSessionsForTests();
-    const {
-      resolveNotionThreadBinding,
-      notionThreadMarkCreateAttempted,
-      NotionWebExecutor,
-    } = mod as typeof mod & {
-      resolveNotionThreadBinding: (
-        spaceKey: string,
-        messages: { role: string; content: string }[],
-        clientThreadId?: string
-      ) => { threadId: string; createThread: boolean; rootKey: string | null };
-      notionThreadMarkCreateAttempted: (rootKey: string | null, threadId: string) => void;
-    };
+    const { resolveNotionThreadBinding, notionThreadMarkCreateAttempted, NotionWebExecutor } =
+      mod as typeof mod & {
+        resolveNotionThreadBinding: (
+          spaceKey: string,
+          messages: { role: string; content: string }[],
+          clientThreadId?: string
+        ) => { threadId: string; createThread: boolean; rootKey: string | null };
+        notionThreadMarkCreateAttempted: (rootKey: string | null, threadId: string) => void;
+      };
 
     const spaceId = "space-fail-sticky";
     const turn1 = [{ role: "user", content: "will fail once" }];
@@ -215,7 +211,9 @@ describe("Notion thread session continuity", () => {
       assert.ok(captured.length >= 2);
       assert.equal(captured[0]!.threadId, captured[1]!.threadId);
       assert.equal(captured[1]!.createThread, false);
-      const json = (await result.response.json()) as { choices?: { message?: { content?: string } }[] };
+      const json = (await result.response.json()) as {
+        choices?: { message?: { content?: string } }[];
+      };
       assert.match(String(json.choices?.[0]?.message?.content || ""), /recovered/);
     } finally {
       restoreTls();
@@ -427,7 +425,7 @@ describe("Notion thread session continuity", () => {
                   value: {
                     step: {
                       type: "agent-inference",
-                      value: [{ type: "text", content: "{\"reply\":\"ok\"}" }],
+                      value: [{ type: "text", content: '{"reply":"ok"}' }],
                     },
                   },
                 },

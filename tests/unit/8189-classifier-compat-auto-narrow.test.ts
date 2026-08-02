@@ -67,9 +67,7 @@ test("issue #8189: 'always' mode is unaffected — every Claude-format request s
 
 test("issue #8189: 'off' mode (shipped default) never short-circuits", () => {
   const body = {
-    system: [
-      { type: "text", text: "You are a security monitor for autonomous AI coding agents." },
-    ],
+    system: [{ type: "text", text: "You are a security monitor for autonomous AI coding agents." }],
     stop_sequences: ["</block>"],
   };
   assert.equal(shouldDefaultAllowClassifier(FORMATS.CLAUDE, body, "off"), false);

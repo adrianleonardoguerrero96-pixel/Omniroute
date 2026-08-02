@@ -389,7 +389,8 @@ function normalizeProviderQuotaOverrideEntry(raw: unknown): ProviderQuotaOverrid
   const out: ProviderQuotaOverrideSettings = {};
   const rpm = typeof record.rpm === "number" ? record.rpm : Number(record.rpm);
   if (Number.isFinite(rpm) && rpm > 0) out.rpm = Math.trunc(rpm);
-  const concurrency = typeof record.concurrency === "number" ? record.concurrency : Number(record.concurrency);
+  const concurrency =
+    typeof record.concurrency === "number" ? record.concurrency : Number(record.concurrency);
   if (Number.isFinite(concurrency) && concurrency > 0) out.concurrency = Math.trunc(concurrency);
   return Object.keys(out).length > 0 ? out : null;
 }

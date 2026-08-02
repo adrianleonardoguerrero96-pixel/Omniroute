@@ -177,8 +177,7 @@ export type EarlyStreamKeepaliveOptions = {
  * type-check. A string discriminant narrows both branches under the same settings.
  */
 type SettledHandler =
-  | { status: "fulfilled"; response: Response }
-  | { status: "rejected"; error: unknown };
+  { status: "fulfilled"; response: Response } | { status: "rejected"; error: unknown };
 
 export async function withEarlyStreamKeepalive(
   handlerPromise: Promise<Response>,

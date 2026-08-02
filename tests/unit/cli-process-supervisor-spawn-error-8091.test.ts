@@ -89,7 +89,10 @@ test("ServerSupervisor.handleExit(code, err) logs err.code/err.path/err.message 
   console.error = origErr;
 
   const printed = logs.join("\n");
-  assert.ok(printed.includes("ENOENT"), `expected err.code (ENOENT) to be printed, got: ${printed}`);
+  assert.ok(
+    printed.includes("ENOENT"),
+    `expected err.code (ENOENT) to be printed, got: ${printed}`
+  );
   assert.ok(
     printed.includes("/fake/server.js"),
     `expected err.path to be printed, got: ${printed}`

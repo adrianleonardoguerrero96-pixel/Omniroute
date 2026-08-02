@@ -28,8 +28,7 @@ export interface SegmindRequestOptions {
 }
 
 export type SegmindRequestResult =
-  | { ok: true; buffer: Buffer; contentType: string }
-  | { ok: false; status: number; error: string };
+  { ok: true; buffer: Buffer; contentType: string } | { ok: false; status: number; error: string };
 
 /**
  * `open-sse` compiles with `strictNullChecks: false`, where `ok: true | false`
@@ -51,10 +50,7 @@ async function logSegmindFailure(
   errorText: string
 ): Promise<SegmindRequestResult> {
   if (opts.log) {
-    opts.log.error(
-      opts.scope,
-      `${opts.provider} error ${status}: ${errorText.slice(0, 200)}`
-    );
+    opts.log.error(opts.scope, `${opts.provider} error ${status}: ${errorText.slice(0, 200)}`);
   }
   saveCallLog({
     method: "POST",

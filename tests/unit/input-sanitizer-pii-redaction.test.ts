@@ -2,7 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { sanitizeRequest } from "../../src/shared/utils/inputSanitizer.ts";
 
-async function withEnv(overrides: Record<string, string | undefined>, fn: () => Promise<void> | void) {
+async function withEnv(
+  overrides: Record<string, string | undefined>,
+  fn: () => Promise<void> | void
+) {
   const originals: Record<string, string | undefined> = {};
   for (const [key, value] of Object.entries(overrides)) {
     originals[key] = process.env[key];
@@ -64,7 +67,10 @@ test("sanitizeRequest redacts Responses API string input items", async () => {
       );
       assert.equal(result.modified, true);
       const body = result.sanitizedBody as ChatBody;
-      assert.match(String(Array.isArray(body.input) ? body.input[0] : undefined), /\[EMAIL_REDACTED\]/);
+      assert.match(
+        String(Array.isArray(body.input) ? body.input[0] : undefined),
+        /\[EMAIL_REDACTED\]/
+      );
     }
   );
 });

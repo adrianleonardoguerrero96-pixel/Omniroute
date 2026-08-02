@@ -6,7 +6,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-const { buildAgentPayload, INCIDENT_SHAPE } = await import("../../scripts/perf/agentPayloadCorpus.ts");
+const { buildAgentPayload, INCIDENT_SHAPE } =
+  await import("../../scripts/perf/agentPayloadCorpus.ts");
 
 const wireBytes = (v: unknown) => Buffer.byteLength(JSON.stringify(v), "utf8");
 
@@ -58,12 +59,18 @@ test("payload is shaped like a coding-agent request (alternating roles, tool sch
   assert.ok(body.messages.every((m) => m.content.length > 0));
   assert.equal(body.tools[0].type, "function");
   assert.equal(body.tools[0].function.name, "tool_0");
-  assert.ok(body.tools[0].function.parameters, "tools must carry a JSON schema — they dominate size");
+  assert.ok(
+    body.tools[0].function.parameters,
+    "tools must carry a JSON schema — they dominate size"
+  );
 });
 
 test("size scales with the knobs the benchmark exposes", () => {
   const small = wireBytes(buildAgentPayload(10, 2, 20));
   assert.ok(wireBytes(buildAgentPayload(20, 2, 20)) > small, "more messages must grow the payload");
   assert.ok(wireBytes(buildAgentPayload(10, 8, 20)) > small, "more tools must grow the payload");
-  assert.ok(wireBytes(buildAgentPayload(10, 2, 80)) > small, "longer content must grow the payload");
+  assert.ok(
+    wireBytes(buildAgentPayload(10, 2, 80)) > small,
+    "longer content must grow the payload"
+  );
 });

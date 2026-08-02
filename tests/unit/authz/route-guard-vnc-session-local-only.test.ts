@@ -22,8 +22,5 @@ test("isLocalOnlyPath: /api/vnc-session is local-only (#7892 — spawns Docker c
 
 test("isLocalOnlyBypassableByManageScope: /api/vnc-session is NOT bypassable (defence in depth)", () => {
   assert.ok(SPAWN_CAPABLE_PREFIXES.includes(VNC_ROUTE_PREFIX));
-  assert.equal(
-    isLocalOnlyBypassableByManageScope("/api/vnc-session/conn123/start"),
-    false
-  );
+  assert.equal(isLocalOnlyBypassableByManageScope("/api/vnc-session/conn123/start"), false);
 });

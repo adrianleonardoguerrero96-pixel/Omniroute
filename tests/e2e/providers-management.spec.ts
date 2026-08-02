@@ -272,7 +272,9 @@ test.describe("Providers management", () => {
     // and shows a Close button. Dismiss it before interacting with the connection list.
     const importDialog = page.getByRole("dialog");
     // The Modal renders two "Close" elements (header X + footer button) — use .first()
-    await expect(importDialog.getByRole("button", { name: "Close" }).first()).toBeVisible({ timeout: 15_000 });
+    await expect(importDialog.getByRole("button", { name: "Close" }).first()).toBeVisible({
+      timeout: 15_000,
+    });
     await importDialog.getByRole("button", { name: "Close" }).first().click();
     await expect(importDialog).not.toBeVisible();
 
@@ -315,9 +317,7 @@ test.describe("Providers management", () => {
     // #7361 replaced the native window.confirm() with a ConfirmModal, so the old
     // page.once("dialog") handler never fires and the delete request was never sent.
     await page.getByTitle(/^delete$/i).click();
-    const confirmDialog = page
-      .getByRole("dialog")
-      .filter({ hasText: /delete this connection/i });
+    const confirmDialog = page.getByRole("dialog").filter({ hasText: /delete this connection/i });
     await expect(confirmDialog).toBeVisible({ timeout: 10000 });
     await confirmDialog.getByRole("button", { name: /^delete$/i }).click();
 

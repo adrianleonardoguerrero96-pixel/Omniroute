@@ -21,9 +21,7 @@ export function normalizeBasePath(value?: string | null): string {
 export function getDeployBasePath(
   env: NodeJS.ProcessEnv = typeof process !== "undefined" ? process.env : ({} as NodeJS.ProcessEnv)
 ): string {
-  return normalizeBasePath(
-    env.NEXT_PUBLIC_OMNIROUTE_BASE_PATH || env.OMNIROUTE_BASE_PATH || ""
-  );
+  return normalizeBasePath(env.NEXT_PUBLIC_OMNIROUTE_BASE_PATH || env.OMNIROUTE_BASE_PATH || "");
 }
 
 /**
@@ -53,8 +51,7 @@ export function withBasePath(
   // Absolute URL — only rewrite same-origin
   try {
     const baseOrigin =
-      origin ||
-      (typeof window !== "undefined" ? window.location.origin : "http://localhost");
+      origin || (typeof window !== "undefined" ? window.location.origin : "http://localhost");
     const url = new URL(input, baseOrigin);
     const currentOrigin = new URL(baseOrigin).origin;
     if (url.origin !== currentOrigin) return input;

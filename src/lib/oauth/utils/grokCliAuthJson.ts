@@ -11,8 +11,7 @@
  * keep the frozen file-size gate on OAuthModal.tsx from growing).
  */
 export type GrokCliPasteTokenResult =
-  | { ok: true; token: string | Record<string, unknown> }
-  | { ok: false; error: string };
+  { ok: true; token: string | Record<string, unknown> } | { ok: false; error: string };
 
 export function parseGrokCliPasteToken(raw: string): GrokCliPasteTokenResult {
   const trimmed = raw.trim();

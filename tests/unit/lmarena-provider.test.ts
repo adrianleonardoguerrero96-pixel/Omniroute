@@ -30,7 +30,11 @@ const UUID_V7_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9
 type LMArenaExecutorTestAccess = {
   provider: string;
   buildUrl: (model: string, credentials: unknown) => string;
-  buildRequestHeaders: (model: string, credentials: unknown, body: unknown) => Record<string, string>;
+  buildRequestHeaders: (
+    model: string,
+    credentials: unknown,
+    body: unknown
+  ) => Record<string, string>;
   transformRequest: (
     body: unknown,
     model: string,
@@ -159,7 +163,11 @@ describe("LMArena Executor", () => {
     assert.equal(headers.Cookie, "session=def");
 
     // providerSpecificData.cookie
-    headers = ex.buildRequestHeaders("gpt-4", { providerSpecificData: { cookie: "session=ghi" } }, {});
+    headers = ex.buildRequestHeaders(
+      "gpt-4",
+      { providerSpecificData: { cookie: "session=ghi" } },
+      {}
+    );
     assert.equal(headers.Cookie, "session=ghi");
 
     // Priority: direct > apiKey > providerSpecificData

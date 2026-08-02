@@ -13,9 +13,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-const { cloneBoundedForLog, MAX_LOG_ARRAY_ITEMS } = await import(
-  "../../open-sse/utils/requestLogger.ts"
-);
+const { cloneBoundedForLog, MAX_LOG_ARRAY_ITEMS } =
+  await import("../../open-sse/utils/requestLogger.ts");
 
 const MAX_KEYS = 80;
 const MAX_STRING = 64 * 1024;

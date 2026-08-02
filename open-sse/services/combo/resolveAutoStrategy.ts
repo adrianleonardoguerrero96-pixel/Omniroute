@@ -1,12 +1,18 @@
-import { errorResponse, unavailableResponse, errorResponseWithComboDiagnostics } from "../../utils/error.ts";
+import {
+  errorResponse,
+  unavailableResponse,
+  errorResponseWithComboDiagnostics,
+} from "../../utils/error.ts";
 import { BudgetExceededError, selectProvider as selectAutoProvider } from "../autoCombo/engine.ts";
 import {
   resolveRequestModePack,
   parseRequestBudgetCap,
   parseRequestBudgetFallback,
+  parseRequestComplexity,
 } from "../autoCombo/requestControls.ts";
 import { selectWithStrategy } from "../autoCombo/routerStrategy.ts";
 import { buildComplexityRoutingHint } from "../autoCombo/complexityRouter";
+import { rebalanceForComplexity } from "../autoCombo/complexityWeights.ts";
 import { getModePack } from "../autoCombo/modePacks.ts";
 import { recordComboIntent } from "../comboMetrics.ts";
 import { estimateTokens } from "../contextManager.ts";
@@ -69,6 +75,8 @@ export interface ResolveAutoStrategyDeps {
     budgetCap?: number | null;
     /** Per-request X-OmniRoute-Budget-Fallback value ("cheapest" | "strict") — #3470. */
     budgetFallback?: "cheapest" | "strict" | null;
+    /** Per-request X-OmniRoute-Complexity toggle (content-aware tier routing) — #5811. */
+    complexity?: boolean | null;
   } | null;
   resilienceSettings: ResilienceSettings;
   log: ComboLogger;
@@ -118,8 +126,7 @@ export async function resolveAutoStrategyOrder(
     // registry/capability rows honestly report toolCalling:false.
     const filtered = eligibleTargets.filter(
       (target) =>
-        supportsToolCalling(target.modelStr) ||
-        providerSupportsEmulatedToolCalling(target.provider)
+        supportsToolCalling(target.modelStr) || providerSupportsEmulatedToolCalling(target.provider)
     );
     if (filtered.length > 0) {
       eligibleTargets = filtered;
@@ -379,20 +386,32 @@ export async function resolveAutoStrategyOrder(
     // Complexity-aware routing (2026, opt-in): classify the request's
     // difficulty and feed a tier hint into scoring so tierAffinity /
     // specificityMatch favor candidates whose tier matches the request.
-    const autoManifestHint: RoutingHint | null =
-      config.complexityAwareRouting === true
-        ? buildComplexityRoutingHint(
-            eligibleTargets.filter((t) => t.kind === "model"),
-            body,
-            log
-          )
-        : null;
+    // Enabled by EITHER the global `comboDefaults.complexityAwareRouting`
+    // setting (folded into `config` via resolveComboConfig — Lever B) OR the
+    // per-request `X-OmniRoute-Complexity` header (Lever A, #5811). Off by
+    // default: when neither is set the hint is null and scoring is unchanged.
+    const complexityRoutingEnabled =
+      config.complexityAwareRouting === true ||
+      parseRequestComplexity(relayOptions?.complexity === true ? "1" : null);
+    const autoManifestHint: RoutingHint | null = complexityRoutingEnabled
+      ? buildComplexityRoutingHint(
+          eligibleTargets.filter((t) => t.kind === "model"),
+          body,
+          log
+        )
+      : null;
+
+    // Lift tierAffinity / specificityMatch to a decision-relevant weight when
+    // complexity routing is active — every mode pack hard-zeros them, so without
+    // this the hint would be multiplied by 0 for e.g. `auto/best-coding`
+    // (quality-first pack). No-op when disabled (weights pass through unchanged).
+    const complexityWeights = complexityRoutingEnabled ? rebalanceForComplexity(weights) : weights;
 
     const scoredTargets = scoreAutoTargets(
       eligibleTargets,
       routableCandidates,
       taskType,
-      weights,
+      complexityWeights,
       autoManifestHint
     );
     const rankedTargets = scoredTargets.map((entry) => entry.target);

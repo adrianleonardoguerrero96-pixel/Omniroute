@@ -427,10 +427,7 @@ export async function createVirtualAutoCombo(
   for (const conn of [...connections, ...disabledNoAuthConnections]) {
     connectionsById.set(conn.id, conn);
   }
-  const resilienceFilteredPool = filterResilienceBlockedCandidates(
-    candidatePool,
-    connectionsById
-  );
+  const resilienceFilteredPool = filterResilienceBlockedCandidates(candidatePool, connectionsById);
   if (resilienceFilteredPool !== candidatePool) {
     candidatePool.length = 0;
     candidatePool.push(...resilienceFilteredPool);

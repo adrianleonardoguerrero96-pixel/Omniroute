@@ -25,10 +25,7 @@ test("readClientThreadId rejects a non-UUID client-supplied thread id (body + he
   // A malformed id must NOT be accepted into the session cache.
   assert.equal(readClientThreadId({ notion_thread_id: "attacker-pinned-value" }), "");
   assert.equal(readClientThreadId({ thread_id: "'; DROP TABLE" }), "");
-  assert.equal(
-    readClientThreadId({}, { "x-notion-thread-id": "../../secret" }),
-    ""
-  );
+  assert.equal(readClientThreadId({}, { "x-notion-thread-id": "../../secret" }), "");
   // A well-formed id is still accepted.
   const good = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
   assert.equal(readClientThreadId({ notion_thread_id: good }), good);

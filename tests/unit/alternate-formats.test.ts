@@ -42,7 +42,10 @@ test("retorna null quando a conexao nao tem targetFormat", () => {
 });
 
 test("retorna null quando a entry nao declara alternativas", () => {
-  assert.equal(resolveAlternateFormat({ ...ENTRY, alternateFormats: undefined }, { targetFormat: "claude" }), null);
+  assert.equal(
+    resolveAlternateFormat({ ...ENTRY, alternateFormats: undefined }, { targetFormat: "claude" }),
+    null
+  );
   assert.equal(resolveAlternateFormat(null, { targetFormat: "claude" }), null);
 });
 
@@ -103,7 +106,11 @@ test("resolveBaseUrl: baseUrl manual da conexao vence a alternativa", () => {
 });
 
 test("resolveBaseUrl: alternativa vence o baseUrl padrao", () => {
-  const url = precedence({ targetFormat: "claude" }, ENTRY_WITH_ALT, "https://default.example.com/v1");
+  const url = precedence(
+    { targetFormat: "claude" },
+    ENTRY_WITH_ALT,
+    "https://default.example.com/v1"
+  );
   assert.equal(url, "https://alt.example.com/anthropic/v1/messages");
 });
 

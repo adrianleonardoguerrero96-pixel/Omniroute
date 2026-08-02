@@ -3,12 +3,10 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 
 const { WEB_COOKIE_PROVIDERS } = await import("../../src/shared/constants/providers.ts");
-const { WEB_SESSION_CREDENTIAL_REQUIREMENTS } = await import(
-  "../../src/shared/providers/webSessionCredentials.ts"
-);
-const { GeminiBusinessExecutor, parseStreamResponse } = await import(
-  "../../open-sse/executors/gemini-business.ts"
-);
+const { WEB_SESSION_CREDENTIAL_REQUIREMENTS } =
+  await import("../../src/shared/providers/webSessionCredentials.ts");
+const { GeminiBusinessExecutor, parseStreamResponse } =
+  await import("../../open-sse/executors/gemini-business.ts");
 
 // ─── Provider metadata ──────────────────────────────────────────────────────
 
@@ -28,10 +26,7 @@ test("Gemini Business credential requirements use __Secure-1PSID cookies", () =>
   assert.ok(req, "credential requirements must be defined");
   assert.equal(req.kind, "cookie");
   assert.equal(req.acceptsFullCookieHeader, true);
-  assert.ok(
-    req.storageKeys.includes("__Secure-1PSID"),
-    "storageKeys must include __Secure-1PSID"
-  );
+  assert.ok(req.storageKeys.includes("__Secure-1PSID"), "storageKeys must include __Secure-1PSID");
   assert.ok(
     req.storageKeys.includes("__Secure-1PSIDTS"),
     "storageKeys must include __Secure-1PSIDTS"

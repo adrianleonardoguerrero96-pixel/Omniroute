@@ -24,10 +24,42 @@ export function estimateMessageTokens(messages: Array<{ content?: string | unkno
   }, 0);
 }
 
+/**
+ * Flatten a message `content` field to plain text for rule matching.
+ *
+ * `content` is either a plain string (OpenAI chat shape) or an array of typed
+ * blocks (Anthropic `/v1/messages` shape, and OpenAI multimodal). The detectors
+ * below previously read `typeof content === "string" ? content : ""`, which
+ * silently yielded an EMPTY string for every Anthropic-format request — so
+ * `codeComplexity` / `mathComplexity` / `domainSpecificity` and friends all
+ * scored 0 and every such request classified as `trivial`, regardless of its
+ * actual content. `estimateMessageTokens` above already walked the array shape,
+ * which is why `contextSize` alone kept working and masked the gap.
+ *
+ * Non-text blocks (image, tool_use, …) contribute nothing, matching the
+ * token-estimator's behavior.
+ */
+export function messageContentToText(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        const text = (part as { text?: unknown })?.text;
+        return typeof text === "string" ? text : "";
+      })
+      .filter(Boolean)
+      .join("\n");
+  }
+  return "";
+}
+
+/** Flatten every message in a RuleInput to one newline-joined text blob. */
+function allMessageText(input: RuleInput): string {
+  return input.messages.map((m) => messageContentToText(m.content)).join("\n");
+}
+
 export function detectCodeComplexity(input: RuleInput): number {
-  const allText = input.messages
-    .map((m) => (typeof m.content === "string" ? m.content : ""))
-    .join("\n");
+  const allText = allMessageText(input);
 
   const codeFenceMatches = allText.match(/```[\s\S]*?```/g);
   const codeBlockCount = codeFenceMatches ? codeFenceMatches.length : 0;
@@ -56,9 +88,7 @@ export function detectCodeComplexity(input: RuleInput): number {
 }
 
 export function detectMathComplexity(input: RuleInput): number {
-  const allText = input.messages
-    .map((m) => (typeof m.content === "string" ? m.content : ""))
-    .join("\n");
+  const allText = allMessageText(input);
 
   const latexMatches = allText.match(/\$\$[\s\S]*?\$\$|\$[^$]+\$/g);
   const latexCount = latexMatches ? latexMatches.length : 0;
@@ -81,9 +111,7 @@ export function detectMathComplexity(input: RuleInput): number {
 }
 
 export function detectReasoningDepth(input: RuleInput): number {
-  const allText = input.messages
-    .map((m) => (typeof m.content === "string" ? m.content : ""))
-    .join("\n");
+  const allText = allMessageText(input);
 
   const reasoningIndicators = [
     /\b(first|step\s*\d|secondly|finally|therefore|thus|consequently|because|since)\b/gi,
@@ -127,9 +155,7 @@ export function detectToolCalling(input: RuleInput): number {
 }
 
 export function detectDomainSpecificity(input: RuleInput): number {
-  const allText = input.messages
-    .map((m) => (typeof m.content === "string" ? m.content : ""))
-    .join("\n");
+  const allText = allMessageText(input);
 
   const domainTerms: Record<string, RegExp[]> = {
     medical: [/\bdiagnosis\b/i, /\bsymptoms\b/i, /\btreatment\b/i, /\bpatient\b/i, /\bclinical\b/i],
@@ -177,9 +203,7 @@ export function detectConversationDepth(input: RuleInput): number {
 }
 
 export function detectFileReferences(input: RuleInput): number {
-  const allText = input.messages
-    .map((m) => (typeof m.content === "string" ? m.content : ""))
-    .join("\n");
+  const allText = allMessageText(input);
 
   const filePatterns = [
     /(?:\/[\w.-]+){2,}/g,
@@ -197,9 +221,7 @@ export function detectFileReferences(input: RuleInput): number {
 }
 
 export function detectErrorContext(input: RuleInput): number {
-  const allText = input.messages
-    .map((m) => (typeof m.content === "string" ? m.content : ""))
-    .join("\n");
+  const allText = allMessageText(input);
 
   const errorPatterns = [
     /\b(?:Error|Exception|TypeError|ReferenceError|SyntaxError)\b/g,

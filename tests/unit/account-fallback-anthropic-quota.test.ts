@@ -10,8 +10,7 @@ import assert from "node:assert/strict";
 
 const { classifyErrorText, parseRetryFromErrorText, checkFallbackError, getProviderProfile } =
   await import("../../open-sse/services/accountFallback.ts");
-const { isSubscriptionQuotaText } =
-  await import("../../open-sse/services/quotaTextCooldowns.ts");
+const { isSubscriptionQuotaText } = await import("../../open-sse/services/quotaTextCooldowns.ts");
 const { RateLimitReason } = await import("../../open-sse/config/constants.ts");
 
 test("#2321 classifyErrorText flags 'Usage Limit Reached' as QUOTA_EXHAUSTED", () => {

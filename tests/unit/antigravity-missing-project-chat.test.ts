@@ -6,12 +6,10 @@ import { createChatPipelineHarness } from "../integration/_chatPipelineHarness.t
 const harness = await createChatPipelineHarness("antigravity-missing-project-chat");
 const { BaseExecutor, buildRequest, handleChat, resetStorage, settingsDb } = harness;
 const providersDb = await import("../../src/lib/db/providers.ts");
-const { clearAntigravityProjectCache } = await import(
-  "../../open-sse/services/antigravityProjectBootstrap.ts"
-);
-const { seedAntigravityIdeVersionCache, seedAntigravityCliVersionCache } = await import(
-  "../../open-sse/services/antigravityVersion.ts"
-);
+const { clearAntigravityProjectCache } =
+  await import("../../open-sse/services/antigravityProjectBootstrap.ts");
+const { seedAntigravityIdeVersionCache, seedAntigravityCliVersionCache } =
+  await import("../../open-sse/services/antigravityVersion.ts");
 
 const BOOTSTRAP_URL = "https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist";
 

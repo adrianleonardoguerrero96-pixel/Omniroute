@@ -35,7 +35,9 @@ function writeBakedBasePath(appRoot, basePath) {
  */
 export function ensureDockerBasePath(opts = {}) {
   const appRoot = opts.appRoot || process.cwd();
-  const runtime = normalizeBasePath(opts.env?.OMNIROUTE_BASE_PATH ?? process.env.OMNIROUTE_BASE_PATH);
+  const runtime = normalizeBasePath(
+    opts.env?.OMNIROUTE_BASE_PATH ?? process.env.OMNIROUTE_BASE_PATH
+  );
   const baked = readBakedBasePath(appRoot);
 
   if (runtime === baked) {

@@ -60,7 +60,10 @@ export function matchesAnyToken(
   if (!q) return true;
   const normalizedText = normalizeForSearch(text);
   if (normalizedText.includes(q)) return true;
-  return q.split(/\s+/).filter(Boolean).some((token) => normalizedText.includes(token));
+  return q
+    .split(/\s+/)
+    .filter(Boolean)
+    .some((token) => normalizedText.includes(token));
 }
 
 const trCollator = new Intl.Collator("tr", {

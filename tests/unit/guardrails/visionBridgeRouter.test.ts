@@ -66,27 +66,21 @@ test("getBestVisionModel — excludes a candidate with no usable active connecti
   // Every candidate reports a confirmed-unusable connection (`false`) ->
   // no candidate survives -> the hardcoded last-resort default is returned
   // instead of an unreachable pick.
-  const model = await getBestVisionModel(
-    {},
-    { hasUsableCredentials: async () => false }
-  );
+  const model = await getBestVisionModel({}, { hasUsableCredentials: async () => false });
   assert.equal(model, "openai/gpt-4o-mini");
 });
 
-test(
-  "getBestVisionModel — selects a credentialed candidate over an uncredentialed higher-priority one",
-  async () => {
-    // openai (priority 50, would normally win) has no usable connection;
-    // every other vision-capable provider does.
-    const model = await getBestVisionModel(
-      {},
-      {
-        hasUsableCredentials: async (fullModelId) => fullModelId.split("/")[0] !== "openai",
-      }
-    );
-    assert.equal(model.startsWith("openai/"), false);
-  }
-);
+test("getBestVisionModel — selects a credentialed candidate over an uncredentialed higher-priority one", async () => {
+  // openai (priority 50, would normally win) has no usable connection;
+  // every other vision-capable provider does.
+  const model = await getBestVisionModel(
+    {},
+    {
+      hasUsableCredentials: async (fullModelId) => fullModelId.split("/")[0] !== "openai",
+    }
+  );
+  assert.equal(model.startsWith("openai/"), false);
+});
 
 // ── getFallbackModels ───────────────────────────────────────────────────────
 
@@ -106,17 +100,14 @@ test("getFallbackModels — should respect max fallback attempts", async () => {
   assert.ok(fallbacks.length <= 2);
 });
 
-test(
-  "getFallbackModels — does not include candidates with a confirmed-unusable connection",
-  async () => {
-    const fallbacks = await getFallbackModels(
-      "openai/gpt-4o-mini",
-      {},
-      { hasUsableCredentials: async (fullModelId) => fullModelId.split("/")[0] !== "anthropic" }
-    );
-    assert.ok(!fallbacks.some((m) => m.startsWith("anthropic/")));
-  }
-);
+test("getFallbackModels — does not include candidates with a confirmed-unusable connection", async () => {
+  const fallbacks = await getFallbackModels(
+    "openai/gpt-4o-mini",
+    {},
+    { hasUsableCredentials: async (fullModelId) => fullModelId.split("/")[0] !== "anthropic" }
+  );
+  assert.ok(!fallbacks.some((m) => m.startsWith("anthropic/")));
+});
 
 // ── recordLatency / getLatencyStats ─────────────────────────────────────────
 

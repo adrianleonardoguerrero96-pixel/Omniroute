@@ -20,7 +20,7 @@ export const INCIDENT_SHAPE = {
 
 function lcg(seed: number): () => number {
   let s = seed >>> 0;
-  return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 0x100000000);
+  return () => (s = (s * 1664525 + 1013904223) >>> 0) / 0x100000000;
 }
 
 const WORDS = [

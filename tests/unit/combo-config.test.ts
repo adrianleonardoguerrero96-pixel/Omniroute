@@ -359,7 +359,12 @@ test("resolveComboTargetTimeoutMsForCombo raises the floor to cover the cooldown
 
   // Explicit per-combo targetTimeoutMs still wins over the derived floor.
   assert.equal(
-    resolveComboTargetTimeoutMsForCombo({ targetTimeoutMs: 45000 }, 600000, "auto", comboCooldownWait),
+    resolveComboTargetTimeoutMsForCombo(
+      { targetTimeoutMs: 45000 },
+      600000,
+      "auto",
+      comboCooldownWait
+    ),
     45000
   );
 

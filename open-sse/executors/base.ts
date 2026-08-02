@@ -59,6 +59,7 @@ import {
   modelHasNativeContext1m,
   modelSupportsContext1mBeta,
 } from "../services/claudeCodeCompatible.ts";
+import { enforceCacheControlLimit } from "../services/claudeCodeConstraints.ts";
 import { getClaudeCodeCompatibleRequestDefaults } from "@/lib/providers/requestDefaults";
 import {
   cloakThirdPartyToolNames,
@@ -249,7 +250,10 @@ function collectThinkingConfigs(body: unknown): Array<Record<string, unknown>> {
   if (!body || typeof body !== "object") return [];
   const root = body as Record<string, unknown>;
   const configs: Array<Record<string, unknown>> = [];
-  const envelopes: unknown[] = [root.generationConfig, (root.request as Record<string, unknown> | undefined)?.generationConfig];
+  const envelopes: unknown[] = [
+    root.generationConfig,
+    (root.request as Record<string, unknown> | undefined)?.generationConfig,
+  ];
   for (const env of envelopes) {
     if (!env || typeof env !== "object") continue;
     const tc = (env as Record<string, unknown>).thinkingConfig;
@@ -1156,6 +1160,15 @@ export class BaseExecutor {
               );
             }
           }
+
+          // Anthropic rejects a request with more than 4 cache_control
+          // breakpoints ("A maximum of 4 blocks with cache_control may be
+          // provided"). The native OAuth path can stack past that cap on
+          // deep multi-turn sessions (client-side breakpoints from a prior
+          // turn plus this turn's own), so enforce the same cap the CC-bridge
+          // path already applies (see claudeCodeCompatible.ts step 5) right
+          // before the body is finalized/sent upstream.
+          enforceCacheControlLimit(tb);
 
           if (!tb.metadata || typeof tb.metadata !== "object") tb.metadata = {};
           (tb.metadata as Record<string, unknown>).user_id = buildUserIdJson({

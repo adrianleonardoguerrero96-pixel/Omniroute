@@ -767,9 +767,7 @@ test("vscode tokenized tags route only exposes usable canonical chat models", as
     );
     assert.ok(
       !catalogModel.api_format ||
-        ["chat-completions", "responses", "openai-responses"].includes(
-          catalogModel.api_format
-        ),
+        ["chat-completions", "responses", "openai-responses"].includes(catalogModel.api_format),
       `tag ${tagModel.name} should use a text-generation API format`
     );
     assert.ok(

@@ -90,16 +90,17 @@ export function getSession(connectionId: string, sessionId: string): VncSession 
 
 export function listSessions(connectionId?: string): VncSession[] {
   const sessions = [...SESSIONS.values()];
-  return connectionId ? sessions.filter((session) => session.connectionId === connectionId) : sessions;
+  return connectionId
+    ? sessions.filter((session) => session.connectionId === connectionId)
+    : sessions;
 }
 
 async function reconcileStaleContainers(): Promise<void> {
   if (!reconciliationPromise) {
     reconciliationPromise = (async () => {
-      const listed = await docker(
-        ["ps", "-aq", "--filter", `label=${LABEL}=true`],
-        { timeoutMs: 20_000 }
-      );
+      const listed = await docker(["ps", "-aq", "--filter", `label=${LABEL}=true`], {
+        timeoutMs: 20_000,
+      });
       if (listed.code !== 0) return;
       const ids = listed.out
         .split(/\s+/)

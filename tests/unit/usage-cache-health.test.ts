@@ -136,10 +136,7 @@ test("tolera linhas com null vindas do banco (colunas são nullable)", () => {
 test("o limiar de 'heavy' acompanha a janela em vez de ser um número mágico fixo", () => {
   // Conversas pequenas (cache de ~2k) não podem ser julgadas pelo mesmo corte
   // absoluto de uma conversa de 130k, senão nada é 'heavy' e o relatório cala.
-  const pequenas = [
-    ...Array.from({ length: 9 }, () => row("m", 2000, 20)),
-    row("m", 500, 1800),
-  ];
+  const pequenas = [...Array.from({ length: 9 }, () => row("m", 2000, 20)), row("m", 500, 1800)];
 
   const s = summarizeCacheHealth(pequenas);
 

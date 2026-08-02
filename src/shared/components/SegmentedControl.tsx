@@ -54,7 +54,7 @@ export default function SegmentedControl({
             value === option.value
               ? "bg-white dark:bg-white/10 text-text-main shadow-sm"
               : "text-text-muted hover:text-text-main",
-            option.icon && "flex items-center",
+            option.icon && "flex items-center"
           )}
         >
           {option.icon && (

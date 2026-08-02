@@ -91,9 +91,8 @@ test("diagnose route: threads ?agentId= query param through to getMitmStatus", a
     return realReadFileSync(p, enc);
   });
 
-  const { GET } = await import(
-    "../../src/app/api/tools/agent-bridge/diagnose/route.ts?probe=8466-route"
-  );
+  const { GET } =
+    await import("../../src/app/api/tools/agent-bridge/diagnose/route.ts?probe=8466-route");
   const res = await GET(
     new Request("http://localhost/api/tools/agent-bridge/diagnose?agentId=claude-code")
   );

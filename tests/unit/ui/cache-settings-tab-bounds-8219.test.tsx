@@ -46,10 +46,7 @@ async function setInputValue(container: HTMLDivElement, value: string) {
   // event fires but React's commit doesn't flush before the callback
   // resolves), leaving the input showing its pre-dispatch value.
   act(() => {
-    const setter = Object.getOwnPropertyDescriptor(
-      window.HTMLInputElement.prototype,
-      "value"
-    )?.set;
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
     setter?.call(input, value);
     input.dispatchEvent(new Event("input", { bubbles: true }));
   });

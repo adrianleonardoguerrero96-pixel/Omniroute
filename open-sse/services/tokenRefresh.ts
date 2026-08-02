@@ -294,10 +294,7 @@ async function _getAccessTokenInternal(provider, credentials, log, proxyConfig: 
         !(credentials.projectId || credentials.providerSpecificData?.projectId)
       ) {
         try {
-          const discovered = await ensureAntigravityProjectAssigned(
-            result.accessToken,
-            fetch
-          );
+          const discovered = await ensureAntigravityProjectAssigned(result.accessToken, fetch);
           if (discovered) {
             result.projectId = discovered;
             result.providerSpecificData = {
@@ -317,7 +314,8 @@ async function _getAccessTokenInternal(provider, credentials, log, proxyConfig: 
             });
           }
         } catch (discoveryError) {
-          const msg = discoveryError instanceof Error ? discoveryError.message : String(discoveryError);
+          const msg =
+            discoveryError instanceof Error ? discoveryError.message : String(discoveryError);
           log?.warn?.("TOKEN", `Antigravity projectId discovery failed: ${msg}`);
         }
       }

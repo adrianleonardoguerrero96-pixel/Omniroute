@@ -106,6 +106,44 @@ export default function IntelligentComboPanel({
     }
   };
 
+  const [savingComplexity, setSavingComplexity] = useState(false);
+  const handleComplexityToggle = async (enabled: boolean) => {
+    if (!combo?.id || enabled === normalizedConfig.complexityAwareRouting) return;
+    setSavingComplexity(true);
+
+    try {
+      const response = await fetch(`/api/combos/${combo.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          config: {
+            ...(combo?.config || {}),
+            complexityAwareRouting: enabled,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null);
+        throw new Error(
+          errorBody?.error?.message || errorBody?.error || "Failed to update content-aware routing"
+        );
+      }
+
+      const updatedCombo = await response.json();
+      onComboUpdated?.(updatedCombo);
+      notify.success(
+        enabled
+          ? getI18nOrFallback(t, "complexityRoutingEnabled", "Content-aware routing enabled.")
+          : getI18nOrFallback(t, "complexityRoutingDisabled", "Content-aware routing disabled.")
+      );
+    } catch (error: any) {
+      notify.error(error?.message || "Failed to update content-aware routing.");
+    } finally {
+      setSavingComplexity(false);
+    }
+  };
+
   return (
     <Card
       className="border-primary/10 bg-gradient-to-br from-primary/[0.04] via-transparent to-transparent"
@@ -205,6 +243,31 @@ export default function IntelligentComboPanel({
                 );
               })}
             </div>
+
+            <label className="flex items-start gap-3 cursor-pointer mt-3 pt-3 border-t border-black/5 dark:border-white/5">
+              <input
+                type="checkbox"
+                checked={normalizedConfig.complexityAwareRouting}
+                onChange={(event) => handleComplexityToggle(event.target.checked)}
+                disabled={savingComplexity}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="text-xs font-semibold text-text-main block">
+                  {getI18nOrFallback(t, "complexityAwareRoutingLabel", "Content-aware routing")}
+                  {savingComplexity && (
+                    <span className="text-[11px] text-text-muted font-normal ml-2">Saving…</span>
+                  )}
+                </span>
+                <span className="text-[11px] text-text-muted mt-1 block">
+                  {getI18nOrFallback(
+                    t,
+                    "complexityAwareRoutingHint",
+                    "Classify each request's difficulty and bias selection toward a matching provider tier (cheaper models for trivial prompts, premium for hard coding/reasoning). Off by default; a per-request X-OmniRoute-Complexity header still applies on top."
+                  )}
+                </span>
+              </span>
+            </label>
           </Card.Section>
         </div>
 

@@ -925,7 +925,12 @@ test("Responses -> Chat: tool_search is mapped to a Chat function tool, not drop
       input: [{ role: "user", content: [{ type: "input_text", text: "hello" }] }],
       tools: [
         { type: "tool_search", name: "search" },
-        { type: "function", name: "foo", description: "A function", parameters: { type: "object" } },
+        {
+          type: "function",
+          name: "foo",
+          description: "A function",
+          parameters: { type: "object" },
+        },
       ],
     },
     false,
@@ -934,7 +939,11 @@ test("Responses -> Chat: tool_search is mapped to a Chat function tool, not drop
 
   const tools = result.tools as any[];
   assert.ok(Array.isArray(tools), "tools array must be present");
-  assert.equal(tools.some((t) => t.type === "tool_search"), false, "raw tool_search type must not survive");
+  assert.equal(
+    tools.some((t) => t.type === "tool_search"),
+    false,
+    "raw tool_search type must not survive"
+  );
   assert.equal(tools.length, 2, "mapped tool_search function + the function tool must remain");
   const toolSearch = tools.find((t) => t.function?.name === "search");
   assert.ok(toolSearch, "tool_search must be mapped to a Chat function tool named after it");

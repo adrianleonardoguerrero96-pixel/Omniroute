@@ -33,9 +33,8 @@ test("resolveTlsClientDownloadDir caches native binary under DATA_DIR/tls-client
   const dataDir = mkdtempSync(join(tmpdir(), "omniroute-tls-client-8579-"));
   process.env.DATA_DIR = dataDir;
 
-  const { resolveTlsClientDownloadDir } = await import(
-    "../../open-sse/services/tlsClientDownloadDir.ts"
-  );
+  const { resolveTlsClientDownloadDir } =
+    await import("../../open-sse/services/tlsClientDownloadDir.ts");
 
   assert.equal(resolveTlsClientDownloadDir(), join(dataDir, "tls-client", "bin"));
 });
@@ -44,9 +43,8 @@ test("buildNativeTlsClientOptions passes downloadDir to tls-client-node (#8579)"
   const dataDir = mkdtempSync(join(tmpdir(), "omniroute-tls-client-opts-8579-"));
   process.env.DATA_DIR = dataDir;
 
-  const { buildNativeTlsClientOptions } = await import(
-    "../../open-sse/services/tlsClientDownloadDir.ts"
-  );
+  const { buildNativeTlsClientOptions } =
+    await import("../../open-sse/services/tlsClientDownloadDir.ts");
 
   const options = buildNativeTlsClientOptions();
 

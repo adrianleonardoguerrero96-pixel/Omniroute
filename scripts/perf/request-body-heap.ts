@@ -112,28 +112,44 @@ async function main(): Promise<void> {
   {
     const r = measureRetained(() => cloneLogPayload(body));
     hold.push(r.value);
-    rows.push({ mechanism: "cloneLogPayload (unbounded)", site: "chat.ts buildClientRawRequest", bytes: r.bytes });
+    rows.push({
+      mechanism: "cloneLogPayload (unbounded)",
+      site: "chat.ts buildClientRawRequest",
+      bytes: r.bytes,
+    });
   }
 
   // 2. What the request logger actually keeps (open-sse/utils/requestLogger.ts).
   {
     const r = measureRetained(() => cloneBoundedForLog(body));
     hold.push(r.value);
-    rows.push({ mechanism: "cloneBoundedForLog (bounded)", site: "requestLogger.logClientRawRequest", bytes: r.bytes });
+    rows.push({
+      mechanism: "cloneBoundedForLog (bounded)",
+      site: "requestLogger.logClientRawRequest",
+      bytes: r.bytes,
+    });
   }
 
   // 3. Combo per-target attempt clones (open-sse/services/combo.ts attemptBody).
   {
     const r = measureRetained(() => Array.from({ length: TARGETS }, () => structuredClone(body)));
     hold.push(r.value);
-    rows.push({ mechanism: `structuredClone x${TARGETS} (combo targets)`, site: "combo.ts attemptBody", bytes: r.bytes });
+    rows.push({
+      mechanism: `structuredClone x${TARGETS} (combo targets)`,
+      site: "combo.ts attemptBody",
+      bytes: r.bytes,
+    });
   }
 
   // 4. Whole-body serialization for token estimation (combo.ts estimateTokens(JSON.stringify(...))).
   {
     const r = measureRetained(() => JSON.stringify(body));
     hold.push(r.value);
-    rows.push({ mechanism: "JSON.stringify (token estimate)", site: "combo.ts estimateTokens", bytes: r.bytes });
+    rows.push({
+      mechanism: "JSON.stringify (token estimate)",
+      site: "combo.ts estimateTokens",
+      bytes: r.bytes,
+    });
   }
 
   // 5. Overlap: what C concurrent in-flight requests retain via the entry clone alone.

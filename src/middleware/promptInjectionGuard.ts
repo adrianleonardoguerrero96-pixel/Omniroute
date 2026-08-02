@@ -89,10 +89,7 @@ export function withInjectionGuard(handler: any, options: any = {}) {
         if (result.flagged) {
           try {
             request.headers.set("X-Injection-Flagged", "true");
-            request.headers.set(
-              "X-Injection-Detections",
-              String(result.detections.length)
-            );
+            request.headers.set("X-Injection-Detections", String(result.detections.length));
           } catch {
             // immutable headers: detection still applied; metadata is best-effort
           }

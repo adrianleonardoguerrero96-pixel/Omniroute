@@ -39,10 +39,7 @@ function makeContainer(): HTMLElement {
 }
 
 function setNativeValue(input: HTMLInputElement, value: string) {
-  const setter = Object.getOwnPropertyDescriptor(
-    window.HTMLInputElement.prototype,
-    "value"
-  )?.set;
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
   setter?.call(input, value);
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
@@ -66,9 +63,7 @@ describe("ProviderCooldownCard (#8107)", () => {
     const container = makeContainer();
     const root: Root = createRoot(container);
     await act(async () => {
-      root.render(
-        <ProviderCooldownCard value={baseValue} onSave={onSave} saving={false} />
-      );
+      root.render(<ProviderCooldownCard value={baseValue} onSave={onSave} saving={false} />);
     });
 
     const editButton = Array.from(container.querySelectorAll("button")).find((b) =>

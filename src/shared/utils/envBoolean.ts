@@ -8,10 +8,7 @@
  * @module shared/utils/envBoolean
  */
 
-export function parseEnvBoolean(
-  value: string | undefined | null,
-  fallback: boolean
-): boolean {
+export function parseEnvBoolean(value: string | undefined | null, fallback: boolean): boolean {
   if (value === undefined || value === null) return fallback;
   const normalized = String(value).trim().toLowerCase();
   if (normalized === "") return fallback;

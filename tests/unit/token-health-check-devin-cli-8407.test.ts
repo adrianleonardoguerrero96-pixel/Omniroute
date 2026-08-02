@@ -63,5 +63,9 @@ test("checkConnection leaves a devin-cli connection with no refresh token untouc
 
   const updated = await providersDb.getProviderConnectionById(getCreatedConnectionId(connection));
   assert.equal(updated?.testStatus, "active", "devin-cli testStatus must remain active");
-  assert.notEqual(updated?.errorCode, "no_refresh_token", "devin-cli must not be marked no_refresh_token");
+  assert.notEqual(
+    updated?.errorCode,
+    "no_refresh_token",
+    "devin-cli must not be marked no_refresh_token"
+  );
 });

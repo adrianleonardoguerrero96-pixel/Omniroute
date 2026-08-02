@@ -246,10 +246,7 @@ export function mapDiscoveredToCatalog(
     if (seen.has(id)) continue;
     // Skip if already covered by a friendly alias with same upstream
     if (
-      out.some(
-        (o) =>
-          o.upstreamModelId === r.modelId && o.upstreamModelVersion === r.modelVersion
-      )
+      out.some((o) => o.upstreamModelId === r.modelId && o.upstreamModelVersion === r.modelVersion)
     ) {
       continue;
     }
@@ -267,7 +264,9 @@ export function mapDiscoveredToCatalog(
   return out;
 }
 
-export function getAdobeFireflyFallbackCatalog(modality?: "image" | "video"): AdobeFireflyCatalogModel[] {
+export function getAdobeFireflyFallbackCatalog(
+  modality?: "image" | "video"
+): AdobeFireflyCatalogModel[] {
   if (!modality) return [...ADOBE_FIREFLY_FALLBACK_MODELS];
   return ADOBE_FIREFLY_FALLBACK_MODELS.filter((m) => m.modality === modality);
 }

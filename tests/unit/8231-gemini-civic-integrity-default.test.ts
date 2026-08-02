@@ -18,9 +18,7 @@ test("[repro #8231] claude-to-gemini default safetySettings must not force HARM_
     false,
     null
   );
-  const categories = (result.safetySettings as Array<{ category: string }>).map(
-    (s) => s.category
-  );
+  const categories = (result.safetySettings as Array<{ category: string }>).map((s) => s.category);
   assert.equal(
     categories.includes("HARM_CATEGORY_CIVIC_INTEGRITY"),
     false,
@@ -35,9 +33,7 @@ test("[repro #8231] openai-to-gemini default safetySettings must not force HARM_
     false,
     null
   );
-  const categories = (result.safetySettings as Array<{ category: string }>).map(
-    (s) => s.category
-  );
+  const categories = (result.safetySettings as Array<{ category: string }>).map((s) => s.category);
   assert.equal(
     categories.includes("HARM_CATEGORY_CIVIC_INTEGRITY"),
     false,

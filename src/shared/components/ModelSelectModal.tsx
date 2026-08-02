@@ -526,11 +526,9 @@ export default function ModelSelectModal({
     if (
       shouldConfirmSelectAll(toAdd.length) &&
       !confirm(
-        labelOrFallback(
-          "selectAllConfirm",
-          `Add ${toAdd.length} models to this combo?`,
-          { count: toAdd.length }
-        )
+        labelOrFallback("selectAllConfirm", `Add ${toAdd.length} models to this combo?`, {
+          count: toAdd.length,
+        })
       )
     ) {
       return;

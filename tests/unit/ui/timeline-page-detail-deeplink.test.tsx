@@ -29,9 +29,8 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(globalThis.location.search),
 }));
 
-const { default: LogsTimelinePage } = await import(
-  "../../../src/app/(dashboard)/dashboard/logs/timeline/page.tsx"
-);
+const { default: LogsTimelinePage } =
+  await import("../../../src/app/(dashboard)/dashboard/logs/timeline/page.tsx");
 
 function Harness() {
   const [, setVersion] = React.useState(0);

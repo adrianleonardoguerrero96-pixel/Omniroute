@@ -48,9 +48,8 @@ vi.mock("@xyflow/react", () => ({
   Position: { Top: "top", Bottom: "bottom", Left: "left", Right: "right" },
 }));
 
-const ProviderTopology = (
-  await import("../../../src/app/(dashboard)/home/ProviderTopology")
-).default;
+const ProviderTopology = (await import("../../../src/app/(dashboard)/home/ProviderTopology"))
+  .default;
 
 // jsdom normalises inline hex colours to `rgb(...)`, so compare in that space.
 const rgb = (hex: string) => {

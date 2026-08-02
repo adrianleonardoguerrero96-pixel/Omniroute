@@ -45,9 +45,7 @@ function rewriteInput(input: RequestInfo | URL, basePath: string): RequestInfo |
  * No-op when basePath is empty (root deploys). Safe to call multiple times;
  * uninstall when the last consumer unmounts.
  */
-export function installBasePathFetch(
-  basePath: string = getDeployBasePath()
-): () => void {
+export function installBasePathFetch(basePath: string = getDeployBasePath()): () => void {
   if (!basePath) return () => {};
   if (typeof globalThis.fetch !== "function") return () => {};
 

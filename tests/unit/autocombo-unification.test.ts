@@ -168,6 +168,19 @@ test("intelligent routing helpers normalize config and build provider scores", (
   assert.equal(normalizedConfig.explorationRate, 0.25);
   assert.equal(normalizedConfig.modePack, "ship-fast");
   assert.equal(normalizedConfig.routerStrategy, "rules");
+  // #5811: complexityAwareRouting defaults to false and only enables on strict `true`.
+  assert.equal(normalizedConfig.complexityAwareRouting, false);
+  assert.equal(
+    intelligentRouting.normalizeIntelligentRoutingConfig({ complexityAwareRouting: true })
+      .complexityAwareRouting,
+    true
+  );
+  assert.equal(
+    intelligentRouting.normalizeIntelligentRoutingConfig({ complexityAwareRouting: "yes" })
+      .complexityAwareRouting,
+    false,
+    "only a strict boolean true enables complexity routing"
+  );
   assert.equal(normalizedConfig.weights.quota, 0.4);
   assert.equal(
     normalizedConfig.weights.health,

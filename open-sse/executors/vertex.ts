@@ -52,7 +52,9 @@ export function looksLikeServiceAccountJson(apiKey: string): boolean {
 
 /** True for a Vertex AI Express-mode API key (a non-empty, non-JSON, non-OAuth credential). */
 export function isExpressApiKey(apiKey?: string | null): boolean {
-  return typeof apiKey === "string" && apiKey.trim().length > 0 && !looksLikeServiceAccountJson(apiKey);
+  return (
+    typeof apiKey === "string" && apiKey.trim().length > 0 && !looksLikeServiceAccountJson(apiKey)
+  );
 }
 
 export async function getAccessToken(sa: ServiceAccount): Promise<string> {
@@ -151,7 +153,11 @@ export class VertexExecutor extends BaseExecutor {
     }
     // Service Account JSON → mint a short-lived OAuth token (Bearer). An Express-mode API key is
     // sent as-is via x-goog-api-key (see buildHeaders), so no token exchange is needed for it.
-    if (credentials.apiKey && !credentials.accessToken && looksLikeServiceAccountJson(credentials.apiKey)) {
+    if (
+      credentials.apiKey &&
+      !credentials.accessToken &&
+      looksLikeServiceAccountJson(credentials.apiKey)
+    ) {
       try {
         const sa = parseSAFromApiKey(credentials.apiKey);
         credentials.accessToken = await getAccessToken(sa);

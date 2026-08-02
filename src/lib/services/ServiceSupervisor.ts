@@ -22,7 +22,13 @@ const CRASH_FAST_THRESHOLD_MS = 5_000;
 export function buildServiceSpawnOptions(
   env: NodeJS.ProcessEnv | undefined,
   cwd: string | undefined
-): { env: NodeJS.ProcessEnv | undefined; cwd: string | undefined; detached: boolean; stdio: ["ignore", "pipe", "pipe"]; windowsHide: boolean } {
+): {
+  env: NodeJS.ProcessEnv | undefined;
+  cwd: string | undefined;
+  detached: boolean;
+  stdio: ["ignore", "pipe", "pipe"];
+  windowsHide: boolean;
+} {
   return {
     env,
     cwd,

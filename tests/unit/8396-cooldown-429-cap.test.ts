@@ -8,7 +8,10 @@
 // an operator-configured maxCooldownMs of 10 minutes.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { checkFallbackError, type ProviderProfile } from "../../open-sse/services/accountFallback.ts";
+import {
+  checkFallbackError,
+  type ProviderProfile,
+} from "../../open-sse/services/accountFallback.ts";
 
 const legacyMigratedOAuthProfile: ProviderProfile = {
   baseCooldownMs: 60000,
@@ -54,7 +57,15 @@ test("#8396: an upstream Retry-After hint is honored (bypasses the exponential s
   };
   const headers = new Headers({ "retry-after": "30" });
 
-  const result = checkFallbackError(429, "", 8, "some-model", "test-apikey-provider", headers, apikeyProfile);
+  const result = checkFallbackError(
+    429,
+    "",
+    8,
+    "some-model",
+    "test-apikey-provider",
+    headers,
+    apikeyProfile
+  );
 
   assert.equal(result.usedUpstreamRetryHint, true);
   assert.ok(

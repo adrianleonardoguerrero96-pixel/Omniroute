@@ -51,14 +51,23 @@ test("deepinfra response adapter falls back to empty text for a {text}-less obje
     { documents: [{} as { text?: string }], return_documents: true }
   );
 
-  assert.equal(out.results[0].document.text, "", "a document with no text must not yield undefined");
+  assert.equal(
+    out.results[0].document.text,
+    "",
+    "a document with no text must not yield undefined"
+  );
 });
 
 test("voyage response adapter resolves document text from {text} objects", () => {
   const cfg = getRerankProvider("voyage-ai");
   const out = transformResponseFromProvider(
     cfg,
-    { data: [{ index: 0, relevance_score: 0.4 }, { index: 1, relevance_score: 0.7 }] },
+    {
+      data: [
+        { index: 0, relevance_score: 0.4 },
+        { index: 1, relevance_score: 0.7 },
+      ],
+    },
     { documents: [{ text: "alpha" }, { text: "beta" }], return_documents: true }
   );
 
