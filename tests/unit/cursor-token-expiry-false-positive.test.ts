@@ -13,6 +13,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  CursorService,
   resolveCursorTokenTtlSeconds,
   CURSOR_FALLBACK_TOKEN_TTL_SECONDS,
 } from "../../src/lib/oauth/services/cursor";
@@ -104,6 +105,34 @@ describe("resolveCursorTokenTtlSeconds (Token-expired false positive)", () => {
       CURSOR_FALLBACK_TOKEN_TTL_SECONDS
     );
     assert.equal(resolveCursorTokenTtlSeconds("", NOW), CURSOR_FALLBACK_TOKEN_TTL_SECONDS);
+  });
+});
+
+describe("CursorService.validateImportToken (call-site wiring)", () => {
+  // Guards the WIRING, not just the helper: reverting the call site to a
+  // hardcoded `expiresIn: 86400` leaves every helper test green, so without
+  // this the regression is invisible.
+  it("reports the JWT-derived TTL, not a hardcoded 24h", async () => {
+    const exp = Math.floor(Date.now() / 1000) + 60 * 24 * 3600; // 60 days out
+    const token = makeJwt({ sub: "auth0|u", aud: "https://cursor.com", exp });
+
+    const data = await new CursorService().validateImportToken(
+      token,
+      "67f9471b-61c5-4857-8402-379bcf4f20ac"
+    );
+
+    assert.notEqual(data.expiresIn, CURSOR_FALLBACK_TOKEN_TTL_SECONDS);
+    assert.ok(data.expiresIn > 50 * 24 * 3600, `expected >50d, got ${data.expiresIn}s`);
+    assert.equal(data.authMethod, "imported");
+    // And the value the import route actually persists must outlive 24h.
+    const expiresAt = Date.now() + data.expiresIn * 1000;
+    assert.ok(expiresAt > Date.now() + 2 * 24 * 3600 * 1000);
+  });
+
+  it("still falls back to 24h for an opaque token (no exp to read)", async () => {
+    const data = await new CursorService().validateImportToken("x".repeat(120));
+    assert.equal(data.expiresIn, CURSOR_FALLBACK_TOKEN_TTL_SECONDS);
+    assert.equal(data.authMethod, "cursor-agent");
   });
 });
 
