@@ -25,6 +25,7 @@ import {
   isContainerWithoutCursorAgent,
   buildCursorAgentMissingMessage,
   fetchCursorAgentModels,
+  CURSOR_AGENT_LIST_MODELS_TIMEOUT_MS,
 } from "../../src/lib/providerModels/cursorAgent";
 
 /** Filesystem stub: only the listed paths exist. */
@@ -211,10 +212,74 @@ describe("fetchCursorAgentModels — auth token forwarding", () => {
     try {
       await assert.rejects(
         () => fetchCursorAgentModels({ binary: FIXTURE, timeoutMs: 15000 }),
-        /Authentication required|cursor-agent/i
+        /not authenticated|Authentication required/i
       );
     } finally {
       if (saved !== undefined) process.env.CURSOR_AUTH_TOKEN = saved;
     }
+  });
+});
+
+describe("fetchCursorAgentModels — slow container cold start", () => {
+  // Measured live: `--list-models` takes ~32s inside the container (cold module
+  // graph + no Node compile cache + first-call auth handshake), vs well under a
+  // second warm on the host. The old 5s default therefore timed out and the UI
+  // fell back to the local catalog while reporting "did not return a model
+  // catalog" — indistinguishable from a parse bug, even though running the CLI
+  // by hand in that same container exits 0.
+  const SLOW = join(tmpdir(), `slow-cursor-agent-${process.pid}.sh`);
+
+  before(() => {
+    writeFileSync(
+      SLOW,
+      [
+        "#!/bin/sh",
+        "sleep 2",
+        'echo "Available models"',
+        'echo ""',
+        'echo "auto - Auto (default)"',
+        "",
+      ].join("\n"),
+      { mode: 0o755 }
+    );
+  });
+
+  after(() => {
+    try {
+      unlinkSync(SLOW);
+    } catch {
+      /* already gone */
+    }
+  });
+
+  it("default timeout is generous enough for a container cold start", () => {
+    // THE REGRESSION ASSERTION: 5000 was below the ~32s observed cold start.
+    assert.ok(
+      CURSOR_AGENT_LIST_MODELS_TIMEOUT_MS >= 32_000,
+      `default ${CURSOR_AGENT_LIST_MODELS_TIMEOUT_MS}ms must exceed the ~32s measured cold start`
+    );
+  });
+
+  it("succeeds on a binary slower than the old 5s budget", async () => {
+    const models = await fetchCursorAgentModels({ binary: SLOW, authToken: "t" });
+    assert.deepEqual(
+      models.map((m) => m.id),
+      ["auto"]
+    );
+  });
+
+  it("a genuine timeout says TIMED OUT, not 'did not return a catalog'", async () => {
+    // Diagnosability: conflating these two cost a full debug cycle.
+    await assert.rejects(
+      () => fetchCursorAgentModels({ binary: SLOW, timeoutMs: 300, authToken: "t" }),
+      (err: Error) => {
+        assert.match(err.message, /timed out/i);
+        assert.ok(
+          !/did not return a model catalog/.test(err.message),
+          "must not report a timeout as a parse failure"
+        );
+        return true;
+      }
+    );
   });
 });

@@ -218,11 +218,26 @@ export type CursorAgentModelEntry = {
   owned_by: "cursor";
 };
 
+/**
+ * Default timeout for `cursor-agent --list-models`.
+ *
+ * The old 5s budget was tuned against a warm host CLI. Measured inside the
+ * container the same command takes ~32s on a cold start (no Node compile cache,
+ * cold module graph, first-call auth handshake), so discovery timed out and fell
+ * back to the local catalog while reporting the misleading
+ * "cursor-agent did not return a model catalog" — even though the CLI, run by
+ * hand in that same container, succeeds with exit 0.
+ *
+ * 60s leaves headroom over the observed cold start without hanging the UI
+ * indefinitely; the result is cached, so this cost is paid once.
+ */
+export const CURSOR_AGENT_LIST_MODELS_TIMEOUT_MS = 60_000;
+
 export async function fetchCursorAgentModels(
   options: { binary?: string; timeoutMs?: number; authToken?: string } = {}
 ): Promise<CursorAgentModelEntry[]> {
   const binary = options.binary || resolveCursorAgentBinary();
-  const timeoutMs = options.timeoutMs ?? 5000;
+  const timeoutMs = options.timeoutMs ?? CURSOR_AGENT_LIST_MODELS_TIMEOUT_MS;
 
   if (!binary) {
     throw new Error(buildCursorAgentMissingMessage());
@@ -271,7 +286,9 @@ export async function fetchCursorAgentModels(
   if (ids.length === 0 && !/Authentication required|Not logged in/i.test(combined)) {
     const remainingTimeoutMs = timeoutMs - (Date.now() - startedAt);
     if (remainingTimeoutMs > 0) {
-      result = await runCursorAgent(binary, ["--model", "--help"], remainingTimeoutMs);
+      // Must forward `env` too — otherwise this legacy path silently drops the
+      // auth token and turns a recoverable retry into "Authentication required".
+      result = await runCursorAgent(binary, ["--model", "--help"], remainingTimeoutMs, env);
       combined = `${result.stdout}\n${result.stderr}`;
       ids = parseCursorAgentModels(combined);
     }
@@ -279,9 +296,26 @@ export async function fetchCursorAgentModels(
 
   if (ids.length === 0) {
     if (/Authentication required|Not logged in/i.test(combined)) {
-      throw new Error("cursor-agent is not authenticated; run 'agent login' on the OmniRoute host");
+      throw new Error(
+        "cursor-agent is not authenticated. Set CURSOR_AUTH_TOKEN (or import a Cursor token in OmniRoute) so discovery can authenticate."
+      );
     }
-    throw new Error("cursor-agent did not return a model catalog from 'agent --list-models'");
+    // Distinguish a timeout from a genuine parse failure. These were previously
+    // collapsed into one opaque message, which cost a full debug cycle: the CLI
+    // ran fine by hand (exit 0) while the app reported "did not return a
+    // catalog", because the ~32s container cold start blew the old 5s budget.
+    const elapsedMs = Date.now() - startedAt;
+    const timedOut = result.signal === "SIGKILL" || elapsedMs >= timeoutMs;
+    if (timedOut) {
+      throw new Error(
+        `cursor-agent --list-models timed out after ${elapsedMs}ms (limit ${timeoutMs}ms). ` +
+          `Cold starts in a container are slow; raise the timeout rather than assuming the CLI is broken.`
+      );
+    }
+    throw new Error(
+      `cursor-agent did not return a model catalog from 'agent --list-models' ` +
+        `(exit=${result.code ?? "null"}, ${elapsedMs}ms, ${combined.trim().length} bytes of output)`
+    );
   }
 
   return ids.map((id) => ({
