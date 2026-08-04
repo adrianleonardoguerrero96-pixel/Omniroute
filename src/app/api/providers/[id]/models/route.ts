@@ -1350,7 +1350,12 @@ export async function GET(
       if (autoFetchDisabledResponse) return autoFetchDisabledResponse;
 
       try {
-        const models = await fetchCursorAgentModels();
+        // `cursor-agent --list-models` is an authenticated call. Forward the
+        // connection's stored token so discovery works in environments with no
+        // `agent login` state (notably the Docker deployment), instead of
+        // silently degrading to the local catalog.
+        const token = (accessToken || apiKey || "").replace(/^Bearer\s+/i, "").trim();
+        const models = await fetchCursorAgentModels(token ? { authToken: token } : {});
         return buildApiDiscoveryResponse(models);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
