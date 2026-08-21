@@ -77,6 +77,7 @@ import { isNoAuthProviderBlockedBySettings } from "./noAuthProviderSettings";
 import { resolveAccountProxiesFromRegistry } from "./noAuthProxyResolution";
 import { getNoAuthHydrationProviderIds } from "./noAuthProviderSiblings";
 import { getResource404Bypass } from "./requestResourceHealth";
+import { shouldPreserveScheduledQuotaCooldown } from "@/lib/quota/connectionRecovery";
 import * as log from "../utils/logger";
 import { fisherYatesShuffle, getNextFromDeckSync } from "@/shared/utils/shuffleDeck";
 
@@ -2322,6 +2323,17 @@ export async function clearAccountError(
   connectionId: string,
   currentConnection: Partial<RecoverableConnectionState>
 ) {
+  if (
+    shouldPreserveScheduledQuotaCooldown({
+      id: connectionId,
+      testStatus: currentConnection.testStatus,
+      lastErrorType: currentConnection.lastErrorType,
+      rateLimitedUntil: currentConnection.rateLimitedUntil,
+    })
+  ) {
+    return;
+  }
+
   // Only update if currently has error status
   const hasError =
     (currentConnection.testStatus && currentConnection.testStatus !== "active") ||
@@ -2364,6 +2376,16 @@ export async function clearRecoveredProviderState(
   expectedState?: RecoveredStateExpectation
 ): Promise<{ applied: boolean }> {
   if (!credentials?.connectionId) return { applied: false };
+  if (
+    shouldPreserveScheduledQuotaCooldown({
+      id: credentials.connectionId,
+      testStatus: credentials.testStatus,
+      lastErrorType: credentials.lastErrorType,
+      rateLimitedUntil: credentials.rateLimitedUntil ?? expectedState?.rateLimitedUntil,
+    })
+  ) {
+    return { applied: false };
+  }
   if (expectedState) {
     const applied = await clearConnectionErrorIfUnchanged(credentials.connectionId, expectedState);
     if (!applied) {

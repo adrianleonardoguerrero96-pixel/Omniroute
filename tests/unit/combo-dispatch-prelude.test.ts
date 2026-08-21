@@ -472,6 +472,28 @@ test("tryPinnedModelDispatch: fails over when the pinned model returns a transie
   }
 });
 
+test("tryPinnedModelDispatch: fails over on hop-local billing statuses instead of leaking them as the combo body", async () => {
+  for (const status of [401, 402, 403]) {
+    const ctx = pinCtx();
+    const { res } = await dispatchHealthyPin(
+      ctx,
+      async () =>
+        new Response(JSON.stringify({ error: { message: "out of credits / billing cycle" } }), {
+          status,
+        })
+    );
+    assert.equal(
+      res,
+      null,
+      `status ${status} is hop-local — Codex/Cursor must still be tried, not serve this body`
+    );
+    assert.ok(
+      ctx.records.some((r) => r.level === "warn" && r.msg.includes(`failed (${status})`)),
+      `status ${status} must log the failover`
+    );
+  }
+});
+
 test("tryPinnedModelDispatch: returns a non-transient error as-is instead of failing over", async () => {
   const ctx = pinCtx();
   const badRequest = new Response("bad request", { status: 400 });

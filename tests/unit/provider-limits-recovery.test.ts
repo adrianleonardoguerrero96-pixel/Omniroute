@@ -256,6 +256,38 @@ test("partial quota refresh does not clear a quota cooldown before its reset", a
   assert.equal(after.rateLimitedUntil, resetAt);
 });
 
+test("remaining Claude weekly quota does not wipe a future rate_limited 429 window", async () => {
+  const resetAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  const created = await providersDb.createProviderConnection({
+    provider: "claude",
+    authType: "oauth",
+    email: "kopyt1-rate-limit@example.com",
+    accessToken: "claude-access",
+    refreshToken: "claude-refresh",
+    testStatus: "unavailable",
+    isActive: true,
+    lastError: "This request would exceed your account's rate limit.",
+    lastErrorType: "rate_limited",
+    errorCode: 429,
+    rateLimitedUntil: resetAt,
+    backoffLevel: 1,
+  });
+  const connectionId = (created as { id: string }).id;
+  const connection = await providersDb.getProviderConnectionById(connectionId);
+
+  await providerLimits.maybeClearRecoveredQuotaState(connection, {
+    quotas: {
+      "session (5h)": { remainingPercentage: 40, resetAt },
+      Weekly: { remainingPercentage: 72 },
+    },
+  });
+  const after = await providersDb.getProviderConnectionById(connectionId);
+
+  assert.equal(after.testStatus, "unavailable");
+  assert.equal(after.lastErrorType, "rate_limited");
+  assert.equal(after.rateLimitedUntil, resetAt);
+});
+
 test("CAS primitive clears when expected state matches", async () => {
   const created = await createGlmConnectionWithTransientCooldown();
   const connectionId = (created as { id: string }).id;

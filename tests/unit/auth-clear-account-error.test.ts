@@ -124,6 +124,42 @@ test("clearRecoveredProviderState ignores empty payloads and clears recoverable 
   assert.equal(updated.backoffLevel, 0);
 });
 
+test("clearAccountError does not wipe a future scheduled rate_limited window", async () => {
+  await resetStorage();
+  const resetAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+  const created = await providersDb.createProviderConnection({
+    provider: "claude",
+    authType: "oauth",
+    email: "preserve-rate-limit@example.com",
+    accessToken: "access",
+    refreshToken: "refresh",
+    testStatus: "unavailable",
+    lastError: "This request would exceed your account's rate limit.",
+    lastErrorType: "rate_limited",
+    lastErrorSource: "executor",
+    errorCode: 429,
+    rateLimitedUntil: resetAt,
+    backoffLevel: 1,
+  });
+
+  await auth.clearAccountError((created as { id: string }).id, {
+    connectionId: created.id,
+    id: created.id,
+    testStatus: "unavailable",
+    lastError: "This request would exceed your account's rate limit.",
+    lastErrorType: "rate_limited",
+    lastErrorSource: "executor",
+    errorCode: 429,
+    rateLimitedUntil: resetAt,
+  });
+
+  const updated = await providersDb.getProviderConnectionById((created as { id: string }).id);
+  assert.equal(updated.testStatus, "unavailable");
+  assert.equal(updated.lastErrorType, "rate_limited");
+  assert.equal(updated.rateLimitedUntil, resetAt);
+});
+
 test("getProviderCredentials resolves provider aliases to canonical DB records", async () => {
   await resetStorage();
 

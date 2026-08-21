@@ -5,9 +5,11 @@ import os from "node:os";
 import path from "node:path";
 
 // Regression tests for the context-aware combo compatibility filter.
-// Unknown context metadata is only safe as a fallback. Once the context filter
-// has rejected known-too-small targets and a known-capacity target remains,
-// unknown-context targets must not survive over it.
+// Drop hops whose window is KNOWN too small. Keep hops with a known-large
+// window AND hops with unknown metadata — unknown is not "too small".
+// Live 2026-08-19: best-reasoning-paid dropped Codex/Cursor as
+// context_window_unknown, kept only Kimi+Opus (2/5), both 403/429'd, combo
+// 503'd "all upstream accounts are inactive" while those accounts were active.
 
 const TEST_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "omniroute-combo-context-filter-"));
 const ORIGINAL_DATA_DIR = process.env.DATA_DIR;
@@ -97,7 +99,7 @@ function bigContextBody(tokens: number) {
 
 const noopLog = { info() {}, warn() {}, error() {}, debug() {} };
 
-test("known compatible context target wins over unknown-context targets", () => {
+test("unknown-context hops stay as fallback when a known-large hop exists (live 503)", () => {
   saveModelsDevCapabilities({
     "unit-known-context": {
       tiny: capabilityEntry(8_000),
@@ -118,7 +120,11 @@ test("known compatible context target wins over unknown-context targets", () => 
 
   assert.deepEqual(
     out.map((entry) => entry.modelStr),
-    ["unit-known-context/million"]
+    [
+      "unit-unknown-context/mystery-a",
+      "unit-known-context/million",
+      "unit-unknown-context/mystery-b",
+    ]
   );
 });
 

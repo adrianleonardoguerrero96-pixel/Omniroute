@@ -164,6 +164,7 @@ import {
   isContextOverflow400,
   isParamValidation400,
   isModelScoped400,
+  isHopLocalBillingStatus,
 } from "./combo/comboPredicates.ts";
 export {
   getConnectionStatusQuotaCutoffReason,
@@ -2001,7 +2002,10 @@ export async function handleComboChat({
       if (setTry < maxSetRetries) continue;
 
       // All set retries exhausted — return the final error
-      if (!lastStatus) {
+      // Hop-local 401/402/403 (Kimi billing / GitHub 402) must not become the
+      // combo body when later hops were skipped or also failed. That leak is
+      // what clients read as "out of credits" while Codex/Cursor still have quota.
+      if (!lastStatus || isHopLocalBillingStatus(lastStatus)) {
         notifyWebhookEvent("request.failed", {
           combo: combo.name,
           reason: "ALL_ACCOUNTS_INACTIVE",
@@ -2964,7 +2968,7 @@ async function handleRoundRobinCombo({
     });
   }
 
-  if (!lastStatus) {
+  if (!lastStatus || isHopLocalBillingStatus(lastStatus)) {
     return new Response(
       JSON.stringify({
         error: {

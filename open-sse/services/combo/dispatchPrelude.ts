@@ -19,7 +19,12 @@ import { handleFusionChat, type FusionTuning } from "../fusion.ts";
 import { parseModel } from "../model.ts";
 import { handlePipelineChat, type PipelineStep } from "../pipeline.ts";
 import type { resolveComboSetupConfig } from "../comboConfig.ts";
-import { clampComboDepth, MAX_GLOBAL_ATTEMPTS, resolveDelayMs } from "./comboPredicates.ts";
+import {
+  clampComboDepth,
+  isHopLocalBillingStatus,
+  MAX_GLOBAL_ATTEMPTS,
+  resolveDelayMs,
+} from "./comboPredicates.ts";
 import { resolveComboRuntimeUnits, resolveComboTargets } from "./comboStructure.ts";
 import { buildFusionHandleSingleModel, extractFusionPanelSpec } from "./fusionPanel.ts";
 import {
@@ -104,20 +109,29 @@ const TERMINAL_PIN_STATUSES = new Set(["credits_exhausted", "banned", "expired"]
 export function pinIsDurablyUnhealthy(
   circuitState: string | undefined,
   connections: Array<{
+    id?: string | null;
     testStatus?: string | null;
     backoffLevel?: number | null;
     rateLimitedUntil?: string | null;
   }>,
   now: number,
-  opts: { backoffLevel?: number; graceMs?: number } = {}
+  opts: { backoffLevel?: number; graceMs?: number; pinnedConnectionId?: string | null } = {}
 ): boolean {
   if (circuitState === "OPEN") return true;
   if (!Array.isArray(connections) || connections.length === 0) return true;
   const backoffThreshold = opts.backoffLevel ?? Number(process.env.PIN_DROP_BACKOFF_LEVEL || "2");
   const graceMs = opts.graceMs ?? Number(process.env.PIN_DROP_GRACE_MS || "20000");
+  // A hop pinned to a specific account must drop when THAT account is
+  // cooling. Sibling Claude accounts must not keep a session pinned to a
+  // benched one through a 1h 429 (#no-models-available live incident).
+  const scoped =
+    opts.pinnedConnectionId &&
+    connections.some((c) => c.id && c.id === opts.pinnedConnectionId)
+      ? connections.filter((c) => c.id === opts.pinnedConnectionId)
+      : connections;
   // The pin survives as long as AT LEAST ONE connection is healthy or only
   // briefly cooling down — failover only when every connection is durably down.
-  const anyUsable = connections.some((c) => {
+  const anyUsable = scoped.some((c) => {
     const status = typeof c.testStatus === "string" ? c.testStatus : "";
     if (TERMINAL_PIN_STATUSES.has(status)) return false;
     if (Number(c.backoffLevel ?? 0) >= backoffThreshold) return false;
@@ -133,7 +147,10 @@ export function pinIsDurablyUnhealthy(
  * active connections, and decide via {@link pinIsDurablyUnhealthy}. Fail-open
  * (return false) on any error so a lookup bug never drops a healthy pin.
  */
-async function isPinnedModelDurablyUnhealthy(pinnedModel: string): Promise<boolean> {
+async function isPinnedModelDurablyUnhealthy(
+  pinnedModel: string,
+  pinnedConnectionId?: string | null
+): Promise<boolean> {
   try {
     const provider = parseModel(pinnedModel).provider;
     if (!provider) return false;
@@ -142,11 +159,14 @@ async function isPinnedModelDurablyUnhealthy(pinnedModel: string): Promise<boole
       provider,
       isActive: true,
     })) as Array<{
+      id?: string | null;
       testStatus?: string | null;
       backoffLevel?: number | null;
       rateLimitedUntil?: string | null;
     }>;
-    return pinIsDurablyUnhealthy(circuitState, connections || [], Date.now());
+    return pinIsDurablyUnhealthy(circuitState, connections || [], Date.now(), {
+      pinnedConnectionId,
+    });
   } catch {
     return false;
   }
@@ -208,7 +228,10 @@ async function evaluatePinnedResponse(args: {
     return null;
   }
   const pinnedStatus = pinnedResult.status || 500;
-  if (![408, 429, 500, 502, 503, 504].includes(pinnedStatus)) {
+  const pinIsFailover =
+    [408, 429, 500, 502, 503, 504].includes(pinnedStatus) ||
+    isHopLocalBillingStatus(pinnedStatus);
+  if (!pinIsFailover) {
     return pinnedResult;
   }
   log.warn(
@@ -254,18 +277,23 @@ export async function tryPinnedModelDispatch(args: {
   // when allCombos is authoritative (non-empty) so we can resolve combo-refs;
   // the auto-combo redirect path passes an empty list and keeps prior behavior.
   const haveFullCombos = Array.isArray(allCombos) ? allCombos.length > 0 : !!allCombos;
-  const pinInCombo =
-    !haveFullCombos ||
-    resolveComboTargets(combo, allCombos, clampComboDepth(config.maxComboDepth)).some(
-      (t) => t.modelStr === pinnedModel
-    );
+  const comboTargets = haveFullCombos
+    ? resolveComboTargets(combo, allCombos, clampComboDepth(config.maxComboDepth))
+    : [];
+  const pinInCombo = !haveFullCombos || comboTargets.some((t) => t.modelStr === pinnedModel);
+  const pinnedHopConnectionId =
+    comboTargets.find((t) => t.modelStr === pinnedModel)?.connectionId ?? null;
   // Honor the pin only if it is still a combo target AND its provider is not
   // DURABLY down. Without the health gate a pin keeps routing a session to a
   // dead/credits-exhausted/throttled account forever (strategy bypassed, no
   // failover) — incident 2026-06-22: laila stuck on a throttled claude account
   // and credits_exhausted accounts never failing over. A transient cooldown is
   // tolerated (pin kept) so an unstable provider does not churn the pin.
-  const pinDurablyDown = pinInCombo ? await isPinnedModelDurablyUnhealthy(pinnedModel) : false;
+  // Scope the health check to the hop's own connectionId when known — a sibling
+  // Claude account that is still "active" must not keep a 1h-429 hop pinned.
+  const pinDurablyDown = pinInCombo
+    ? await isPinnedModelDurablyUnhealthy(pinnedModel, pinnedHopConnectionId)
+    : false;
   if (pinInCombo && !pinDurablyDown) {
     log.info(
       "COMBO",

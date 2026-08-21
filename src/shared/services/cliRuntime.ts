@@ -331,9 +331,15 @@ const runProcess = (
     // #13). When useShell is false (.exe and all non-Windows), spawn passes
     // `command` as a raw argv[0] and the OS loader handles spaces. When useShell
     // is true (.cmd/.bat on Windows), Node quotes the command for cmd.exe itself.
+    // v9: an explicit `env` replaces the child's whole environment. CLIs
+    // expect NODE_ENV (and Next's ProcessEnv typing requires it) — default it
+    // from this process; callers that set one keep theirs (spread wins).
+    const childEnv: NodeJS.ProcessEnv | undefined = env
+      ? { NODE_ENV: process.env.NODE_ENV, ...env }
+      : undefined;
     const child = spawn(command, args, {
       windowsHide: true,
-      env,
+      env: childEnv,
       stdio: ["ignore", "pipe", "pipe"],
       // On Windows, npm installs CLI wrappers as .cmd/.bat scripts. Those still
       // need cmd.exe, but direct .exe paths must avoid the shell so paths with
@@ -352,11 +358,11 @@ const runProcess = (
       resolve(result);
     };
 
-    child.stdout.on("data", (chunk) => {
+    child.stdout?.on("data", (chunk) => {
       stdout += chunk.toString();
     });
 
-    child.stderr.on("data", (chunk) => {
+    child.stderr?.on("data", (chunk) => {
       stderr += chunk.toString();
     });
 

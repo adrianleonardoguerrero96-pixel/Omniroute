@@ -75,3 +75,37 @@ test("keeps pin if ANY connection is usable (terminal + healthy mix)", () => {
   ];
   assert.equal(pinIsDurablyUnhealthy("CLOSED", conns, NOW, opts), false);
 });
+
+test("drops pin when the pinned hop's connection is cooling even if a sibling account is healthy", () => {
+  const kopyt1 = {
+    id: "2ef5beb8",
+    testStatus: "unavailable",
+    backoffLevel: 0,
+    rateLimitedUntil: new Date(NOW + 3_600_000).toISOString(),
+  };
+  const elastic = { id: "fe1c3764", ...healthy };
+  assert.equal(
+    pinIsDurablyUnhealthy("CLOSED", [kopyt1, elastic], NOW, {
+      ...opts,
+      pinnedConnectionId: "2ef5beb8",
+    }),
+    true
+  );
+});
+
+test("keeps pin when the pinned hop's own connection is still healthy", () => {
+  const kopyt1 = { id: "2ef5beb8", ...healthy };
+  const elastic = {
+    id: "fe1c3764",
+    testStatus: "unavailable",
+    backoffLevel: 0,
+    rateLimitedUntil: new Date(NOW + 3_600_000).toISOString(),
+  };
+  assert.equal(
+    pinIsDurablyUnhealthy("CLOSED", [kopyt1, elastic], NOW, {
+      ...opts,
+      pinnedConnectionId: "2ef5beb8",
+    }),
+    false
+  );
+});

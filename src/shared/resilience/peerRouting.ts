@@ -5,7 +5,11 @@ const INSTANCE_ID_PATTERN = /^[A-Za-z0-9._:-]{1,64}$/;
 export const OMNIROUTE_PEER_TRACE_HEADER = "X-OmniRoute-Peer-Trace";
 
 type HeaderSource = Headers | Record<string, unknown> | null | undefined;
+// v9: process.env (ProcessEnv) is an index-signature type; a pure
+// optional-prop interface shares no properties with it (TS2559 weak-type
+// check). The index signature makes it assignable.
 type PeerEnvironment = {
+  [key: string]: string | undefined;
   OMNIROUTE_INSTANCE_ID?: string;
   OMNIROUTE_PEER_URLS?: string;
   OMNIROUTE_PEER_MAX_HOPS?: string;

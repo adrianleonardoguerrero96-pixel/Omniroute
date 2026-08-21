@@ -195,3 +195,144 @@ test("combo falls through 400s and reaches the next model", async () => {
     "openrouter/google/gemini-3.1-pro-preview",
   ]);
 });
+
+test("combo does not leak a hop-local 403 credits body when a later hop succeeds", async () => {
+  const calls = [];
+  const result = await handleComboChat({
+    body: {},
+    combo: {
+      name: "billing-skip-then-codex",
+      strategy: "priority",
+      models: [
+        { model: "claude/claude-opus-5", weight: 0, connectionId: "kopyt1" },
+        { model: "codex/gpt-5.6-sol-high", weight: 0, connectionId: "codex1" },
+      ],
+      config: { maxRetries: 0 },
+    },
+    handleSingleModel: async (_body, modelStr) => {
+      calls.push(modelStr);
+      if (modelStr.startsWith("claude/")) {
+        return new Response(
+          JSON.stringify({
+            error: { message: "You've reached your usage limit for this billing cycle" },
+          }),
+          { status: 403, headers: { "content-type": "application/json" } }
+        );
+      }
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    },
+    isModelAvailable: () => true,
+    log: createLog(),
+    settings: null,
+    allCombos: null,
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(calls, ["claude/claude-opus-5", "codex/gpt-5.6-sol-high"]);
+  const body = await result.json();
+  assert.equal(JSON.stringify(body).includes("billing cycle"), false);
+});
+
+test("combo does not leak a hop-local 403 as the combo body when remaining hops were skipped", async () => {
+  const result = await handleComboChat({
+    body: {},
+    combo: {
+      name: "billing-then-skipped",
+      strategy: "priority",
+      models: [
+        { model: "kimi/k2.5", weight: 0, connectionId: "kimi1" },
+        { model: "codex/gpt-5.6-sol-high", weight: 0, connectionId: "codex1" },
+      ],
+      config: { maxRetries: 0 },
+    },
+    handleSingleModel: async (_body, modelStr) => {
+      if (String(modelStr).startsWith("kimi/")) {
+        return new Response(
+          JSON.stringify({ error: { message: "out of credits" } }),
+          { status: 403, headers: { "content-type": "application/json" } }
+        );
+      }
+      throw new Error(`should not dispatch skipped hop ${modelStr}`);
+    },
+    isModelAvailable: (_modelStr, target) => !String(target?.modelStr ?? _modelStr).startsWith("codex/"),
+    log: createLog(),
+    settings: null,
+    allCombos: null,
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.status, 503);
+  const body = await result.json();
+  const text = JSON.stringify(body);
+  assert.equal(text.includes("out of credits"), false);
+  assert.equal(body.error?.code, "ALL_ACCOUNTS_INACTIVE");
+});
+
+test("cursor-agent stream timeout before first token fails over to the next hop", async () => {
+  // Live 2026-08-19: best-chat-paid / main burned 300s on composer-2.5*,
+  // logged cursor 502, and never dispatched Claude/Kiro (same cid had no
+  // 200 sibling). Combo must treat that 200+dead-SSE as a hop failure.
+  const calls: string[] = [];
+  const deadSse = () =>
+    new Response(
+      new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.error(new Error("cursor-agent stream timed out"));
+        },
+      }),
+      { status: 200, headers: { "content-type": "text/event-stream" } }
+    );
+
+  const result = await handleComboChat({
+    body: { stream: true },
+    combo: {
+      name: "best-chat-paid",
+      strategy: "priority",
+      models: [
+        { model: "cursor/composer-2.5-fast", weight: 0 },
+        { model: "claude/claude-sonnet-5", weight: 0 },
+      ],
+      config: { maxRetries: 0 },
+    },
+    handleSingleModel: async (_body, modelStr) => {
+      calls.push(String(modelStr));
+      if (String(modelStr).startsWith("cursor/")) return deadSse();
+      return new Response(JSON.stringify({ ok: true, model: modelStr }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    },
+    isModelAvailable: () => true,
+    log: createLog(),
+    settings: null,
+    allCombos: null,
+  });
+
+  assert.deepEqual(calls, ["cursor/composer-2.5-fast", "claude/claude-sonnet-5"]);
+  assert.equal(result.ok, true, "Claude must serve after Cursor's empty-stream timeout");
+});
+
+test("one-hop cheap combo must not 502 when the hop returns keepalive-prefixed SSE", async () => {
+  const sse =
+    ': keep-alive\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","choices":[{"delta":{"content":"pong"}}]}\n\ndata: [DONE]\n\n';
+  const result = await handleComboChat({
+    body: {},
+    combo: {
+      name: "cheap",
+      strategy: "priority",
+      models: [{ model: "openrouter/deepseek/deepseek-v4-flash", weight: 0 }],
+      config: { maxRetries: 0 },
+    },
+    handleSingleModel: async () =>
+      new Response(sse, {
+        status: 200,
+        headers: { "content-type": "text/event-stream" },
+      }),
+    isModelAvailable: () => true,
+    log: createLog(),
+    settings: null,
+    allCombos: null,
+  });
+
+  assert.equal(result.ok, true, "a 200 SSE hop is usable — do not crystallize a quality 502");
+});

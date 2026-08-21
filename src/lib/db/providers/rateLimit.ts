@@ -4,6 +4,7 @@
 
 import { getDbInstance } from "../core";
 import { invalidateDbCache } from "../readCache";
+import { shouldPreserveScheduledQuotaCooldown } from "@/lib/quota/connectionRecovery";
 
 interface StatementLike<TRow = unknown> {
   all: (...params: unknown[]) => TRow[];
@@ -156,13 +157,37 @@ export function clearStaleCrashCooldowns(): { cleared: number } {
 
   const rows = db
     .prepare(
-      `SELECT id, test_status FROM provider_connections WHERE rate_limited_until IS NOT NULL`
+      `SELECT id, test_status, last_error_type, rate_limited_until FROM provider_connections WHERE rate_limited_until IS NOT NULL`
     )
-    .all() as Array<{ id: string; test_status: string | null }>;
+    .all() as Array<{
+    id: string;
+    test_status: string | null;
+    last_error_type: string | null;
+    rate_limited_until: string | number | null;
+  }>;
 
+  const nowMs = Date.now();
   const toReset = rows.filter((r) => {
     const status = (r.test_status || "").trim().toLowerCase();
-    return !TERMINAL_STATUSES.has(status);
+    if (TERMINAL_STATUSES.has(status)) return false;
+    // Future quota windows (Kimi weekly, Claude session, quota-preflight)
+    // are *scheduled*, not crash-stale. Wiping them on every docker restart
+    // is why exhausted hops rejoin combos and surface 403 as the combo error.
+    if (
+      shouldPreserveScheduledQuotaCooldown(
+        {
+          id: r.id,
+          testStatus: r.test_status,
+          lastErrorType: r.last_error_type,
+          rateLimitedUntil:
+            r.rate_limited_until == null ? null : String(r.rate_limited_until),
+        },
+        nowMs
+      )
+    ) {
+      return false;
+    }
+    return true;
   });
 
   if (toReset.length === 0) return { cleared: 0 };

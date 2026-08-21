@@ -48,10 +48,59 @@ export interface RecoverableConnectionInput {
   id: string;
   testStatus?: string | null;
   rateLimitedUntil?: string | null;
+  lastErrorAt?: string | null;
+  lastErrorType?: string | null;
 }
 
 function normalizeStatus(value: string | null | undefined): string {
   return (value || "").trim().toLowerCase();
+}
+
+/** Error types that encode a known quota reset, not a crash-stale backoff. */
+const SCHEDULED_QUOTA_ERROR_TYPES = new Set([
+  "quota_exhausted",
+  "free_quota_exhausted",
+  "rate_limit_exceeded",
+  // Claude Max / Anthropic 429s stamp this (not quota_exhausted). Wiping the
+  // window on restart/health-check re-promotes the hop and 503s the combo.
+  "rate_limited",
+]);
+
+/** Short `rate_limited` windows are crash/backoff (e.g. GLM 60s), not resets. */
+const MIN_RATE_LIMITED_PRESERVE_MS = 5 * 60 * 1000;
+
+/**
+ * True when the connection is cooling down until a *scheduled* quota reset
+ * (Kimi billing cycle, Claude weekly, quota-preflight, etc.).
+ *
+ * Crash-recovery (`clearStaleCrashCooldowns`) and token-health must not
+ * revive these: `/models` 200 / a successful OAuth refresh only prove the
+ * credential is valid, not that the billing window has reopened. Elapsed
+ * windows are *not* preserved — those belong on the normal recovery path.
+ */
+export function shouldPreserveScheduledQuotaCooldown(
+  connection: RecoverableConnectionInput | null | undefined,
+  nowMs: number = Date.now()
+): boolean {
+  if (!connection || typeof connection.id !== "string" || connection.id.length === 0) {
+    return false;
+  }
+  const status = normalizeStatus(connection.testStatus);
+  if (status !== RECOVERABLE_COOLDOWN_STATUS && status !== "credits_exhausted") {
+    return false;
+  }
+  const errorType = normalizeStatus(connection.lastErrorType);
+  if (!SCHEDULED_QUOTA_ERROR_TYPES.has(errorType) && status !== "credits_exhausted") {
+    return false;
+  }
+  const untilMs = cooldownUntilMs(connection.rateLimitedUntil || "");
+  if (!Number.isFinite(untilMs) || untilMs <= nowMs) {
+    return false;
+  }
+  if (errorType === "rate_limited" && untilMs - nowMs < MIN_RATE_LIMITED_PRESERVE_MS) {
+    return false;
+  }
+  return true;
 }
 
 /**
@@ -63,6 +112,56 @@ function hasElapsedCooldown(rateLimitedUntil: string | null | undefined, nowMs: 
   if (!rateLimitedUntil) return false;
   const ms = cooldownUntilMs(rateLimitedUntil);
   return Number.isFinite(ms) && ms <= nowMs;
+}
+
+export function buildCredentialTestStatusUpdate(opts: {
+  id: string;
+  testStatus?: string | null;
+  lastErrorType?: string | null;
+  rateLimitedUntil?: string | null;
+  resultValid: boolean;
+  nowIso: string;
+  nowMs?: number;
+}): {
+  testStatus: string;
+  lastErrorType: string | null;
+  rateLimitedUntil: string | null;
+  lastTested: string;
+} {
+  const lastTested = opts.nowIso;
+  if (
+    opts.resultValid &&
+    shouldPreserveScheduledQuotaCooldown(
+      {
+        id: opts.id,
+        testStatus: opts.testStatus,
+        lastErrorType: opts.lastErrorType,
+        rateLimitedUntil: opts.rateLimitedUntil,
+      },
+      opts.nowMs ?? Date.parse(opts.nowIso)
+    )
+  ) {
+    return {
+      testStatus: opts.testStatus || "unavailable",
+      lastErrorType: opts.lastErrorType ?? null,
+      rateLimitedUntil: opts.rateLimitedUntil ?? null,
+      lastTested,
+    };
+  }
+  if (opts.resultValid) {
+    return {
+      testStatus: "active",
+      lastErrorType: null,
+      rateLimitedUntil: null,
+      lastTested,
+    };
+  }
+  return {
+    testStatus: "error",
+    lastErrorType: opts.lastErrorType ?? null,
+    rateLimitedUntil: opts.rateLimitedUntil ?? null,
+    lastTested,
+  };
 }
 
 /**

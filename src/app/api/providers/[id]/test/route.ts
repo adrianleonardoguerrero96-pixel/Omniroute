@@ -22,6 +22,7 @@ import { providerAllowsOptionalApiKey } from "@/shared/constants/providers";
 import { removeConnectionHealth } from "@omniroute/open-sse/services/apiKeyRotator.ts";
 import { classifyAmbiguousOrAuthError, type ClassifyFailureArgs } from "./mistralAmbiguousAuth";
 import { OAUTH_TEST_CONFIG } from "./oauthTestConfig";
+import { buildCredentialTestStatusUpdate } from "@/lib/quota/connectionRecovery";
 
 // Bound the OAuth probe so a hung upstream can't block the connection-test queue
 // forever (#1449). Mirrors the 30s timeout the API-key path uses via validateProviderApiKey.
@@ -697,18 +698,57 @@ export async function testSingleConnection(connectionId: string, validationModel
       ? makeDiagnosis("ok", "local", null, null)
       : classifyFailure({ error: result.error, statusCode: result.statusCode, provider }));
 
+  const preserved = buildCredentialTestStatusUpdate({
+    id: connectionId,
+    testStatus: typeof connection.testStatus === "string" ? connection.testStatus : null,
+    lastErrorType: typeof connection.lastErrorType === "string" ? connection.lastErrorType : null,
+    rateLimitedUntil:
+      typeof connection.rateLimitedUntil === "string" ? connection.rateLimitedUntil : null,
+    resultValid: Boolean(result.valid),
+    nowIso: now,
+  });
+  const preservedScheduledWindow = Boolean(result.valid) && preserved.testStatus !== "active";
+
   const updateData: Record<string, any> = {
-    testStatus: result.valid ? "active" : "error",
-    lastError: result.valid ? null : result.error,
-    lastErrorAt: result.valid ? null : now,
+    testStatus: preservedScheduledWindow
+      ? preserved.testStatus
+      : result.valid
+        ? "active"
+        : "error",
+    lastError: result.valid
+      ? preservedScheduledWindow
+        ? connection.lastError
+        : null
+      : result.error,
+    lastErrorAt: result.valid
+      ? preservedScheduledWindow
+        ? connection.lastErrorAt
+        : null
+      : now,
     lastTested: now,
-    lastErrorType: result.valid ? null : diagnosis.type,
-    lastErrorSource: result.valid ? null : diagnosis.source,
-    errorCode: result.valid ? null : diagnosis.code || result.statusCode || null,
-    rateLimitedUntil: result.valid ? null : connection.rateLimitedUntil || null,
+    lastErrorType: preservedScheduledWindow
+      ? preserved.lastErrorType
+      : result.valid
+        ? null
+        : diagnosis.type,
+    lastErrorSource: result.valid
+      ? preservedScheduledWindow
+        ? connection.lastErrorSource
+        : null
+      : diagnosis.source,
+    errorCode: result.valid
+      ? preservedScheduledWindow
+        ? connection.errorCode
+        : null
+      : diagnosis.code || result.statusCode || null,
+    rateLimitedUntil: preservedScheduledWindow
+      ? preserved.rateLimitedUntil
+      : result.valid
+        ? null
+        : connection.rateLimitedUntil || null,
   };
 
-  if (result.valid) {
+  if (result.valid && !preservedScheduledWindow) {
     updateData.backoffLevel = 0;
 
     const psd = connection?.providerSpecificData as Record<string, unknown> | undefined;
