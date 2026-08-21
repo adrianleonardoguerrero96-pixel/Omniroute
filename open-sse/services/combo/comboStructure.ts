@@ -13,10 +13,7 @@
 
 import { getModelContextLimit } from "../../../src/lib/modelCapabilities";
 import { getComboModelString, normalizeComboStep } from "../../../src/lib/combos/steps.ts";
-import {
-  getProviderByAlias,
-  getProviderById,
-} from "../../../src/shared/constants/providers.ts";
+import { getProviderByAlias, getProviderById } from "../../../src/shared/constants/providers.ts";
 import { estimateTokens } from "../contextManager.ts";
 import { getResolvedModelCapabilities } from "../modelCapabilities.ts";
 import { parseModel } from "../model.ts";
@@ -687,11 +684,11 @@ export function filterTargetsByRequestCompatibility(
     return false;
   });
 
-  // Unknown context limits are safe only as a fallback. If this request already
-  // filtered at least one known-too-small target and known-good targets remain,
-  // prefer the known-good set over unknown metadata gaps. If no known-good
-  // context target remains, fall back to the strategy order for context-only
-  // candidates instead of letting unknown metadata be the only survivors.
+  // Drop hops whose window is KNOWN too small. Keep unknown-window hops:
+  // missing catalog metadata is not proof they cannot serve. Live 2026-08-19:
+  // preferring only known-large hops dropped Codex/Cursor from
+  // best-reasoning-paid (kept 2/5 = Kimi+Opus), then both 403/429'd into a
+  // misleading "all upstream accounts are inactive" 503.
   const rejectedForContextWindow = rejected.some((entry) =>
     entry.reasons.includes("context_window")
   );
@@ -699,27 +696,6 @@ export function filterTargetsByRequestCompatibility(
     const knownContextCompatible = compatible.filter((target) =>
       hasKnownCompatibleContextLimit(target, requirements)
     );
-
-    if (knownContextCompatible.length > 0 && knownContextCompatible.length < compatible.length) {
-      const knownContextCompatibleTargets = new Set(knownContextCompatible);
-      for (const target of compatible) {
-        if (!knownContextCompatibleTargets.has(target)) {
-          rejected.push({ target, reasons: ["context_window_unknown"] });
-        }
-      }
-
-      log.info(
-        "COMBO",
-        `${label}: kept ${knownContextCompatible.length}/${targets.length} targets for request requirements`
-      );
-      log.debug?.(
-        "COMBO",
-        `${label}: rejected targets ${rejected
-          .map((entry) => `${entry.target.modelStr}(${entry.reasons.join("+")})`)
-          .join(", ")}`
-      );
-      return knownContextCompatible;
-    }
 
     if (knownContextCompatible.length === 0 && compatible.length > 0) {
       const rejectedByTarget = new Map(rejected.map((entry) => [entry.target, entry.reasons]));

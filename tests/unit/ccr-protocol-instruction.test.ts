@@ -150,19 +150,23 @@ describe("ccr protocol instruction (#8033)", () => {
       instruction.includes("[CCR retrieve hash=<24hex> chars=N]"),
       "must show the marker shape"
     );
-    assert.match(
-      instruction,
-      /verbatim|exact/i,
-      "must stress verbatim/exact copying of the hash"
-    );
+    assert.match(instruction, /verbatim|exact/i, "must stress verbatim/exact copying of the hash");
     assert.match(instruction, /24/, "must mention the 24-character length of the hash");
     assert.ok(instruction.includes("dedup:ref"), "must mention the dedup:ref contract");
   });
 
   it("recognizes all three tools[] shapes: OpenAI nested, flat, Claude", () => {
-    assert.equal(callerSupportsCcrRetrieve({ tools: [RETRIEVE_TOOL_OPENAI] }), true, "OpenAI nested shape");
+    assert.equal(
+      callerSupportsCcrRetrieve({ tools: [RETRIEVE_TOOL_OPENAI] }),
+      true,
+      "OpenAI nested shape"
+    );
     assert.equal(callerSupportsCcrRetrieve({ tools: [RETRIEVE_TOOL_FLAT] }), true, "flat shape");
-    assert.equal(callerSupportsCcrRetrieve({ tools: [RETRIEVE_TOOL_CLAUDE] }), true, "Claude shape");
+    assert.equal(
+      callerSupportsCcrRetrieve({ tools: [RETRIEVE_TOOL_CLAUDE] }),
+      true,
+      "Claude shape"
+    );
     assert.equal(callerSupportsCcrRetrieve({ tools: [] }), false, "empty tools array");
     assert.equal(callerSupportsCcrRetrieve({}), false, "absent tools field");
     assert.equal(

@@ -100,7 +100,8 @@ test("#7993 a canonical 'opencode/<model>' resolved combo/catalog target egresse
   let observedSource: string | null = null;
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (async (input: unknown) => {
-    const url = typeof input === "string" ? input : (input as { url?: string })?.url || String(input);
+    const url =
+      typeof input === "string" ? input : (input as { url?: string })?.url || String(input);
     observedSource = resolveProxyForRequest(url).source;
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,

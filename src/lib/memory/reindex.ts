@@ -23,9 +23,7 @@ const log = logger("MEMORY_REINDEX");
  *
  * @returns { processed: number; errors: number }
  */
-export async function runReindexBatch(
-  limit = 100
-): Promise<{ processed: number; errors: number }> {
+export async function runReindexBatch(limit = 100): Promise<{ processed: number; errors: number }> {
   const queue = getMemoryReindexQueue(limit);
 
   if (queue.length === 0) {

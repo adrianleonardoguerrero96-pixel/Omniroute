@@ -600,7 +600,9 @@ async function resolveModelByProviderInference(modelId: string, extendedContext:
 
   // Canonicalize candidates (deduplicate alias providers pointing to the same provider ID)
   const canonicalCandidates = Array.from(
-    new Set(candidatesToUse.map((p) => resolveProviderAlias(p)).filter((p): p is string => p !== null))
+    new Set(
+      candidatesToUse.map((p) => resolveProviderAlias(p)).filter((p): p is string => p !== null)
+    )
   );
 
   // Filter candidates by active connections configured in the database

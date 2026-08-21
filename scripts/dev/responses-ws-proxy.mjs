@@ -585,12 +585,18 @@ class ResponsesWsSession {
   // preparedContext, but never touches this.upstream/this.upstreamReady; the caller decides
   // whether a new upstream socket is needed.
   async runPrepare(message, responseBody) {
-    const prepared = await callInternal(this.fetchImpl, this.baseUrl, this.bridgeSecret, "prepare", {
-      requestUrl: this.requestUrl,
-      headers: getAuthHeaders(this.requestUrl, this.requestHeaders),
-      message,
-      response: responseBody,
-    });
+    const prepared = await callInternal(
+      this.fetchImpl,
+      this.baseUrl,
+      this.bridgeSecret,
+      "prepare",
+      {
+        requestUrl: this.requestUrl,
+        headers: getAuthHeaders(this.requestUrl, this.requestHeaders),
+        message,
+        response: responseBody,
+      }
+    );
 
     if (!prepared.ok) {
       const message2 =
@@ -716,7 +722,9 @@ class ResponsesWsSession {
         // otherwise every turn after the first bypasses the whole pipeline. This reuses
         // the already-established upstream transport; it must NOT recreate the socket.
         const prepared = await this.runPrepare(message, nextTurnBody);
-        this.upstream.send(jsonStringifySafe(withPreparedResponseCreate(message, prepared.json.response)));
+        this.upstream.send(
+          jsonStringifySafe(withPreparedResponseCreate(message, prepared.json.response))
+        );
         return;
       }
       this.upstream.send(jsonStringifySafe(message));

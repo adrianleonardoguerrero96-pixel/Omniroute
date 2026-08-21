@@ -29,6 +29,22 @@ test("returns valid=false for non-JSON non-SSE text", async () => {
   assert.strictEqual(res.valid, false);
 });
 
+test("returns valid=true for event-stream SSE that starts with a keepalive comment", async () => {
+  const body = ': keep-alive\n\ndata: {"id":"chatcmpl-1","choices":[{"delta":{"content":"pong"}}]}\n\ndata: [DONE]\n\n';
+  const res = await validateResponseQuality(makeResponse(body, "text/event-stream"), false, {});
+  assert.strictEqual(
+    res.valid,
+    true,
+    "OpenRouter/DeepSeek SSE often starts with ':' — must not be rejected as invalid JSON"
+  );
+});
+
+test("returns valid=true for event-stream SSE that starts with a blank line", async () => {
+  const body = '\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","choices":[{"delta":{"content":"hi"}}]}\n\n';
+  const res = await validateResponseQuality(makeResponse(body, "text/event-stream"), false, {});
+  assert.strictEqual(res.valid, true);
+});
+
 test("returns valid=false for Responses API bodies with no output items", async () => {
   const res = await validateResponseQuality(
     makeResponse(JSON.stringify({ object: "response", status: "completed", output: [] }), "application/json"),
@@ -135,6 +151,29 @@ test("streaming event: ping only (no content, no terminator) → still valid (re
   const res = makeSseResponse(": ping - 2026-07-17\n\nevent: ping\ndata: {}\n\n");
   const verdict = await validateResponseQuality(res, true, {});
   assert.strictEqual(verdict.valid, true);
+});
+
+test("streaming Cursor timeout before any token is invalid (live composer-2.5 502)", async () => {
+  // Live 2026-08-19: cursor-agent returns HTTP 200 + empty SSE, then driveH2
+  // rejects after 300s with "cursor-agent stream timed out". The peek used
+  // to treat that read error as valid, so combo committed the dead stream
+  // and never tried Claude.
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.error(new Error("cursor-agent stream timed out"));
+    },
+  });
+  const res = new Response(stream, {
+    status: 200,
+    headers: { "content-type": "text/event-stream" },
+  });
+  const verdict = await validateResponseQuality(res, true, {});
+  assert.strictEqual(
+    verdict.valid,
+    false,
+    "a stream that dies before any token must fail over, not pass through"
+  );
+  assert.match(verdict.reason ?? "", /timed out|abort|streaming/i);
 });
 
 test("streaming OpenAI finish_reason-only chunk (no content delta) → valid (recognised terminator)", async () => {

@@ -82,8 +82,5 @@ test("#8688 error Try Again returns gitlab-duo to the setup step", () => {
   const errorStep = read("../../src/shared/components/oauthModal/OAuthErrorStep.tsx");
   assert.match(errorStep, /returnToGitlabDuoSetup/);
   assert.match(errorStep, /onReturnToGitlabDuoSetup/);
-  assert.match(
-    errorStep,
-    /if \(returnToGitlabDuoSetup\)[\s\S]{0,80}?onReturnToGitlabDuoSetup\(\)/
-  );
+  assert.match(errorStep, /if \(returnToGitlabDuoSetup\)[\s\S]{0,80}?onReturnToGitlabDuoSetup\(\)/);
 });

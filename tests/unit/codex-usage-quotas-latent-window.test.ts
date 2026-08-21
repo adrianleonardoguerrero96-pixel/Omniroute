@@ -81,7 +81,11 @@ test("spark display name comes from the payload limit_name, falling back to the 
         limit_name: "GPT-9.9-Codex-Nova",
         metered_feature: "codex_bengalfox",
         rate_limit: {
-          primary_window: { used_percent: 5, limit_window_seconds: WEEK, reset_after_seconds: 1000 },
+          primary_window: {
+            used_percent: 5,
+            limit_window_seconds: WEEK,
+            reset_after_seconds: 1000,
+          },
         },
       },
     ],
@@ -94,7 +98,11 @@ test("spark display name comes from the payload limit_name, falling back to the 
         metered_feature: "codex_bengalfox",
         model: "codex-spark",
         rate_limit: {
-          primary_window: { used_percent: 5, limit_window_seconds: WEEK, reset_after_seconds: 1000 },
+          primary_window: {
+            used_percent: 5,
+            limit_window_seconds: WEEK,
+            reset_after_seconds: 1000,
+          },
         },
       },
     ],

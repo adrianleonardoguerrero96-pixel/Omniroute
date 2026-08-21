@@ -94,8 +94,7 @@ export type ChatRequestAdmission =
   | { admit: false; response: Response };
 
 export type ChatStructureAdmission =
-  | { admit: true; lease: ChatAdmissionLease | null }
-  | { admit: false; response: Response };
+  { admit: true; lease: ChatAdmissionLease | null } | { admit: false; response: Response };
 
 function rejectionResponse(status: 413 | 503, hardMaxBytes: number): Response {
   const isPayload = status === 413;

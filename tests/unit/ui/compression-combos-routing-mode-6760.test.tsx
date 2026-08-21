@@ -94,9 +94,8 @@ function setupFetchMock() {
 
 describe("CompressionCombosPageClient — routing-combo compression mode selector (#6760)", () => {
   async function render() {
-    const { default: CompressionCombosPageClient } = await import(
-      "../../../src/app/(dashboard)/dashboard/context/combos/CompressionCombosPageClient"
-    );
+    const { default: CompressionCombosPageClient } =
+      await import("../../../src/app/(dashboard)/dashboard/context/combos/CompressionCombosPageClient");
     let container!: HTMLElement;
     await act(async () => {
       container = mount(<CompressionCombosPageClient />);
@@ -137,17 +136,13 @@ describe("CompressionCombosPageClient — routing-combo compression mode selecto
     });
     await flush();
 
-    const putCalls = calls.filter(
-      (c) => c.url === "/api/combos/rc1" && c.init?.method === "PUT"
-    );
+    const putCalls = calls.filter((c) => c.url === "/api/combos/rc1" && c.init?.method === "PUT");
     expect(putCalls).toHaveLength(1);
     const body = JSON.parse(putCalls[0].init?.body as string);
     expect(body).toEqual({ config: { compressionMode: "ultra" } });
 
     // The assignment checkbox for the same routing combo still toggles independently.
-    const checkbox = container.querySelector(
-      'input[type="checkbox"]'
-    ) as HTMLInputElement | null;
+    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement | null;
     expect(checkbox).toBeTruthy();
     const before = checkbox!.checked;
     await act(async () => {

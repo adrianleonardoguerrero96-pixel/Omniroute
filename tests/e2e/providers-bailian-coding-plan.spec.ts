@@ -222,6 +222,8 @@ test.describe("Bailian Coding Plan Provider", () => {
     expect(capturedPayloads.createProvider).toBeDefined();
     const payload = capturedPayloads.createProvider;
     expect(payload?.providerSpecificData).toBeDefined();
-    expect((payload?.providerSpecificData as Record<string, unknown>)?.region).toBe("china-beijing");
+    expect((payload?.providerSpecificData as Record<string, unknown>)?.region).toBe(
+      "china-beijing"
+    );
   });
 });

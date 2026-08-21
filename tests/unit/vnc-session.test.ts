@@ -24,7 +24,10 @@ test("provider list has well-formed URLs, unique IDs, and canonical requirements
   for (const entry of providers) {
     assert.match(entry.url, /^https:\/\//, `bad url for ${entry.id}`);
     assert.ok(["cookie", "token"].includes(entry.requirement.kind), `bad kind for ${entry.id}`);
-    assert.ok(Array.isArray(entry.requirement.storageKeys), `storageKeys not array for ${entry.id}`);
+    assert.ok(
+      Array.isArray(entry.requirement.storageKeys),
+      `storageKeys not array for ${entry.id}`
+    );
     assert.equal(getVncProvider(entry.id)?.id, entry.id);
   }
 });

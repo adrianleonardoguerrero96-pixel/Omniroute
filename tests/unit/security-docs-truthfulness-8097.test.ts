@@ -14,16 +14,11 @@ const root = join(__dirname, "..", "..");
  * reflect that truthfully and must not claim the guard blocks unconditionally.
  */
 test("SECURITY.md and ENVIRONMENT.md do not overstate sanitizer defaults", () => {
-  const envDoc = readFileSync(
-    join(root, "docs/reference/ENVIRONMENT.md"),
-    "utf8"
-  );
+  const envDoc = readFileSync(join(root, "docs/reference/ENVIRONMENT.md"), "utf8");
   const secDoc = readFileSync(join(root, "SECURITY.md"), "utf8");
 
   // The table row for INPUT_SANITIZER_ENABLED must show `true` (on-by-default per #8093).
-  const envRow = envDoc.match(
-    /\|\s*`INPUT_SANITIZER_ENABLED`\s*\|\s*`(\w+)`\s*\|/
-  );
+  const envRow = envDoc.match(/\|\s*`INPUT_SANITIZER_ENABLED`\s*\|\s*`(\w+)`\s*\|/);
   assert.ok(envRow, "INPUT_SANITIZER_ENABLED row not found in ENVIRONMENT.md");
   assert.equal(
     envRow![1],
@@ -32,9 +27,7 @@ test("SECURITY.md and ENVIRONMENT.md do not overstate sanitizer defaults", () =>
   );
 
   // SECURITY.md must not claim the guard "blocks" unconditionally.
-  const injectionHeader = secDoc.match(
-    /###\s*🧠\s*Prompt Injection Guard\s*\n\s*\n([^\n]+)/
-  );
+  const injectionHeader = secDoc.match(/###\s*🧠\s*Prompt Injection Guard\s*\n\s*\n([^\n]+)/);
   assert.ok(injectionHeader, "Prompt Injection Guard section not found");
   assert.ok(
     !/blocks prompt injection attacks/.test(injectionHeader![1]),
@@ -46,9 +39,7 @@ test("SECURITY.md and ENVIRONMENT.md do not overstate sanitizer defaults", () =>
 test("SECURITY.md severity table matches code", () => {
   const secDoc = readFileSync(join(root, "SECURITY.md"), "utf8");
 
-  const roleHijackRow = secDoc.match(
-    /\|\s*Role Hijack\s*\|\s*(\w+)\s*\|/
-  );
+  const roleHijackRow = secDoc.match(/\|\s*Role Hijack\s*\|\s*(\w+)\s*\|/);
   assert.ok(roleHijackRow, "Role Hijack row not found in SECURITY.md");
   assert.equal(
     roleHijackRow![1],
@@ -56,9 +47,7 @@ test("SECURITY.md severity table matches code", () => {
     "Role Hijack severity must be Medium (code: role_hijack = medium)"
   );
 
-  const danRow = secDoc.match(
-    /\|\s*DAN\/Jailbreak\s*\|\s*(\w+)\s*\|/
-  );
+  const danRow = secDoc.match(/\|\s*DAN\/Jailbreak\s*\|\s*(\w+)\s*\|/);
   assert.ok(danRow, "DAN/Jailbreak row not found in SECURITY.md");
   assert.equal(
     danRow![1],
@@ -69,15 +58,10 @@ test("SECURITY.md severity table matches code", () => {
 
 /** Docs must not claim redact mode strips injection text from requests. */
 test("ENVIRONMENT.md does not overstate redact mode", () => {
-  const envDoc = readFileSync(
-    join(root, "docs/reference/ENVIRONMENT.md"),
-    "utf8"
-  );
+  const envDoc = readFileSync(join(root, "docs/reference/ENVIRONMENT.md"), "utf8");
 
   // Find the INPUT_SANITIZER_MODE description cell.
-  const modeRow = envDoc.match(
-    /\|\s*`INPUT_SANITIZER_MODE`\s*\|[^\n]*?\|\s*([^\n]+?)\s*\|/
-  );
+  const modeRow = envDoc.match(/\|\s*`INPUT_SANITIZER_MODE`\s*\|[^\n]*?\|\s*([^\n]+?)\s*\|/);
   assert.ok(modeRow, "INPUT_SANITIZER_MODE row not found in ENVIRONMENT.md");
   const desc = modeRow![1];
   assert.ok(

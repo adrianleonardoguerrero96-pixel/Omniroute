@@ -6,9 +6,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-const { applyClientUsageBuffer } = await import(
-  "../../open-sse/handlers/chatCore/clientUsageBuffer.ts"
-);
+const { applyClientUsageBuffer } =
+  await import("../../open-sse/handlers/chatCore/clientUsageBuffer.ts");
 
 function makeDeps(overrides: Record<string, unknown> = {}) {
   const calls = { buffer: [] as unknown[], estimate: [] as unknown[], filter: [] as unknown[] };
@@ -107,9 +106,15 @@ test("preserveContextBudgetInVisibleUsage folds context_budget_* back into visib
     usage: { prompt_tokens: 5, input_tokens: 5, total_tokens: 10 },
   };
 
-  applyClientUsageBuffer(resp, { messages: [] }, "openai", {
-    preserveContextBudgetInVisibleUsage: true,
-  }, deps);
+  applyClientUsageBuffer(
+    resp,
+    { messages: [] },
+    "openai",
+    {
+      preserveContextBudgetInVisibleUsage: true,
+    },
+    deps
+  );
 
   const filtered = calls.filter[0] as Record<string, unknown>;
   assert.equal(filtered.prompt_tokens, 2005, "Claude-Code path re-folds the buffered value");

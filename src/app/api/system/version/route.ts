@@ -83,7 +83,10 @@ export async function GET(req: NextRequest) {
   const serialized = JSON.stringify(body);
   const etag = `"${createHash("sha256").update(serialized).digest("base64url")}"`;
   const headers = { "Cache-Control": "private, no-cache, must-revalidate", ETag: etag };
-  const validators = req.headers.get("If-None-Match")?.split(",").map((value) => value.trim());
+  const validators = req.headers
+    .get("If-None-Match")
+    ?.split(",")
+    .map((value) => value.trim());
   if (validators?.some((value) => value === etag || value === `W/${etag}`)) {
     return new NextResponse(null, { status: 304, headers });
   }
@@ -320,11 +323,11 @@ export async function POST(req: NextRequest) {
           return;
         }
         send({ step: "install", status: "running", message: `Installing omniroute@${latest}...` });
-          await execFileAsync(
-            "npm",
-            ["install", "-g", `omniroute@${latest}`, "--ignore-scripts", "--legacy-peer-deps"],
-            buildNpmExecOptions(process.platform, { cwd: PROJECT_ROOT, timeoutMs: 300_000 })
-          );
+        await execFileAsync(
+          "npm",
+          ["install", "-g", `omniroute@${latest}`, "--ignore-scripts", "--legacy-peer-deps"],
+          buildNpmExecOptions(process.platform, { cwd: PROJECT_ROOT, timeoutMs: 300_000 })
+        );
         send({ step: "install", status: "done", message: `Installed omniroute@${latest}` });
 
         // Step 2: Rebuild native modules (critical for better-sqlite3)
@@ -343,20 +346,20 @@ export async function POST(req: NextRequest) {
 
         // Step 3: Restart PM2
         send({ step: "restart", status: "running", message: "Restarting service via PM2..." });
-          try {
-            await execFileAsync("pm2", ["restart", "omniroute", "--update-env"], {
-              timeout: 30000,
-              cwd: PROJECT_ROOT,
-            });
-            send({ step: "restart", status: "done", message: "Service restarted" });
-          } catch {
-            // PM2 may not be available (Docker/manual setups)
-            send({
-              step: "restart",
-              status: "skipped",
-              message: "PM2 not available — manual restart needed",
-            });
-          }
+        try {
+          await execFileAsync("pm2", ["restart", "omniroute", "--update-env"], {
+            timeout: 30000,
+            cwd: PROJECT_ROOT,
+          });
+          send({ step: "restart", status: "done", message: "Service restarted" });
+        } catch {
+          // PM2 may not be available (Docker/manual setups)
+          send({
+            step: "restart",
+            status: "skipped",
+            message: "PM2 not available — manual restart needed",
+          });
+        }
 
         clearLatestVersionCache();
         send({

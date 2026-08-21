@@ -10,7 +10,7 @@ lastUpdated: 2026-06-28
 > 精簡化發行流程，運用 Claude Code Skills 實現自動化。
 >
 > **在發行之間保持佇列／分支為綠色：** 請參閱 [RELEASE_GREEN.md](./RELEASE_GREEN.md)
->（`/green-prs` 系列指令 + `npm run check:release-green` + `/babysit` + 夜間排程）。定期執行此流程——
+> （`/green-prs` 系列指令 + `npm run check:release-green` + `/babysit` + 夜間排程）。定期執行此流程——
 > 尤其是在執行本檢查清單**之前**——可讓發行 PR 一開始就處於綠色狀態。
 
 ## TL;DR
@@ -205,11 +205,11 @@ Husky hooks 位於 `.husky/` 目錄，會在 git 操作時自動執行。
 
 倉儲使用三個不同的輸出目錄——切勿混淆：
 
-| 目錄       | 用途                                                | 是否追蹤？    |
-| --------- | --------------------------------------------------- | ------------- |
-| `src/`    | 應用程式原始碼（TypeScript／TSX）                    | 是            |
-| `.build/` | 建置中間產物 — `next build` 輸出（`distDir`）        | 否（gitignored）|
-| `dist/`   | 可發行的 npm 套件 — 由 `assembleStandalone` 組合而成 | 否（gitignored）|
+| 目錄      | 用途                                                 | 是否追蹤？       |
+| --------- | ---------------------------------------------------- | ---------------- |
+| `src/`    | 應用程式原始碼（TypeScript／TSX）                    | 是               |
+| `.build/` | 建置中間產物 — `next build` 輸出（`distDir`）        | 否（gitignored） |
+| `dist/`   | 可發行的 npm 套件 — 由 `assembleStandalone` 組合而成 | 否（gitignored） |
 
 > **操作注意：** 遠端 VPS 映像目錄仍為 `/usr/lib/node_modules/omniroute/app/`。
 > 只有**倉儲內**的建置輸出目錄變更了（`app/` → `dist/`）。部署 skills 會將

@@ -135,7 +135,9 @@ export async function POST(request) {
           if (!shapeCheck.success) {
             const issue = shapeCheck.error.issues[0];
             const field = issue?.path?.length ? issue.path.join(".") : "body";
-            return finishAdmission(errorResponse(400, `${field}: ${issue?.message ?? "Invalid request"}`));
+            return finishAdmission(
+              errorResponse(400, `${field}: ${issue?.message ?? "Invalid request"}`)
+            );
           }
         }
 

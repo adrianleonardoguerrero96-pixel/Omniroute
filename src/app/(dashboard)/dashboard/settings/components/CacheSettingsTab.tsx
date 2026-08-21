@@ -34,7 +34,8 @@ export default function CacheSettingsTab() {
       .then((config) => {
         if (!active) return;
         const ms = config.modelCatalogCacheTtlMs ?? DEFAULT_TTL_MS;
-        const str = typeof ms === "number" && Number.isFinite(ms) ? String(ms) : String(DEFAULT_TTL_MS);
+        const str =
+          typeof ms === "number" && Number.isFinite(ms) ? String(ms) : String(DEFAULT_TTL_MS);
         setValue(str);
         setSavedValue(str);
       })

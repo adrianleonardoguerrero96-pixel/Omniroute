@@ -103,9 +103,7 @@ test("#8560: compressContext prunes older images before purifying history", () =
     Array.isArray(msg.content)
       ? msg.content.filter(
           (part) =>
-            part &&
-            typeof part === "object" &&
-            (part as { type?: string }).type === "input_image"
+            part && typeof part === "object" && (part as { type?: string }).type === "input_image"
         )
       : []
   );
@@ -161,7 +159,10 @@ test("#8560: Responses input adapts → compressContext → restore shrinks and 
         part && typeof part === "object" && (part as { type?: string }).type === "input_image"
     );
   });
-  assert.ok(imageParts.length <= 2, `expected at most 2 surviving images, got ${imageParts.length}`);
+  assert.ok(
+    imageParts.length <= 2,
+    `expected at most 2 surviving images, got ${imageParts.length}`
+  );
   assert.ok(imageParts.length >= 1, "newest images should survive pruning");
 
   // Re-adapt for a fair object-aware estimate of the restored payload.

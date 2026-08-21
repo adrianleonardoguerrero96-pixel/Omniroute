@@ -19,10 +19,7 @@ test("patchBasePathLiterals rewrites empty basePath literals", () => {
 test("patchJsonManifestFile updates nested basePath fields", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "omniroute-basepath-"));
   const filePath = path.join(dir, "routes-manifest.json");
-  fs.writeFileSync(
-    filePath,
-    JSON.stringify({ basePath: "", nested: { basePath: "" } }, null, 2)
-  );
+  fs.writeFileSync(filePath, JSON.stringify({ basePath: "", nested: { basePath: "" } }, null, 2));
   assert.equal(patchJsonManifestFile(filePath, "/omniroute"), true);
   const parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
   assert.equal(parsed.basePath, "/omniroute");
@@ -33,14 +30,8 @@ test("patchStandaloneBasePath rewrites a root-path standalone tree", () => {
   const appRoot = fs.mkdtempSync(path.join(os.tmpdir(), "omniroute-standalone-"));
   const distRoot = path.join(appRoot, ".build", "next");
   fs.mkdirSync(path.join(distRoot, "server"), { recursive: true });
-  fs.writeFileSync(
-    path.join(distRoot, "routes-manifest.json"),
-    JSON.stringify({ basePath: "" })
-  );
-  fs.writeFileSync(
-    path.join(distRoot, "server", "chunk.js"),
-    'export const config={basePath:""};'
-  );
+  fs.writeFileSync(path.join(distRoot, "routes-manifest.json"), JSON.stringify({ basePath: "" }));
+  fs.writeFileSync(path.join(distRoot, "server", "chunk.js"), 'export const config={basePath:""};');
   fs.writeFileSync(path.join(appRoot, "BUILD_OMNIROUTE_BASE_PATH"), "\n");
 
   const result = patchStandaloneBasePath({

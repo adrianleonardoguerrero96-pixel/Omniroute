@@ -14,7 +14,9 @@ const FAMILY_PATTERNS: ReadonlyArray<[string, RegExp]> = [
 ];
 
 function strings(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
 }
 
 function modelFamily(model: string): string | null {

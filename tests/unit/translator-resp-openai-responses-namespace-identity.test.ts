@@ -99,11 +99,7 @@ function functionItems(events: ResponseEvent[]) {
 // `{namespace, name}` tuple on every output item.
 test("Chat -> Responses emits namespace tuple in added, done, and completed output", () => {
   const wireName = "mcp__1mcp__tool_list";
-  const events = collectToolEvents(
-    wireName,
-    "call_1mcp",
-    identityMapFor("mcp__1mcp", "tool_list")
-  );
+  const events = collectToolEvents(wireName, "call_1mcp", identityMapFor("mcp__1mcp", "tool_list"));
   for (const item of Object.values(functionItems(events))) {
     assert.deepEqual(
       { namespace: item.namespace, name: item.name },

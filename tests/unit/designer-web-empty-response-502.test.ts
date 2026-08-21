@@ -1,9 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-const { handleDesignerWebImageGeneration } = await import(
-  "../../open-sse/handlers/imageGeneration/providers/designerWeb.ts"
-);
+const { handleDesignerWebImageGeneration } =
+  await import("../../open-sse/handlers/imageGeneration/providers/designerWeb.ts");
 
 /**
  * `stepDesignerWebPoll` classifies an unrecognized upstream body as a terminal

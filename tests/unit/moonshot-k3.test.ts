@@ -26,6 +26,10 @@ import { getResolvedModelCapabilities } from "../../src/lib/modelCapabilities.ts
 
 const EXPECTED_MODELS = [
   "kimi-k3",
+  // combo hop aliases (main / best-coding-paid) added 2026-08-21 — without
+  // them the hops resolve as unknown and drop out of large-prompt fallback
+  "k3-256k",
+  "kimi-for-coding",
   "kimi-k2.7-code",
   "kimi-k2.7-code-highspeed",
   "kimi-k2.6",

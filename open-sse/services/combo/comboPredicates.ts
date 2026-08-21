@@ -23,6 +23,11 @@ export const ALL_ACCOUNTS_RATE_LIMITED_PATTERNS = [
   /service temporarily unavailable/i,
 ];
 
+/** 401/402/403 on one hop (billing cycle, credits, key dead) must not become the combo body. */
+export function isHopLocalBillingStatus(status: number | null | undefined): boolean {
+  return status === 401 || status === 402 || status === 403;
+}
+
 export function isAllAccountsRateLimitedResponse(
   status: number,
   contentType: string | null,

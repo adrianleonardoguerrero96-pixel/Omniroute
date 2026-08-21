@@ -384,7 +384,9 @@ test("muse-spark-web: parallel chats with identical assistant replies don't coll
     // answers "pong", so both threads' cached prefixes end in identical
     // assistant text — only the differing question text keeps them apart.
     await executor.execute(
-      withConnection("conn-parallel", { body: { messages: [{ role: "user", content: "tell me a joke" }] } })
+      withConnection("conn-parallel", {
+        body: { messages: [{ role: "user", content: "tell me a joke" }] },
+      })
     );
     const convX1 = decodeIntroConversationId(MockWebSocket.instances.at(-1) as MockWebSocket);
 

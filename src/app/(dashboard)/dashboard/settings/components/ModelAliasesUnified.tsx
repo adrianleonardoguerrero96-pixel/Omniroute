@@ -118,10 +118,7 @@ export default function ModelAliasesUnified() {
       const currentWildcards = Array.isArray(settingsData.wildcardAliases)
         ? settingsData.wildcardAliases
         : wildcardAliases;
-      const updated = [
-        ...currentWildcards,
-        { pattern: fromValue.trim(), target: toValue.trim() },
-      ];
+      const updated = [...currentWildcards, { pattern: fromValue.trim(), target: toValue.trim() }];
       const res = await fetch("/api/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

@@ -173,6 +173,7 @@ import {
   PROVIDER_ERROR_TYPES,
   isEmptyContentResponse,
 } from "../services/errorClassifier.ts";
+import { getKimiTemporaryRateLimitResetAt, getKimiBillingCycleResetAt } from "./chatCore/kimiQuotaRecovery.ts";
 import { updateProviderConnection, getProviderConnectionById } from "@/lib/db/providers";
 import { wasRefreshTokenRotated } from "@omniroute/open-sse/services/refreshSerializer.ts";
 import { connectionHasExtraKeys } from "../services/apiKeyRotator.ts";
@@ -3705,7 +3706,43 @@ export async function handleChatCore({
           if (accountSemaphoreKey) {
             markAccountSemaphoreBlocked(accountSemaphoreKey, quotaCooldownMs);
           }
-          if (isModelScope() && errorConnectionId) {
+          let kimiRateLimitResetAt: string | null = null;
+          let kimiBillingCycleResetAt: string | null = null;
+          if (provider === "kimi-coding" || provider === "kimi-coding-apikey") {
+            try {
+              const { fetchAndPersistProviderLimits } = await import("@/lib/usage/providerLimits");
+              const { usage } = await fetchAndPersistProviderLimits(errorConnectionId, "manual");
+              kimiRateLimitResetAt = getKimiTemporaryRateLimitResetAt(usage);
+              kimiBillingCycleResetAt = getKimiBillingCycleResetAt(usage);
+            } catch {
+              // Preserve the existing quota handling when Kimi's usage endpoint is unavailable.
+            }
+          }
+          if (kimiRateLimitResetAt) {
+            await updateProviderConnection(errorConnectionId, {
+              testStatus: "unavailable",
+              rateLimitedUntil: kimiRateLimitResetAt,
+              backoffLevel: 0,
+              lastErrorType: PROVIDER_ERROR_TYPES.RATE_LIMITED,
+              lastError: message,
+              errorCode: statusCode,
+            });
+            console.warn(
+              `[provider] Node ${errorConnectionId} Kimi request window exhausted (${statusCode}) — retrying after ${kimiRateLimitResetAt}`
+            );
+          } else if (kimiBillingCycleResetAt) {
+            await updateProviderConnection(errorConnectionId, {
+              testStatus: "unavailable",
+              rateLimitedUntil: kimiBillingCycleResetAt,
+              backoffLevel: 0,
+              lastErrorType: PROVIDER_ERROR_TYPES.QUOTA_EXHAUSTED,
+              lastError: message,
+              errorCode: statusCode,
+            });
+            console.warn(
+              `[provider] Node ${errorConnectionId} Kimi billing cycle exhausted (${statusCode}) — skip until ${kimiBillingCycleResetAt}`
+            );
+          } else if (isModelScope() && errorConnectionId) {
             lockModel(provider, errorConnectionId, model, "quota_exhausted", quotaCooldownMs);
             console.warn(
               `[provider] Node ${errorConnectionId} ModelScope model quota exhausted (${statusCode}) for ${model} - ${Math.ceil(quotaCooldownMs / 1000)}s (connection stays active)`

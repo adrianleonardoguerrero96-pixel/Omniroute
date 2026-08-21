@@ -16,9 +16,7 @@ process.env.DATA_DIR = TEST_DATA_DIR;
 
 const core = await import("../../src/lib/db/core.ts");
 const serviceModelsDb = await import("../../src/lib/db/serviceModels.ts");
-const routeModule = await import(
-  "../../src/app/api/v1/providers/[provider]/models/route.ts"
-);
+const routeModule = await import("../../src/app/api/v1/providers/[provider]/models/route.ts");
 
 function makeRequest(provider: string) {
   return new Request(`http://localhost/api/v1/providers/${encodeURIComponent(provider)}/models`);

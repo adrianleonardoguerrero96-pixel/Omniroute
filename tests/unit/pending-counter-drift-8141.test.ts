@@ -8,10 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const repoRoot = join(__dirname, "..", "..");
 
-const src = readFileSync(
-  join(repoRoot, "open-sse/utils/streamHandler.ts"),
-  "utf-8",
-);
+const src = readFileSync(join(repoRoot, "open-sse/utils/streamHandler.ts"), "utf-8");
 
 test("#8141: clearPendingRequest does not swallow trackPendingRequest errors silently", () => {
   // Extract just the clearPendingRequest function body
@@ -32,11 +29,11 @@ test("#8141: clearPendingRequest does not swallow trackPendingRequest errors sil
   assert.match(
     afterTrack,
     /console\.(error|warn)/,
-    "catch block must log the error for observability",
+    "catch block must log the error for observability"
   );
   assert.match(
     afterTrack,
     /trackPendingRequest decrement failed/,
-    "error message must mention decrement failure for debuggability",
+    "error message must mention decrement failure for debuggability"
   );
 });

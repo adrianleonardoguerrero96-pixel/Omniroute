@@ -207,7 +207,8 @@ function buildAdobeFireflyEditDataUrls(
     }
   }
   if (dataUrls.length === 0 && imageBytes && imageBytes.length > 0) {
-    const mime = typeof imageMime === "string" && imageMime.startsWith("image/") ? imageMime : "image/png";
+    const mime =
+      typeof imageMime === "string" && imageMime.startsWith("image/") ? imageMime : "image/png";
     dataUrls.push(`data:${mime};base64,${imageBytes.toString("base64")}`);
   }
   return dataUrls;
@@ -250,7 +251,10 @@ async function handleAdobeFireflyEditRequest(params: {
     resolvedModel
   );
   if (!credentials) {
-    return errorResponse(HTTP_STATUS.UNAUTHORIZED, `No credentials for provider: ${parsed.provider}`);
+    return errorResponse(
+      HTTP_STATUS.UNAUTHORIZED,
+      `No credentials for provider: ${parsed.provider}`
+    );
   }
   if (credentials.allRateLimited) {
     return unavailableResponse(
@@ -363,10 +367,7 @@ async function postHandler(request: Request, _context?: unknown) {
       : providerConfig?.format === "codex-responses"
         ? Number.POSITIVE_INFINITY
         : MAX_NON_CODEX_IMAGE_EDIT_REFERENCES;
-  if (
-    providerConfig?.format !== "codex-responses" &&
-    imageInputCount > maxRefsForProvider
-  ) {
+  if (providerConfig?.format !== "codex-responses" && imageInputCount > maxRefsForProvider) {
     return errorResponse(
       HTTP_STATUS.BAD_REQUEST,
       providerConfig?.format === "adobe-firefly-image"

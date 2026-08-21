@@ -21,10 +21,7 @@ import http from "node:http";
 
 import { createPinnedFetch } from "@/shared/network/remoteImageFetch";
 
-async function withHttpServer(
-  handler: http.RequestListener,
-  fn: (port: number) => Promise<void>
-) {
+async function withHttpServer(handler: http.RequestListener, fn: (port: number) => Promise<void>) {
   const server = http.createServer(handler);
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
@@ -53,9 +50,7 @@ test("createPinnedFetch binds the connection to the pinned address, ignoring the
       // broken), this request would fail with an ENOTFOUND-style DNS error
       // instead of reaching the loopback server.
       const pinnedFetch = createPinnedFetch("127.0.0.1", 4);
-      const response = await pinnedFetch(
-        `http://pin-dns-nonexistent-host.invalid:${port}/probe`
-      );
+      const response = await pinnedFetch(`http://pin-dns-nonexistent-host.invalid:${port}/probe`);
       assert.equal(response.status, 200);
       assert.equal(await response.text(), "pinned-response");
     }

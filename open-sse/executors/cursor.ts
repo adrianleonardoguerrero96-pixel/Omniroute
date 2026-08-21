@@ -185,7 +185,11 @@ function buildExecRejection(event: ExecServerEvent): Buffer | null {
   }
 }
 
-const CURSOR_AGENT_HOST = "agentn.global.api5.cursor.sh";
+// Regional AgentService host. cursor-agent resolves this per-account region
+// (captured live as agentn.us.api5.cursor.sh for this deployment). The older
+// `agentn.global.*` host is rejected by current Cursor backends. Overridable
+// via CURSOR_AGENT_HOST for accounts homed in a different region.
+const CURSOR_AGENT_HOST = process.env.CURSOR_AGENT_HOST?.trim() || "agentn.us.api5.cursor.sh";
 const CURSOR_AGENT_PATH = "/agent.v1.AgentService/Run";
 const CURSOR_AGENT_URL = `https://${CURSOR_AGENT_HOST}${CURSOR_AGENT_PATH}`;
 
@@ -337,6 +341,21 @@ export function newStreamCtx(model: string, emit: (chunk: string) => void): Stre
     composerToolParserState: isComposerModel(model) ? createStreamingState() : null,
     composerInlineToolCallsEmitted: false,
   };
+}
+
+/**
+ * True when the driven turn produced any usable signal — visible text,
+ * thinking, a tool call, or a token delta. A turn completing with none of
+ * these is a dead hop masquerading as a legitimate empty completion
+ * (live: grok-4.6-high 200 OK, 0 tokens out, 20.6s). Exported for tests.
+ */
+export function ctxProducedSignal(ctx: StreamCtx): boolean {
+  return (
+    ctx.receivedText ||
+    ctx.thinkingText.length > 0 ||
+    ctx.toolCalls.length > 0 ||
+    ctx.tokenDelta > 0
+  );
 }
 
 function emitChunk(ctx: StreamCtx, delta: object, finishReason: string | null = null) {
@@ -707,10 +726,12 @@ export class CursorExecutor extends BaseExecutor {
     const requestId = crypto.randomUUID();
     const traceParent = `00-${crypto.randomBytes(16).toString("hex")}-${crypto.randomBytes(8).toString("hex")}-01`;
 
-    // Mirrors cursor-agent's actual headers for agent.v1.AgentService/Run.
-    // Notably: no x-cursor-checksum, no machineId, no x-amzn-trace-id.
-    // Only advertise gzip (not brotli) — our Connect-RPC frame decoder
-    // only handles gzip-compressed message bodies.
+    // Header set verified against a live cursor-agent 2026.07.23 capture of
+    // POST agentn.<region>.api5.cursor.sh/agent.v1.AgentService/Run (HTTP/2).
+    // The CLI sends NO x-cursor-checksum here — the session JWT itself is the
+    // credential. Client-version must track the installed CLI (a stale pin is
+    // rejected upstream). We keep accept-encoding=gzip only: our Connect-RPC
+    // frame decoder can't inflate brotli response bodies.
     return {
       authorization: `Bearer ${cleanToken}`,
       "backend-traceparent": traceParent,
@@ -1014,20 +1035,26 @@ export class CursorExecutor extends BaseExecutor {
     return new Promise((resolve, reject) => {
       let scanning = false;
       let settled = false;
-      // Phase 8: safety timeout. If neither turn_ended, kv_after_text, nor
-      // server-end fires within CURSOR_STREAM_TIMEOUT_MS, abort the stream
-      // so a stuck upstream doesn't keep the response open indefinitely.
-      const safetyTimer = setTimeout(() => {
-        if (ctx.endReason) return;
-        debugLog("[cursor-agent] stream safety timeout fired");
-        teardown();
-        reject(new Error("cursor-agent stream timed out"));
-      }, CURSOR_STREAM_TIMEOUT_MS);
+      // Idle safety timeout, not wall-clock. A 5-minute *productive* composer
+      // turn must not die just because CURSOR_STREAM_TIMEOUT_MS elapsed since
+      // open. Only a silent hang (no frames) should abort so combo can fail over.
+      let safetyTimer: ReturnType<typeof setTimeout>;
+      const armSafetyTimer = () => {
+        clearTimeout(safetyTimer);
+        safetyTimer = setTimeout(() => {
+          if (ctx.endReason || settled) return;
+          debugLog("[cursor-agent] stream safety timeout fired");
+          teardown();
+          reject(new Error("cursor-agent stream timed out"));
+        }, CURSOR_STREAM_TIMEOUT_MS);
+      };
+      armSafetyTimer();
 
       const onData = (chunk: Buffer) => {
         if (CURSOR_DEBUG && process.env.CURSOR_DUMP_FILE) {
           fs.appendFileSync(process.env.CURSOR_DUMP_FILE, chunk);
         }
+        armSafetyTimer();
         buf = buf.length === 0 ? Buffer.from(chunk) : Buffer.concat([buf, chunk]);
         void tryScan();
       };
@@ -1333,6 +1360,18 @@ export class CursorExecutor extends BaseExecutor {
             const ctx = newStreamCtx(model, (s) => controller.enqueue(enc.encode(s)));
             try {
               await this.driveH2(h2, ctx, mcpTools, blobStore, clientPlatform, todoHistory, signal);
+              // A turn completed with zero decoded signal would be finalized
+              // into a clean 200 that the quality gate passes; error it so the
+              // peek's dead-before-token gate marks the hop invalid and combo
+              // fails over (see ctxProducedSignal).
+              const producedSignal = ctxProducedSignal(ctx);
+              if (!producedSignal) {
+                finishLifecycle(ctx, true);
+                controller.error(
+                  new Error("cursor-agent completed turn with no usable content")
+                );
+                return;
+              }
               this.finalizeSseStream(ctx, body);
               finishLifecycle(ctx, false);
               controller.close();
@@ -1368,6 +1407,22 @@ export class CursorExecutor extends BaseExecutor {
       const message = err instanceof Error ? err.message : String(err);
       return {
         response: buildErrorResponse(HTTP_STATUS.SERVER_ERROR, message, "connection_error"),
+        url,
+        headers,
+        transformedBody: body,
+      };
+    }
+    // Same empty-turn guard as the streaming path: a turn completed with zero
+    // usable signal is a dead hop, not a valid empty completion. 502 so the
+    // combo layer fails over.
+    if (!ctxProducedSignal(ctx)) {
+      finishLifecycle(ctx, true);
+      return {
+        response: buildErrorResponse(
+          HTTP_STATUS.SERVER_ERROR,
+          "cursor-agent completed turn with no usable content",
+          "connection_error"
+        ),
         url,
         headers,
         transformedBody: body,

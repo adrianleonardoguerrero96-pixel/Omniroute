@@ -8,7 +8,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-const { gheCopilotProvider } = await import("../../open-sse/config/providers/registry/ghe-copilot/index.ts");
+const { gheCopilotProvider } =
+  await import("../../open-sse/config/providers/registry/ghe-copilot/index.ts");
 const { getModelsByProviderId } = await import("../../open-sse/config/providerModels.ts");
 
 type ModelEntry = { id: string; targetFormat?: string; [k: string]: unknown };

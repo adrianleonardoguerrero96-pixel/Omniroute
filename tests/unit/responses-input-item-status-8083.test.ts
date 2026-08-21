@@ -3,9 +3,8 @@ import assert from "node:assert/strict";
 
 // Kept in its own file rather than growing the frozen
 // tests/unit/translator-openai-responses-req.test.ts (file-size ratchet).
-const { openaiToOpenAIResponsesRequest } = await import(
-  "../../open-sse/translator/request/openai-responses.ts"
-);
+const { openaiToOpenAIResponsesRequest } =
+  await import("../../open-sse/translator/request/openai-responses.ts");
 
 // --- Issue #8083: strict Responses-compatible upstreams reject items whose
 // `type` is set without an accompanying `status`, returning

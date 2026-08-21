@@ -58,10 +58,7 @@ test("stopProcessGracefully: on win32 escalates to SIGKILL if the process never 
     killed.some((k) => k.signal === "SIGKILL"),
     `expected an eventual SIGKILL escalation, got: ${JSON.stringify(killed)}`
   );
-  assert.ok(
-    !killed.some((k) => k.signal === "SIGTERM"),
-    "must never send SIGTERM on win32"
-  );
+  assert.ok(!killed.some((k) => k.signal === "SIGTERM"), "must never send SIGTERM on win32");
 });
 
 test("stopProcessGracefully: on non-win32 sends SIGTERM immediately (unchanged POSIX behavior)", async () => {

@@ -33,7 +33,6 @@ const GROK_BUILD_UNSUPPORTED_PARAMS = [
   "reasoning_effort",
 ];
 
-
 /**
  * Grok Build's cli-chat-proxy is stricter about Responses `function_call_output.output`
  * than OpenAI's Responses API. Agent tool results can contain truncated / incomplete

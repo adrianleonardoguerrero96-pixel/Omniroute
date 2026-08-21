@@ -9,13 +9,15 @@ import assert from "node:assert/strict";
 const mod = await import("../../open-sse/executors/notion-web.ts");
 const { getModelsByProviderId } = await import("../../open-sse/config/providerModels.ts");
 const { WEB_COOKIE_PROVIDERS } = await import("../../src/shared/constants/providers/web-cookie.ts");
-const { __setTlsFetchOverrideForTesting } = await import(
-  "../../open-sse/services/notionTlsClient.ts"
-);
+const { __setTlsFetchOverrideForTesting } =
+  await import("../../open-sse/services/notionTlsClient.ts");
 
 /** Mock the Chrome-JA3 path used by sendNotionInferenceRequest (not global fetch). */
 function installNotionTlsMock(
-  handler: (url: string, opts: { headers?: Record<string, string>; body?: string }) => Promise<{
+  handler: (
+    url: string,
+    opts: { headers?: Record<string, string>; body?: string }
+  ) => Promise<{
     status: number;
     text: string;
   }>
@@ -512,9 +514,7 @@ describe("buildNotionTranscript", () => {
         },
         {
           role: "user",
-          content: [
-            { type: "text", text: "find icon skill" },
-          ] as unknown as string,
+          content: [{ type: "text", text: "find icon skill" }] as unknown as string,
         },
       ],
       { spaceId: "s1" }

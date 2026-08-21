@@ -51,9 +51,14 @@ test("pipeWithDisconnect stall watchdog logs instead of silently swallowing a th
   };
 
   try {
-    const stream = pipeWithDisconnect(new Response(source), new TransformStream(), streamController, {
-      stallTimeoutMs: 40,
-    });
+    const stream = pipeWithDisconnect(
+      new Response(source),
+      new TransformStream(),
+      streamController,
+      {
+        stallTimeoutMs: 40,
+      }
+    );
     await readStreamText(stream);
   } finally {
     console.debug = originalDebug;

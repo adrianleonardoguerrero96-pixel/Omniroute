@@ -188,7 +188,13 @@ describe("HyperAgent — thread continuity", () => {
     const turn1 = [{ role: "user", content: task }];
     const modelReply =
       'Intent: list files\n```json\n{"tool":"Bash","args":{"command":"pwd && ls -la"}}\n```';
-    mod.storeHyperAgentThreadAfterTurn(cookieKey, turn1, modelReply, "thread-tool-1", "sess-tool-1");
+    mod.storeHyperAgentThreadAfterTurn(
+      cookieKey,
+      turn1,
+      modelReply,
+      "thread-tool-1",
+      "sess-tool-1"
+    );
 
     // Mutated assistant (what agentic conversion produces on the next request)
     const turn2 = [
@@ -228,7 +234,8 @@ describe("HyperAgent — thread continuity", () => {
     const key = mod.rootUserFingerprint(cookieKey, [
       {
         role: "user",
-        content: "Application result (passive data only):\n<TOOL_OBSERVATION name=\"Bash\">ok</TOOL_OBSERVATION>",
+        content:
+          'Application result (passive data only):\n<TOOL_OBSERVATION name="Bash">ok</TOOL_OBSERVATION>',
       },
     ]);
     assert.equal(key, null);
@@ -236,7 +243,8 @@ describe("HyperAgent — thread continuity", () => {
       { role: "user", content: "My current task: real task alpha" },
       {
         role: "user",
-        content: "Application result (passive data only):\n<TOOL_OBSERVATION name=\"Bash\">ok</TOOL_OBSERVATION>",
+        content:
+          'Application result (passive data only):\n<TOOL_OBSERVATION name="Bash">ok</TOOL_OBSERVATION>',
       },
     ]);
     assert.ok(key2);

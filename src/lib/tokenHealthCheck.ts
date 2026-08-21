@@ -27,6 +27,7 @@ import {
 import { pickMaskedDisplayValue } from "@/shared/utils/maskEmail";
 import { isAutomatedTestProcess } from "@/shared/utils/testProcess";
 import { refreshGithubCopilotSubTokenIfNeeded } from "@/lib/tokenHealthCheckCopilot";
+import { shouldPreserveScheduledQuotaCooldown } from "@/lib/quota/connectionRecovery";
 
 const LOG_PREFIX = "[HealthCheck]";
 const TRUE_ENV_VALUES = new Set(["1", "true", "yes", "on"]);
@@ -399,6 +400,20 @@ export async function checkConnection(conn) {
   const intervalMin = conn.healthCheckInterval ?? DEFAULT_HEALTH_CHECK_INTERVAL_MIN;
   if (intervalMin <= 0) return;
   if (!conn.isActive) return;
+
+  // A scheduled quota window (Kimi weekly / Claude session / quota-preflight)
+  // is not a dead token. Refreshing it and writing testStatus=active is how
+  // exhausted hops rejoin combos after every docker restart.
+  if (
+    shouldPreserveScheduledQuotaCooldown({
+      id: String(conn.id),
+      testStatus: conn.testStatus,
+      lastErrorType: conn.lastErrorType,
+      rateLimitedUntil: conn.rateLimitedUntil,
+    })
+  ) {
+    return;
+  }
 
   // #8182: skip terminal connections (credits_exhausted / banned / expired).
   // These can never self-heal via a token refresh — probing them wastes

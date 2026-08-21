@@ -15,7 +15,10 @@ import { MODELS_DEV_PROVIDER_MAP } from "@/lib/modelsDevSync/transform";
 import { getModelContextOverride } from "@/lib/db/modelContextOverrides";
 import { getModelCapabilityOverride } from "@/lib/db/modelCapabilityOverrides";
 import { isVisionModelId } from "@/shared/constants/visionModels";
-import { getUnsupportedParams } from "@omniroute/open-sse/config/providerRegistry.ts";
+import {
+  getRegistryEntry,
+  getUnsupportedParams,
+} from "@omniroute/open-sse/config/providerRegistry.ts";
 import {
   getLearnedThinkingCap,
   GEMINI_FALLBACK_THINKING_CAP,
@@ -569,11 +572,16 @@ export function getResolvedModelCapabilities(input: CapabilityInput): ResolvedMo
     resolved.model,
     resolved.rawModel
   );
+  const providerDefaultContext =
+    resolved.provider != null
+      ? getRegistryEntry(resolved.provider)?.defaultContextLength ?? null
+      : null;
   const contextWindow =
     authoritativeContextWindow ??
     synced?.limit_context ??
     (typeof registryModel?.contextLength === "number" ? registryModel.contextLength : null) ??
     spec?.contextWindow ??
+    (typeof providerDefaultContext === "number" ? providerDefaultContext : null) ??
     null;
 
   const maxTokenOverride = getMaxTokenCapabilityOverride(resolved);
@@ -694,8 +702,7 @@ export function capThinkingBudget(input: CapabilityInput, budget: number): numbe
   // default to "gemini". Without this a cap learned via the executor would be
   // invisible to bare-model callers. Provider-qualified inputs keep their own
   // provider, preserving per-provider independence.
-  const providerForLearned =
-    resolved.provider ?? (modelLower.includes("gemini") ? "gemini" : null);
+  const providerForLearned = resolved.provider ?? (modelLower.includes("gemini") ? "gemini" : null);
 
   const learned = getLearnedThinkingCap(providerForLearned, modelId);
   if (learned !== null) {

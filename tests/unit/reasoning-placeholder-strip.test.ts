@@ -46,7 +46,7 @@ test("a chunk with the placeholder mixed into real text strips it (trim only aff
   // only strips the string's own leading/trailing whitespace, not internal gaps.
   assert.equal(
     stripInternalReasoningPlaceholder(`foo ${NON_ANTHROPIC_THINKING_PLACEHOLDER} bar`),
-    "foo  bar",
+    "foo  bar"
   );
 });
 

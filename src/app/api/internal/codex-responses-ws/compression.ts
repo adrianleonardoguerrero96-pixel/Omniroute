@@ -55,13 +55,16 @@ export async function applyResponsesWsCompression(
     if (!enabled || !settings) return responseBody;
 
     const adapter = adaptBodyForCompression(responseBody);
-    if (!adapter.adapted || !Array.isArray(adapter.body.messages) || adapter.body.messages.length === 0) {
+    if (
+      !adapter.adapted ||
+      !Array.isArray(adapter.body.messages) ||
+      adapter.body.messages.length === 0
+    ) {
       return responseBody;
     }
 
-    const { selectCompressionStrategy, applyCompressionAsync } = await import(
-      "@omniroute/open-sse/services/compression/strategySelector.ts"
-    );
+    const { selectCompressionStrategy, applyCompressionAsync } =
+      await import("@omniroute/open-sse/services/compression/strategySelector.ts");
 
     const estimatedTokens = estimateTokens(adapter.body.messages);
     const cachingContext = {

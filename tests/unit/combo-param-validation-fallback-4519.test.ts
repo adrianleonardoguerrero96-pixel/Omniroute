@@ -11,12 +11,10 @@ import assert from "node:assert/strict";
 //      400 and rate-limit as 429 (instead of rewriting everything to 502).
 
 const { checkFallbackError } = await import("../../open-sse/services/accountFallback.ts");
-const { isContextOverflow400, isParamValidation400, isModelScoped400 } = await import(
-  "../../open-sse/services/combo.ts"
-);
-const { normalizeUpstreamFailure } = await import(
-  "../../open-sse/translator/response/openai-responses.ts"
-);
+const { isContextOverflow400, isParamValidation400, isModelScoped400 } =
+  await import("../../open-sse/services/combo.ts");
+const { normalizeUpstreamFailure } =
+  await import("../../open-sse/translator/response/openai-responses.ts");
 
 test("#4519 checkFallbackError treats per-model max_tokens 400 as fallback-worthy with zero cooldown", () => {
   const res = checkFallbackError(
@@ -43,7 +41,10 @@ test("#4519 combo guard: a genuinely body-specific 400 is NOT classified as over
 
 test("#5249 combo guard: model-not-supported is model-scoped (must advance, not stop)", () => {
   assert.equal(isModelScoped400("requested model is not supported"), true);
-  assert.equal(isModelScoped400("invalid_request_error: model claude-fable-5 is not supported"), true);
+  assert.equal(
+    isModelScoped400("invalid_request_error: model claude-fable-5 is not supported"),
+    true
+  );
   assert.equal(isModelScoped400("Bad Request: The model is not supported"), true);
   // still not overflow/param — those are separate advance reasons
   assert.equal(isContextOverflow400("model is not supported"), false);

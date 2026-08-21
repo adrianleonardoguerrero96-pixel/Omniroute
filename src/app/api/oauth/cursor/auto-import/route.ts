@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { access, constants, readFile } from "fs/promises";
+import { existsSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
 import { execFile } from "child_process";
@@ -40,9 +41,7 @@ export interface CursorInstallProbe {
  * Port of decolua/9router#313 — only the linux probe is added; macOS/Windows
  * keep their existing behavior (no install probe).
  */
-export async function verifyLinuxCursorInstalled(
-  probe: CursorInstallProbe = {}
-): Promise<boolean> {
+export async function verifyLinuxCursorInstalled(probe: CursorInstallProbe = {}): Promise<boolean> {
   const exec = probe.execFile ?? execFileAsync;
   const canAccess = probe.access ?? access;
   const home = probe.home ?? homedir();
@@ -167,6 +166,37 @@ export function cursorDbCandidatePaths(
 }
 
 /**
+ * Resolve the candidate `auth.json` paths written by the `cursor-agent` CLI.
+ *
+ * The CLI's own resolver (verified by grepping its bundled JS at
+ * `~/.local/share/cursor-agent/versions/<v>/`) is platform-dependent:
+ *   darwin → `join(homedir(), ".cursor", "auth.json")`
+ *   win32  → `join(APPDATA, "Cursor", "auth.json")`
+ *   other  → `join(XDG_CONFIG_HOME ?? ~/.config, "cursor", "auth.json")`
+ *
+ * The previous implementation used the XDG path on **every** platform, so on
+ * macOS it probed `~/.config/cursor/auth.json` — a path the CLI never writes.
+ * That made auto-import report "No Cursor credentials found" on a machine where
+ * `cursor-agent status` said `✓ Logged in`. All candidates are returned (most
+ * specific first) so a token is still found if a user has a stray XDG file.
+ */
+export function cursorAgentAuthCandidatePaths(
+  platform: NodeJS.Platform,
+  env: { home: string; appdata?: string; xdgConfigHome?: string }
+): string[] {
+  const xdg = env.xdgConfigHome || join(env.home, ".config");
+  const paths: string[] = [];
+  if (platform === "darwin") {
+    paths.push(join(env.home, ".cursor", "auth.json"));
+  } else if (platform === "win32") {
+    if (env.appdata) paths.push(join(env.appdata, "Cursor", "auth.json"));
+  }
+  // XDG location — canonical on linux, kept as a fallback elsewhere.
+  paths.push(join(xdg, "cursor", "auth.json"));
+  return [...new Set(paths)];
+}
+
+/**
  * Try to read credentials from cursor-agent's auth.json
  * (written by `cursor-agent` CLI after login).
  */
@@ -176,17 +206,27 @@ async function tryAgentAuth(): Promise<{
   source?: string;
   error?: string;
 }> {
-  try {
-    const authPath = join(homedir(), ".config", "cursor", "auth.json");
-    const raw = await readFile(authPath, "utf-8");
-    const auth = JSON.parse(raw);
-    if (auth.accessToken && typeof auth.accessToken === "string") {
-      return { found: true, accessToken: auth.accessToken, source: "cursor-agent" };
+  const candidates = cursorAgentAuthCandidatePaths(process.platform, {
+    home: homedir(),
+    appdata: process.env.APPDATA,
+    xdgConfigHome: process.env.XDG_CONFIG_HOME,
+  });
+
+  const errors: string[] = [];
+  for (const authPath of candidates) {
+    try {
+      const raw = await readFile(authPath, "utf-8");
+      const auth = JSON.parse(raw);
+      const token = auth?.accessToken ?? auth?.access_token;
+      if (token && typeof token === "string") {
+        return { found: true, accessToken: token, source: "cursor-agent" };
+      }
+      errors.push(`${authPath}: no accessToken`);
+    } catch {
+      errors.push(`${authPath}: not found`);
     }
-    return { found: false, error: "cursor-agent auth.json has no accessToken" };
-  } catch {
-    return { found: false, error: "cursor-agent auth.json not found" };
   }
+  return { found: false, error: `cursor-agent auth.json unusable (${errors.join("; ")})` };
 }
 
 /**
@@ -322,6 +362,35 @@ async function tryIdeAuth(): Promise<{
 }
 
 /**
+ * Detect that we're running inside a container whose filesystem cannot possibly
+ * contain the host's Cursor credentials.
+ *
+ * Auto-import reads host-local paths (`state.vscdb`, `auth.json`) via
+ * `os.homedir()`. In the Docker deployment `homedir()` is `/home/node` and no
+ * host home is bind-mounted, so **every** probe necessarily misses and the
+ * generic "Install Cursor IDE or login with cursor-agent" message sends the
+ * operator to fix an install that is already fine. Detect the situation and say
+ * what's actually true: auto-import is unavailable here, paste the token.
+ */
+export function detectContainerizedHome(env: {
+  platform: NodeJS.Platform;
+  home: string;
+  existsSync: (p: string) => boolean;
+}): boolean {
+  // A container marker is necessary but not sufficient — a Linux desktop user
+  // running natively must keep working. Require BOTH a container marker and the
+  // absence of any Cursor footprint under the resolved home.
+  const containerized = env.existsSync("/.dockerenv") || env.existsSync("/run/.containerenv");
+  if (!containerized) return false;
+  const footprints = [
+    join(env.home, ".config/Cursor"),
+    join(env.home, ".cursor"),
+    join(env.home, "Library/Application Support/Cursor"),
+  ];
+  return !footprints.some((p) => env.existsSync(p));
+}
+
+/**
  * GET /api/oauth/cursor/auto-import
  * Auto-detect and extract Cursor tokens from:
  *   1. Cursor IDE's local SQLite database (state.vscdb) — includes machineId
@@ -358,9 +427,33 @@ export async function GET(request: Request) {
       });
     }
 
+    // Both probes missed. Distinguish "credentials genuinely absent" from
+    // "this process cannot see the host filesystem" — the latter is not a
+    // Cursor install problem and must not be reported as one.
+    if (
+      detectContainerizedHome({
+        platform: process.platform,
+        home: homedir(),
+        existsSync,
+      })
+    ) {
+      return NextResponse.json({
+        found: false,
+        containerized: true,
+        error:
+          "OmniRoute is running in a container and cannot read the host's Cursor " +
+          "credentials (no host home is mounted). Paste the Access Token and " +
+          "Machine ID manually — on macOS read them from " +
+          "~/Library/Application Support/Cursor/User/globalStorage/state.vscdb " +
+          "(keys cursorAuth/accessToken and storage.serviceMachineId).",
+        detail: { ide: ideResult.error, agent: agentResult.error },
+      });
+    }
+
     return NextResponse.json({
       found: false,
       error: "No Cursor credentials found. Install Cursor IDE or login with cursor-agent.",
+      detail: { ide: ideResult.error, agent: agentResult.error },
     });
   } catch (error) {
     console.error("Cursor auto-import error:", error);

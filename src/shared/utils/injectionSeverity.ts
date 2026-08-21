@@ -29,8 +29,7 @@ export function shouldBlockDetections(
 ): boolean {
   const minimumSeverity = SEVERITY_SCORES[threshold] || SEVERITY_SCORES.high;
   return detections.some((detection) => {
-    const score =
-      SEVERITY_SCORES[(detection.severity as InjectionSeverity) || "high"] || 0;
+    const score = SEVERITY_SCORES[(detection.severity as InjectionSeverity) || "high"] || 0;
     return score >= minimumSeverity;
   });
 }

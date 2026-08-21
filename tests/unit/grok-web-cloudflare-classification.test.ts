@@ -7,11 +7,8 @@ import {
 import { __setGrokClearanceAcquireOverrideForTesting } from "../../open-sse/services/grokClearance.ts";
 import type { ExecuteInput } from "../../open-sse/executors/base.ts";
 
-const {
-  GrokWebExecutor,
-  classifyGrokNullBodyError,
-  resolveGrokNullBodyTlsResult,
-} = await import("../../open-sse/executors/grok-web.ts");
+const { GrokWebExecutor, classifyGrokNullBodyError, resolveGrokNullBodyTlsResult } =
+  await import("../../open-sse/executors/grok-web.ts");
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 

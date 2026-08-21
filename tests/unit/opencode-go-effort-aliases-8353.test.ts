@@ -12,19 +12,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-const { parseEffortLevel, OpencodeExecutor } = (await import(
-  "../../open-sse/executors/opencode.ts"
-)) as {
-  parseEffortLevel: (model: string) => { baseModel: string; effort: string } | null;
-  OpencodeExecutor: new (provider: string) => {
-    transformRequest: (
-      model: string,
-      body: Record<string, unknown>,
-      stream: boolean,
-      credentials: unknown
-    ) => Record<string, unknown>;
+const { parseEffortLevel, OpencodeExecutor } =
+  (await import("../../open-sse/executors/opencode.ts")) as {
+    parseEffortLevel: (model: string) => { baseModel: string; effort: string } | null;
+    OpencodeExecutor: new (provider: string) => {
+      transformRequest: (
+        model: string,
+        body: Record<string, unknown>,
+        stream: boolean,
+        credentials: unknown
+      ) => Record<string, unknown>;
+    };
   };
-};
 
 const { REGISTRY } = (await import("../../open-sse/config/providerRegistry.ts")) as {
   REGISTRY: Record<

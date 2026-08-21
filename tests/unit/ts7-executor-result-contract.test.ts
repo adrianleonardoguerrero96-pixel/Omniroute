@@ -43,9 +43,8 @@ const INPUT = {
 test("GithubExecutor.execute passes a bare Response through untouched", async () => {
   const bare = new Response("upstream body", { status: 503 });
 
-  const result = await withBaseExecuteStub(
-    (async () => bare) as ExecuteFn,
-    () => new GithubExecutor().execute(INPUT)
+  const result = await withBaseExecuteStub((async () => bare) as ExecuteFn, () =>
+    new GithubExecutor().execute(INPUT)
   );
 
   assert.equal(
@@ -63,9 +62,8 @@ test("GithubExecutor.execute still materializes the capture-object arm", async (
     transformedBody: { a: 1 },
   };
 
-  const result = await withBaseExecuteStub(
-    (async () => captured) as ExecuteFn,
-    () => new GithubExecutor().execute(INPUT)
+  const result = await withBaseExecuteStub((async () => captured) as ExecuteFn, () =>
+    new GithubExecutor().execute(INPUT)
   );
 
   assert.ok(!(result instanceof Response), "the object arm must stay an object");
@@ -80,9 +78,8 @@ test("GithubExecutor.execute still materializes the capture-object arm", async (
 });
 
 test("GithubExecutor.execute tolerates a nullish result without throwing", async () => {
-  const result = await withBaseExecuteStub(
-    (async () => undefined) as unknown as ExecuteFn,
-    () => new GithubExecutor().execute(INPUT)
+  const result = await withBaseExecuteStub((async () => undefined) as unknown as ExecuteFn, () =>
+    new GithubExecutor().execute(INPUT)
   );
 
   assert.equal(result, undefined, "a nullish base result must short-circuit, not throw");

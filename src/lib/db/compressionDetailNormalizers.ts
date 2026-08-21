@@ -56,7 +56,10 @@ export function normalizeCcrConfig(value: unknown): CcrConfig {
 
 /** Default sub-objects spread into getCompressionSettings' seed config. */
 export function buildDetailConfigDefaults(): Pick<CompressionConfig, "sessionDedup" | "ccr"> {
-  return { sessionDedup: normalizeSessionDedupConfig(undefined), ccr: normalizeCcrConfig(undefined) };
+  return {
+    sessionDedup: normalizeSessionDedupConfig(undefined),
+    ccr: normalizeCcrConfig(undefined),
+  };
 }
 
 /** Applies a stored sessionDedup/ccr row onto config during getCompressionSettings' row scan. */

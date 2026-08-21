@@ -1,13 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-const { createStreamFailureFinalizers } = await import(
-  "../../open-sse/utils/streamFailureFinalization.ts"
-);
+const { createStreamFailureFinalizers } =
+  await import("../../open-sse/utils/streamFailureFinalization.ts");
 
 test("createStreamFailureFinalizers: 499 client disconnect body is client_disconnected", () => {
-  let captured: { status: number; responseBody: unknown; errorCode?: string | null } | null =
-    null;
+  let captured: { status: number; responseBody: unknown; errorCode?: string | null } | null = null;
 
   const { onPipelineStreamError } = createStreamFailureFinalizers({
     isFailureCompletionRecorded: () => false,

@@ -156,6 +156,12 @@ export const cursorProvider: RegistryEntry = {
     { id: "grok-4.5-xhigh", name: "Grok 4.5 XHigh" },
     { id: "grok-4.5-fast-xhigh", name: "Grok 4.5 Fast XHigh" },
     //
+    // Live combo hop (best-reasoning-paid / klaudiusz-opus). Cursor's
+    // advertised window is the provider default (200k); declare it so a
+    // large-prompt filter cannot treat this hop as unknown.
+    { id: "cursor-grok-4.6-high", name: "Grok 4.6 High", contextLength: 500000 },
+    { id: "grok-4.6-high", name: "Grok 4.6 High", contextLength: 500000 },
+    //
     { id: "kimi-k2.5", name: "Kimi K2.5" },
   ],
 };

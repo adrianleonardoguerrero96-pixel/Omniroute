@@ -5,12 +5,7 @@
  */
 
 export type ModelBreakdownSortField =
-  | "model"
-  | "requests"
-  | "promptTokens"
-  | "completionTokens"
-  | "totalTokens"
-  | "cost";
+  "model" | "requests" | "promptTokens" | "completionTokens" | "totalTokens" | "cost";
 
 export type ModelBreakdownSortOrder = "asc" | "desc";
 

@@ -31,7 +31,11 @@ beforeEach(() => {
       // test): a non-ok GET leaves dbSettings null, so the `!dbSettingsLoading &&
       // dbSettings` form block is skipped while the Maintenance card stays rendered.
       if (method === "GET" && /\/api\/settings\/database$/.test(url)) {
-        return Promise.resolve({ ok: false, status: 404, json: async () => ({}) } as unknown as Response);
+        return Promise.resolve({
+          ok: false,
+          status: 404,
+          json: async () => ({}),
+        } as unknown as Response);
       }
       return Promise.resolve({
         ok: true,

@@ -105,10 +105,7 @@ function isLatentWindow(window: JsonRecord): boolean {
     getFieldValue(window, "limit_window_seconds", "limitWindowSeconds"),
     0
   );
-  const resetAfter = toNumber(
-    getFieldValue(window, "reset_after_seconds", "resetAfterSeconds"),
-    0
-  );
+  const resetAfter = toNumber(getFieldValue(window, "reset_after_seconds", "resetAfterSeconds"), 0);
   return usedPercent === 0 && limitWindow > 0 && resetAfter >= limitWindow;
 }
 
@@ -225,7 +222,9 @@ function findCodexReviewRateLimit(data: JsonRecord): JsonRecord {
  * (issue #5199).
  */
 function parseBankedResetCredits(data: JsonRecord): number | undefined {
-  const resetCredits = toRecord(getFieldValue(data, "rate_limit_reset_credits", "rateLimitResetCredits"));
+  const resetCredits = toRecord(
+    getFieldValue(data, "rate_limit_reset_credits", "rateLimitResetCredits")
+  );
   const availableCount = getFieldValue(resetCredits, "available_count", "availableCount");
   const count = toNumber(availableCount, NaN);
   return Number.isFinite(count) ? count : undefined;

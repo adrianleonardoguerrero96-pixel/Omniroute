@@ -138,7 +138,10 @@ test("quota-share: 403 quota_exhausted → NO wait, error propagated immediately
   // that we didn't accidentally wait out a real (multi-second-to-hours)
   // quota_exhausted lock, so a generous bound still catches a real
   // regression while tolerating CI-runner DB/import contention.
-  assert.ok(elapsed < 10000, `quota_exhausted must not wait out a cooldown, but ${elapsed}ms elapsed`);
+  assert.ok(
+    elapsed < 10000,
+    `quota_exhausted must not wait out a cooldown, but ${elapsed}ms elapsed`
+  );
 });
 
 test("non quota-share (priority): short 429 cooldown → waits and re-dispatches (2nd pass 200)", async () => {
@@ -221,7 +224,11 @@ test("non quota-share (priority): a quota_exhausted lock drives the decision wit
   // Final status is the last target's 403 (aggregation last-wins). The security
   // invariant is that the allow-list rejected the wait — not that a peer 429 is
   // re-surfaced as the HTTP status.
-  assert.equal(res.status, 403, "quota_exhausted target status crystallizes; wait must not redispatch");
+  assert.equal(
+    res.status,
+    403,
+    "quota_exhausted target status crystallizes; wait must not redispatch"
+  );
   // Deterministic proof (no wall-clock dependency, so it cannot flake under
   // CI-runner contention): each target is dispatched EXACTLY ONCE. Had the wait
   // fired, the whole set loop would re-run — maxAttempts=2 within the 8s budget

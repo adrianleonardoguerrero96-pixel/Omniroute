@@ -27,6 +27,12 @@ export type IntelligentRoutingConfig = {
   budgetCap?: number;
   weights: IntelligentRoutingWeights;
   routerStrategy: string;
+  /**
+   * #5811: content-aware (complexity) routing. When true, the auto-combo scorer
+   * classifies the request's difficulty and biases selection toward a matching
+   * provider tier. Off by default. Only meaningful for the `auto` strategy.
+   */
+  complexityAwareRouting: boolean;
   slaTargetP95Ms?: number;
   slaMaxErrorRate?: number;
   slaMaxCostPer1MTokens?: number;
@@ -167,6 +173,7 @@ export function normalizeIntelligentRoutingConfig(config: unknown): IntelligentR
       configRecord.routerStrategy.trim().length > 0
         ? configRecord.routerStrategy
         : "rules",
+    complexityAwareRouting: configRecord.complexityAwareRouting === true,
     slaTargetP95Ms: toPositiveNumber(slaTargetP95Ms),
     slaMaxErrorRate:
       slaMaxErrorRate !== null ? Math.min(1, Math.max(0, slaMaxErrorRate)) : undefined,

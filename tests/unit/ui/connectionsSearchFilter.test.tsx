@@ -134,9 +134,8 @@ describe("useProviderConnections — accountSearch (#7937)", () => {
   });
 
   it("defaults accountSearch to empty string and exposes setAccountSearch", async () => {
-    const { useProviderConnections } = await import(
-      "@/app/(dashboard)/dashboard/providers/[id]/hooks/useProviderConnections"
-    );
+    const { useProviderConnections } =
+      await import("@/app/(dashboard)/dashboard/providers/[id]/hooks/useProviderConnections");
 
     type HookResult = ReturnType<typeof useProviderConnections>;
     let result: HookResult | null = null;
@@ -158,9 +157,8 @@ describe("useProviderConnections — accountSearch (#7937)", () => {
   });
 
   it("resets page to 0 when the search query changes", async () => {
-    const { useProviderConnections } = await import(
-      "@/app/(dashboard)/dashboard/providers/[id]/hooks/useProviderConnections"
-    );
+    const { useProviderConnections } =
+      await import("@/app/(dashboard)/dashboard/providers/[id]/hooks/useProviderConnections");
 
     type HookResult = ReturnType<typeof useProviderConnections>;
     let result: HookResult | null = null;

@@ -260,7 +260,10 @@ export async function waitForCdpReady(cdpPort: number, timeoutMs: number): Promi
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 2_000);
     try {
-      const version = await fetchJson(`http://127.0.0.1:${cdpPort}/json/version`, controller.signal);
+      const version = await fetchJson(
+        `http://127.0.0.1:${cdpPort}/json/version`,
+        controller.signal
+      );
       if (version?.webSocketDebuggerUrl) return;
       lastError = new Error("CDP endpoint did not return a websocket URL");
     } catch (error) {
@@ -284,10 +287,7 @@ export async function harvestFromContainer(
   let client: CdpClient | null = null;
 
   try {
-    const version = await fetchJson(
-      `http://127.0.0.1:${cdpPort}/json/version`,
-      controller.signal
-    );
+    const version = await fetchJson(`http://127.0.0.1:${cdpPort}/json/version`, controller.signal);
     const debuggerUrl = version?.webSocketDebuggerUrl;
     if (typeof debuggerUrl !== "string" || !debuggerUrl) {
       throw new Error("No CDP websocket endpoint from browser container");

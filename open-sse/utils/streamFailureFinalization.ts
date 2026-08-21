@@ -107,9 +107,7 @@ export function createStreamFailureFinalizers({
     const message = failure.message || "Upstream stream error";
     const code = failure.code || failure.type || String(status);
     const classification =
-      failure.code || failure.type
-        ? { code: failure.code, type: failure.type }
-        : undefined;
+      failure.code || failure.type ? { code: failure.code, type: failure.type } : undefined;
 
     if (!isFailureCompletionRecorded()) {
       const errorBody = buildErrorBody(status, message, undefined, classification);

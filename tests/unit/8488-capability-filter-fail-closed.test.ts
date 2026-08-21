@@ -129,10 +129,7 @@ test("#8488 filter: chatgpt-web emulation providers stay eligible for tools (#52
   assert.equal(providerSupportsEmulatedToolCalling("openai"), false);
 
   const kept = filterTargetsByRequestCompatibility(
-    [
-      target("chatgpt-web", "chatgpt-web/gpt-5.5"),
-      target("chatgpt-web", "chatgpt-web/o3"),
-    ],
+    [target("chatgpt-web", "chatgpt-web/gpt-5.5"), target("chatgpt-web", "chatgpt-web/o3")],
     {
       messages: [{ role: "user", content: "Use a tool." }],
       tools: [{ type: "function", function: { name: "lookup", parameters: {} } }],
@@ -146,10 +143,7 @@ test("#8488 filter: chatgpt-web emulation providers stay eligible for tools (#52
   );
 
   const exhaustion = describeCapabilityFilterExhaustion(
-    [
-      target("chatgpt-web", "chatgpt-web/gpt-5.5"),
-      target("chatgpt-web", "chatgpt-web/o3"),
-    ],
+    [target("chatgpt-web", "chatgpt-web/gpt-5.5"), target("chatgpt-web", "chatgpt-web/o3")],
     {
       messages: [{ role: "user", content: "Use a tool." }],
       tools: [{ type: "function", function: { name: "lookup", parameters: {} } }],
@@ -175,7 +169,10 @@ test("#8488 auto: chatgpt-web emulation survives tool pre-filter (#5240)", async
     buildAutoCandidates: (async () => []) as never,
   });
 
-  assert.ok(!("earlyResponse" in result), "must not 400 capability_mismatch for emulation providers");
+  assert.ok(
+    !("earlyResponse" in result),
+    "must not 400 capability_mismatch for emulation providers"
+  );
   if ("orderedTargets" in result) {
     assert.equal(result.orderedTargets.length, 1);
     assert.equal(result.orderedTargets[0].modelStr, "chatgpt-web/gpt-5.5");

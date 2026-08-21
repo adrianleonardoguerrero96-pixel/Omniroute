@@ -159,61 +159,58 @@
 
 Nie musisz tworzyć żadnego komba. Ustaw swój model na `auto` (lub jego wariant), a OmniRoute zbuduje wirtualne kombo z Twoich połączonych dostawców, oceniane na żywo:
 
-| Identyfikator modelu | Pod kątem czego optymalizuje                                                                                                                         |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `auto`               | 🎯 Zbalansowana wartość domyślna (LKGP — trzyma się ostatniego dobrego dostawcy)                                                                     |
-| `auto/coding`        | 🧑‍💻 Wagi zorientowane na jakość przy generowaniu kodu                                                                                               |
-| `auto/fast`          | ⚡ W pierwszej kolejności najniższe opóźnienia                                                                                                       |
-| `auto/cheap`         | 💰 W pierwszej kolejności najtańsze za token                                                                                                         |
-| `auto/offline`       | 🔋 W pierwszej kolejności największy zapas limitu (quota / rate-limit)                                                                               |
-| `auto/smart`         | 🔭 Najpierw jakość + 10% eksploracji w celu odkrycia lepszych modeli                                                                                 |
-
+| Identyfikator modelu | Pod kątem czego optymalizuje                                                     |
+| -------------------- | -------------------------------------------------------------------------------- |
+| `auto`               | 🎯 Zbalansowana wartość domyślna (LKGP — trzyma się ostatniego dobrego dostawcy) |
+| `auto/coding`        | 🧑‍💻 Wagi zorientowane na jakość przy generowaniu kodu                             |
+| `auto/fast`          | ⚡ W pierwszej kolejności najniższe opóźnienia                                   |
+| `auto/cheap`         | 💰 W pierwszej kolejności najtańsze za token                                     |
+| `auto/offline`       | 🔋 W pierwszej kolejności największy zapas limitu (quota / rate-limit)           |
+| `auto/smart`         | 🔭 Najpierw jakość + 10% eksploracji w celu odkrycia lepszych modeli             |
 
 ### 🔀 Albo zbuduj własne — 18 strategii routingu
 
 Wszystkie **18** strategii — łącz i dopasowuj na każdym kroku komba:
 
-| #   | Strategia           | Co robi                                                                                                                  |
-| --- | ------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| 1   | `priority`          | Uporządkowana lista według priorytetu — zużyj każdy cel przed przejściem do kolejnego 🥇                                 |
-| 2   | `fill-first`        | Wypełnij całkowicie limit każdego celu przed pójściem dalej                                                              |
-| 3   | `weighted`          | Wybór losowy ważony według wagi przypisanej do celu                                                                      |
-| 4   | `round-robin`       | Przechodzenie przez cele po kolei (Round-Robin)                                                                          |
-| 5   | `p2c`               | Losowe równoważenie obciążenia metodą "wybierz dwa, weź lepszy" (P2C)                                                    |
-| 6   | `least-used`        | Wybierz cel o najniższym aktualnym obciążeniu                                                                            |
-| 7   | `random`            | Jednolity losowy wybór (ze skreśleniem powtórzeń)                                                                        |
-| 8   | `strict-random`     | Losowo bez usuwania duplikatów 🎲                                                                                        |
-| 9   | `cost-optimized`    | Minimalizuj koszt w USD za zapytanie na podstawie cennika w katalogu na żywo 💸                                           |
-| 10  | `headroom`          | Wybierz cel z największym pozostałym limitem                                                                             |
-| 11  | `reset-window`      | Preferuj cel, którego okno limitu resetuje się najszybciej                                                               |
-| 12  | `reset-aware`       | Klasyfikuj według czasu resetu limitu — najpierw krótkie okna 📊                                                         |
-| 13  | `context-relay`     | Przekazuj kontekst między celami przy długich rozmowach 🧠                                                               |
-| 14  | `context-optimized` | Wybierz cel najlepiej dopasowany do bieżącego rozmiaru kontekstu                                                         |
-| 15  | `lkgp`              | Ostatnia znana dobra ścieżka (LKGP) — trzyma się ostatniego udanego celu                                                 |
-| 16  | `auto`              | Ocenianie na żywo na podstawie 12 czynników dla każdego połączenia 🤖                                                   |
-| 17  | `fusion`            | Rozesłanie zapytania do panelu modeli + sędzia syntetyzuje jedną odpowiedź (Fusion) 🧬                                   |
-| 18  | `pipeline`          | Łączenie kroków — wyjście każdego celu zasila kolejny 🔗                                                                 |
+| #   | Strategia           | Co robi                                                                                  |
+| --- | ------------------- | ---------------------------------------------------------------------------------------- |
+| 1   | `priority`          | Uporządkowana lista według priorytetu — zużyj każdy cel przed przejściem do kolejnego 🥇 |
+| 2   | `fill-first`        | Wypełnij całkowicie limit każdego celu przed pójściem dalej                              |
+| 3   | `weighted`          | Wybór losowy ważony według wagi przypisanej do celu                                      |
+| 4   | `round-robin`       | Przechodzenie przez cele po kolei (Round-Robin)                                          |
+| 5   | `p2c`               | Losowe równoważenie obciążenia metodą "wybierz dwa, weź lepszy" (P2C)                    |
+| 6   | `least-used`        | Wybierz cel o najniższym aktualnym obciążeniu                                            |
+| 7   | `random`            | Jednolity losowy wybór (ze skreśleniem powtórzeń)                                        |
+| 8   | `strict-random`     | Losowo bez usuwania duplikatów 🎲                                                        |
+| 9   | `cost-optimized`    | Minimalizuj koszt w USD za zapytanie na podstawie cennika w katalogu na żywo 💸          |
+| 10  | `headroom`          | Wybierz cel z największym pozostałym limitem                                             |
+| 11  | `reset-window`      | Preferuj cel, którego okno limitu resetuje się najszybciej                               |
+| 12  | `reset-aware`       | Klasyfikuj według czasu resetu limitu — najpierw krótkie okna 📊                         |
+| 13  | `context-relay`     | Przekazuj kontekst między celami przy długich rozmowach 🧠                               |
+| 14  | `context-optimized` | Wybierz cel najlepiej dopasowany do bieżącego rozmiaru kontekstu                         |
+| 15  | `lkgp`              | Ostatnia znana dobra ścieżka (LKGP) — trzyma się ostatniego udanego celu                 |
+| 16  | `auto`              | Ocenianie na żywo na podstawie 12 czynników dla każdego połączenia 🤖                    |
+| 17  | `fusion`            | Rozesłanie zapytania do panelu modeli + sędzia syntetyzuje jedną odpowiedź (Fusion) 🧬   |
+| 18  | `pipeline`          | Łączenie kroków — wyjście każdego celu zasila kolejny 🔗                                 |
 
 <img src="../../../docs/diagrams/strategies-grid.svg" width="100%" alt="Wszystkie 18 strategii routingu komba w formie animowanej, po jednym kafelku na strategię pokazującym realizowany przepływ: priority (zużyj pierwszy, potem kolejny), fill-first (wypełnij limit celu, potem idź dalej), weighted (losowy ważony), round-robin (cyklicznie w kolejności), p2c (wybierz dwa, weź lżejszy), least-used (wygrywa najniższe obciążenie), random (jednolity, bez powtórzeń), strict-random (powtórzenia dozwolone), cost-optimized (najtańszy $ za zapytanie), headroom (najwięcej pozostałego limitu), reset-window (resetuje się najszybciej → użyj go), reset-aware (klasyfikacja wg resetu, krótkie najpierw), context-relay (przekazywanie długiego kontekstu), context-optimized (dopasowanie do rozmiaru kontekstu), lkgp (trzymaj się ostatniego sukcesu), auto (ocenianie na żywo na bazie 12 czynników), fusion (panel + sędzia → jedna odpowiedź), pipeline (każde wyjście zasila kolejne)."/>
 
 <sub>Silnik Auto-Combo ocenia każdego kandydata na podstawie **12 czynników** (stan techniczny, limit, koszt, opóźnienie, wskaźnik sukcesu, aktualność…) — zobacz [`docs/routing/AUTO-COMBO.md`](docs/routing/AUTO-COMBO.md).</sub>
 
-
 ### ⚖️ Quota-Share — podziel jedną subskrypcję w zespole ✨ NOWOŚĆ
 
 > Uruchamiasz kilka kluczy na tym **samym koncie nadrzędnym** (jeden plan Codex Pro, jeden klucz Kimi, jedno stanowisko GLM Coding)? Nagły skok zużycia na jednym kluczu może wyczerpać cały 5-godzinny / godzinny limit i zablokować wszystkich innych. **Quota-Share** rozdziela limit czasowy dostawcy **sprawiedliwie** pomiędzy klucze w puli — a dzięki zasadzie _oszczędzania pracy (work-conserving)_, nieużywana część limitu bezczynnego członka jest wypożyczana innym, zamiast się marnować.
 
-| Suwak / Opcja | Co kontroluje |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ⚖️ **Waga alokacji** | udział każdego klucza w puli — np. `50 / 30 / 20`                                                                                                                            |
-| 📐 **Wymiary** | śledzenie `%` · zapytań · tokenów · `$`, w oknie **5h / 7d / na model**                                                                                                       |
-| 🚦 **Polityka** | `hard` (blokuj po przekroczeniu) · `soft` (obniż priorytet) · `burst` (użyj wolnego zapasu)                                                                                               |
-| 🧱 **Limit max (Cap)** | bezwzględny limit na klucz, niezależny od trybu                                                                                                                                 |
+| Suwak / Opcja          | Co kontroluje                                                                               |
+| ---------------------- | ------------------------------------------------------------------------------------------- |
+| ⚖️ **Waga alokacji**   | udział każdego klucza w puli — np. `50 / 30 / 20`                                           |
+| 📐 **Wymiary**         | śledzenie `%` · zapytań · tokenów · `$`, w oknie **5h / 7d / na model**                     |
+| 🚦 **Polityka**        | `hard` (blokuj po przekroczeniu) · `soft` (obniż priorytet) · `burst` (użyj wolnego zapasu) |
+| 🧱 **Limit max (Cap)** | bezwzględny limit na klucz, niezależny od trybu                                             |
 
 <img src="../../../docs/diagrams/pool-fair-share.svg" width="100%" alt="Pula kluczy OmniRoute 'team-codex': jedno konto Codex Pro dzielone przez 3 klucze w 5-godzinnym oknie. alice waga 50 (do 50% współdzielonego limitu 5h), bob waga 30, ci-bot waga 20. W trybie łagodnym (poniżej 50% zużycia puli) wolne udziały są wypożyczane; gdy pula przekroczy 50%, tryb rygorystyczny ogranicza każdy klucz do jego sprawiedliwego udziału."/>
 
 <sub>Wymuszane na "gorącej ścieżce" **zanim** żądanie opuści OmniRoute, z limitami na parę (klucz, model) + zachowaniem sesyjności (session stickiness) dla spójności pamięci podręcznej promptów (teraz z przełącznikiem wyłączania dla komba / globalnie). 📖 [Silnik Quota Sharing](../../../docs/routing/QUOTA_SHARE.md)</sub>
-
 
 ### 🧱 Odporność jest wbudowana (3 niezależne warstwy)
 
@@ -229,20 +226,20 @@ Wszystkie **18** strategii — łącz i dopasowuj na każdym kroku komba:
 
 </div>
 
-| Funkcja | OmniRoute | Inne routery |
-| -------------------------------------- | ------------------------------------------------------------------- | ------------- |
-| 🌐 Dostawcy | **268** | 20–100 |
-| 🆓 Darmowi dostawcy | **90+ (40+ darmowych na zawsze)** | 1–5 |
-| 🔀 Strategie routingu | **18** (priorytetowa, ważona, zoptymalizowana pod kątem kosztów, przekazywanie kontekstu, fusion…) | 1–3 |
-| 🗜️ Kompresja tokenów | **Kaskadowa RTK + Caveman (15–95%)** | Brak / 20–40% |
-| 🧰 Wbudowany serwer MCP | **104 narzędzia, 3 protokoły transportowe, 31 zakresów** | Rzadkość |
-| 🤝 Protokół agenta A2A | **6 umiejętności, JSON-RPC 2.0** | Brak |
-| 🧠 Pamięć (FTS5 + wektorowa) | **Tak** | Rzadkość |
-| 🛡️ Barierki ochronne (PII, wstrzykiwanie promptów, wizja) | **Tak** | Rzadkość |
-| ☁️ Agenci chmurowi | **Codex, Cursor, Devin, Jules** | Brak |
-| 🥷 Maskowanie sygnatury TLS | **JA3/JA4 przez wreq-js** | Brak |
-| 🖥️ Wieloplatformowość | **Web · Desktop · Termux · PWA** | Tylko Web |
-| 🌍 i18n (lokalizacja) | **43 języki** | 0–4 |
+| Funkcja                                                   | OmniRoute                                                                                          | Inne routery  |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------- |
+| 🌐 Dostawcy                                               | **268**                                                                                            | 20–100        |
+| 🆓 Darmowi dostawcy                                       | **90+ (40+ darmowych na zawsze)**                                                                  | 1–5           |
+| 🔀 Strategie routingu                                     | **18** (priorytetowa, ważona, zoptymalizowana pod kątem kosztów, przekazywanie kontekstu, fusion…) | 1–3           |
+| 🗜️ Kompresja tokenów                                      | **Kaskadowa RTK + Caveman (15–95%)**                                                               | Brak / 20–40% |
+| 🧰 Wbudowany serwer MCP                                   | **104 narzędzia, 3 protokoły transportowe, 31 zakresów**                                           | Rzadkość      |
+| 🤝 Protokół agenta A2A                                    | **6 umiejętności, JSON-RPC 2.0**                                                                   | Brak          |
+| 🧠 Pamięć (FTS5 + wektorowa)                              | **Tak**                                                                                            | Rzadkość      |
+| 🛡️ Barierki ochronne (PII, wstrzykiwanie promptów, wizja) | **Tak**                                                                                            | Rzadkość      |
+| ☁️ Agenci chmurowi                                        | **Codex, Cursor, Devin, Jules**                                                                    | Brak          |
+| 🥷 Maskowanie sygnatury TLS                               | **JA3/JA4 przez wreq-js**                                                                          | Brak          |
+| 🖥️ Wieloplatformowość                                     | **Web · Desktop · Termux · PWA**                                                                   | Tylko Web     |
+| 🌍 i18n (lokalizacja)                                     | **43 języki**                                                                                      | 0–4           |
 
 <sub>📊 Szczegółowe porównanie z LiteLLM, OpenRouter i Portkey → [`docs/comparison/OMNIROUTE_VS_ALTERNATIVES.md`](../../../docs/comparison/OMNIROUTE_VS_ALTERNATIVES.md)</sub>
 
@@ -394,16 +391,16 @@ Wszystkie **18** strategii — łącz i dopasowuj na każdym kroku komba:
 
 > Ta sama aplikacja, Twoja maszyna, Twoje zasady. Od globalnej instalacji przez npm po Twój telefon za pomocą Termux.
 
-| Platforma | Instalacja | Najważniejsze cechy |
-| ------------------------- | ---------------------------------------- | --------------------------------------------------------- |
-| 📦 **npm (globalnie)** | `npm install -g omniroute` | Jedno polecenie, dowolny system operacyjny |
-| 🐳 **Docker** | `docker run … diegosouzapw/omniroute` | Wielonatywność architektur **AMD64 + ARM64** |
-| 🖥️ **Desktop (Electron)** | `npm run electron:build` | Natywne okno + zasobnik systemowy (system tray) — **Windows / macOS / Linux** |
-| 💪 **ARM** | natywnie `arm64` | Raspberry Pi, serwery ARM, Apple Silicon |
-| 📱 **Android (Termux)** | `pkg install nodejs && npx -y omniroute` | Działa **na Twoim telefonie**, 24/7, bez roota |
-| 📲 **PWA** | "Dodaj do ekranu głównego" | Pełny ekran, offline, instalacja z poziomu przeglądarki |
-| 🧩 **Wtyczka OpenCode** | `@omniroute/opencode-provider` | Natywna integracja z OpenCode |
-| 🛠️ **Ze źródeł** | `npm install && npm run dev` | Modyfikuj kod, współtwórz projekt |
+| Platforma                 | Instalacja                               | Najważniejsze cechy                                                           |
+| ------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------- |
+| 📦 **npm (globalnie)**    | `npm install -g omniroute`               | Jedno polecenie, dowolny system operacyjny                                    |
+| 🐳 **Docker**             | `docker run … diegosouzapw/omniroute`    | Wielonatywność architektur **AMD64 + ARM64**                                  |
+| 🖥️ **Desktop (Electron)** | `npm run electron:build`                 | Natywne okno + zasobnik systemowy (system tray) — **Windows / macOS / Linux** |
+| 💪 **ARM**                | natywnie `arm64`                         | Raspberry Pi, serwery ARM, Apple Silicon                                      |
+| 📱 **Android (Termux)**   | `pkg install nodejs && npx -y omniroute` | Działa **na Twoim telefonie**, 24/7, bez roota                                |
+| 📲 **PWA**                | "Dodaj do ekranu głównego"               | Pełny ekran, offline, instalacja z poziomu przeglądarki                       |
+| 🧩 **Wtyczka OpenCode**   | `@omniroute/opencode-provider`           | Natywna integracja z OpenCode                                                 |
+| 🛠️ **Ze źródeł**          | `npm install && npm run dev`             | Modyfikuj kod, współtwórz projekt                                             |
 
 <sub>📖 [Podręcznik Docker](../../../docs/guides/DOCKER_GUIDE.md) · [Desktop](../../../electron/README.md) · [Termux](../../../docs/guides/TERMUX_GUIDE.md) · [PWA](../../../docs/guides/PWA_GUIDE.md) · [OpenCode](../../../docs/frameworks/OPENCODE.md)</sub>
 
@@ -464,12 +461,12 @@ Tokeny mają zakresy `read` / `write` / `admin`; trasy uruchamiające procesy po
 
 Udostępnij OmniRoute przez **MCP** lub **A2A**, a każdy zdolny do tego agent autonomicznie otrzyma klucze do całej bramki — routingu, dostawców, kombinacji (combos), pamięci podręcznej, kompresji i pamięci.
 
-| Protokół | Punkt końcowy | Zastosowanie |
-| ------------------ | ----------------------------------------------- | ------------------------------------------------------- |
-| 🧰 **MCP (stdio)** | `omniroute --mcp`                               | Podłącz do Claude Desktop, Cursor, dowolnego klienta MCP |
-| 🌊 **MCP (HTTP)** | `http://localhost:20128/api/mcp/stream`         | Zdalny MCP — **104 narzędzia**, 31 zakresów, pełna ścieżka audytu |
-| 📡 **MCP (SSE)** | `http://localhost:20128/api/mcp/sse`            | Strumieniowy transport MCP |
-| 🤝 **A2A** | `http://localhost:20128/.well-known/agent.json` | Komunikacja agent-do-agenta, **JSON-RPC 2.0** + SSE, 6 umiejętności |
+| Protokół           | Punkt końcowy                                   | Zastosowanie                                                        |
+| ------------------ | ----------------------------------------------- | ------------------------------------------------------------------- |
+| 🧰 **MCP (stdio)** | `omniroute --mcp`                               | Podłącz do Claude Desktop, Cursor, dowolnego klienta MCP            |
+| 🌊 **MCP (HTTP)**  | `http://localhost:20128/api/mcp/stream`         | Zdalny MCP — **104 narzędzia**, 31 zakresów, pełna ścieżka audytu   |
+| 📡 **MCP (SSE)**   | `http://localhost:20128/api/mcp/sse`            | Strumieniowy transport MCP                                          |
+| 🤝 **A2A**         | `http://localhost:20128/.well-known/agent.json` | Komunikacja agent-do-agenta, **JSON-RPC 2.0** + SSE, 6 umiejętności |
 
 ```bash
 # Daj Claude Code pełny zestaw narzędzi OmniRoute przez MCP:
@@ -492,29 +489,29 @@ claude mcp add-server omniroute --type http --url http://localhost:20128/api/mcp
 
 Silniki działają w kolejności potoku; każdy z nich można niezależnie włączać i konfigurować dla poszczególnych komb:
 
-| #   | Silnik | Co robi |
-| --- | ----------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| 1   | **Session-Dedup** | Odrzuca treści powtarzające się między kolejnymi turami (adresowane treścią, międzyturowe) |
-| 2   | **CCR** | Archiwizuje duże bloki pod znacznikami pobierania, pobieranymi na żądanie |
-| 3   | **RTK** | Inteligentne filtrowanie, deduplikacja i skracanie wyników narzędzi (z uwzględnieniem poleceń) |
-| 4   | **Headroom** | Bezstratne upakowanie tabelaryczne jednorodnych tablic JSON, płaskich lub zagnieżdżonych (~30%), poprzez wbudowany kodek **GCF** (specyfikacja v3.2) |
-| 5   | **Relevance** | Ekstrakcyjne ocenianie zdań pod kątem dopasowania do ostatniego zapytania użytkownika |
-| 6   | **Caveman** | Kompresja prozy oparta na regułach (~65–75% na wyjściu) |
-| 7   | **LLMLingua-2** | Semantyczne przycinanie oparte na uczeniu maszynowym przez MobileBERT ONNX — bezpieczne dla kodu, asynchroniczne |
-| 8   | **Lite** | Usuwanie białych znaków i skracanie adresów URL obrazów (lekki pod kątem opóżeń punkt odniesienia) |
-| 9   | **Aggressive** | Streszczanie + stopniowe "starzenie" starych tur |
-| 10  | **Ultra** | Heurystyczne przycinanie tokenów z opcjonalnym poziomem małego modelu (SLM) |
+| #   | Silnik            | Co robi                                                                                                                                              |
+| --- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Session-Dedup** | Odrzuca treści powtarzające się między kolejnymi turami (adresowane treścią, międzyturowe)                                                           |
+| 2   | **CCR**           | Archiwizuje duże bloki pod znacznikami pobierania, pobieranymi na żądanie                                                                            |
+| 3   | **RTK**           | Inteligentne filtrowanie, deduplikacja i skracanie wyników narzędzi (z uwzględnieniem poleceń)                                                       |
+| 4   | **Headroom**      | Bezstratne upakowanie tabelaryczne jednorodnych tablic JSON, płaskich lub zagnieżdżonych (~30%), poprzez wbudowany kodek **GCF** (specyfikacja v3.2) |
+| 5   | **Relevance**     | Ekstrakcyjne ocenianie zdań pod kątem dopasowania do ostatniego zapytania użytkownika                                                                |
+| 6   | **Caveman**       | Kompresja prozy oparta na regułach (~65–75% na wyjściu)                                                                                              |
+| 7   | **LLMLingua-2**   | Semantyczne przycinanie oparte na uczeniu maszynowym przez MobileBERT ONNX — bezpieczne dla kodu, asynchroniczne                                     |
+| 8   | **Lite**          | Usuwanie białych znaków i skracanie adresów URL obrazów (lekki pod kątem opóżeń punkt odniesienia)                                                   |
+| 9   | **Aggressive**    | Streszczanie + stopniowe "starzenie" starych tur                                                                                                     |
+| 10  | **Ultra**         | Heurystyczne przycinanie tokenów z opcjonalnym poziomem małego modelu (SLM)                                                                          |
 
 Bloki kodu, adresy URL i dane strukturyzowane są **zawsze zachowywane** z dokładnością co do bajtu. Presety uruchamiane jednym kliknięciem łączą te silniki:
 
-| Tryb | Oszczędności | Najlepszy do |
-| ------------------------------ | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| 🪶 **Lite** | ~15% | Zawsze włączona bezpieczna opcja domyślna |
-| 🪨 **Standard (Caveman)** | ~30% | Codzienne kodowanie |
-| ⚡ **Aggressive** | ~50% | Długie sesje z intensywnym użyciem narzędzi |
-| 🔥 **Ultra** | ~75% | Maksymalne oszczędności |
-| 🧰 **RTK** | 60–90% | Dane wyjściowe z terminala/testów/budowania/git |
-| 🔗 **Kaskadowa (RTK → Caveman)** | **78–95%** | Mieszane prompty + logi z narzędzi |
+| Tryb                             | Oszczędności | Najlepszy do                                    |
+| -------------------------------- | ------------ | ----------------------------------------------- |
+| 🪶 **Lite**                      | ~15%         | Zawsze włączona bezpieczna opcja domyślna       |
+| 🪨 **Standard (Caveman)**        | ~30%         | Codzienne kodowanie                             |
+| ⚡ **Aggressive**                | ~50%         | Długie sesje z intensywnym użyciem narzędzi     |
+| 🔥 **Ultra**                     | ~75%         | Maksymalne oszczędności                         |
+| 🧰 **RTK**                       | 60–90%       | Dane wyjściowe z terminala/testów/budowania/git |
+| 🔗 **Kaskadowa (RTK → Caveman)** | **78–95%**   | Mieszane prompty + logi z narzędzi              |
 
 **Rzeczywisty przykład — tryb Standard:**
 
@@ -729,12 +726,12 @@ W celu uzyskania najszybszej instalacji preferuj **pnpm** (magazyn adresowany tr
 
 </div>
 
-| Strona | Zrzut ekranu | Strona | Zrzut ekranu |
-| ---------- | ------------------------------------------------- | ---------- | --------------------------------------------- |
-| Dostawcy | ![Providers](../../../docs/screenshots/01-providers.png) | Komba | ![Combos](../../../docs/screenshots/02-combos.png) |
-| Analityka | ![Analytics](../../../docs/screenshots/03-analytics.png) | Stan techniczny | ![Health](../../../docs/screenshots/04-health.png) |
-| Tłumacz | ![Translator](../../../docs/screenshots/05-translator.png) | Ustawienia | ![Settings](../../../docs/screenshots/06-settings.png) |
-| Narzędzia CLI | ![CLI Tools](../../../docs/screenshots/07-cli-tools.png) | Logi użycia | ![Usage](../../../docs/screenshots/08-usage.png) |
+| Strona        | Zrzut ekranu                                               | Strona          | Zrzut ekranu                                           |
+| ------------- | ---------------------------------------------------------- | --------------- | ------------------------------------------------------ |
+| Dostawcy      | ![Providers](../../../docs/screenshots/01-providers.png)   | Komba           | ![Combos](../../../docs/screenshots/02-combos.png)     |
+| Analityka     | ![Analytics](../../../docs/screenshots/03-analytics.png)   | Stan techniczny | ![Health](../../../docs/screenshots/04-health.png)     |
+| Tłumacz       | ![Translator](../../../docs/screenshots/05-translator.png) | Ustawienia      | ![Settings](../../../docs/screenshots/06-settings.png) |
+| Narzędzia CLI | ![CLI Tools](../../../docs/screenshots/07-cli-tools.png)   | Logi użycia     | ![Usage](../../../docs/screenshots/08-usage.png)       |
 
 <br/>
 
@@ -786,66 +783,66 @@ W celu uzyskania najszybszej instalacji preferuj **pnpm** (magazyn adresowany tr
 
 ### 📘 Wprowadzenie
 
-| Dokument | Opis |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [Podręcznik użytkownika](docs/guides/USER_GUIDE.md) | Dostawcy, komba, integracja CLI, wdrażanie |
-| [Podręcznik instalacji](../../../docs/guides/SETUP_GUIDE.md) | Pełne metody instalacji, konfiguracje narzędzi CLI, konfiguracja protokołów, dostrajanie limitów czasu (timeout) |
-| [Podręcznik narzędzi CLI](docs/reference/CLI-TOOLS.md) | Konfiguracja per narzędzie dla Claude Code, Codex, Cursor, Cline, OpenClaw, Kilo, Copilot |
-| [Tryb zdalny](../../../docs/guides/REMOTE-MODE.md) | Steruj zdalnym OmniRoute (VPS) z poziomu CLI na swoim laptopie za pomocą tokenów o ograniczonym zakresie |
+| Dokument                                                                      | Opis                                                                                                               |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| [Podręcznik użytkownika](docs/guides/USER_GUIDE.md)                           | Dostawcy, komba, integracja CLI, wdrażanie                                                                         |
+| [Podręcznik instalacji](../../../docs/guides/SETUP_GUIDE.md)                  | Pełne metody instalacji, konfiguracje narzędzi CLI, konfiguracja protokołów, dostrajanie limitów czasu (timeout)   |
+| [Podręcznik narzędzi CLI](docs/reference/CLI-TOOLS.md)                        | Konfiguracja per narzędzie dla Claude Code, Codex, Cursor, Cline, OpenClaw, Kilo, Copilot                          |
+| [Tryb zdalny](../../../docs/guides/REMOTE-MODE.md)                            | Steruj zdalnym OmniRoute (VPS) z poziomu CLI na swoim laptopie za pomocą tokenów o ograniczonym zakresie           |
 | [Konfiguracja Claude Code](../../../docs/guides/CLAUDE-CODE-CONFIGURATION.md) | Skieruj Claude Code na OmniRoute (lokalnie/zdalnie) za pomocą polecenia launch + profili dla poszczególnych modeli |
-| [Szybki start](#-szybki-start) | 3-krokowa instalacja → połącz → skonfiguruj |
+| [Szybki start](#-szybki-start)                                                | 3-krokowa instalacja → połącz → skonfiguruj                                                                        |
 
 ### 🔧 Administracja i wdrażanie
 
-| Dokument | Opis |
-| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Podręcznik Docker](../../../docs/guides/DOCKER_GUIDE.md) | Uruchamianie w Dockerze, profile Compose, HTTPS przez Caddy, tunele, tagi obrazów |
-| [Podręcznik Podman](../../../contrib/podman/README.md) | Integracja Quadlet z systemd, podman-compose, SELinux |
-| [Wdrożenie na VM](docs/ops/VM_DEPLOYMENT_GUIDE.md) | Pełny poradnik: konfiguracja VM + nginx + Cloudflare |
-| [Wdrożenie na Fly.io](docs/ops/FLY_IO_DEPLOYMENT_GUIDE.md) | Wdrażanie na Fly.io z trwałą pamięcią masową |
-| [Podręcznik Termux](../../../docs/guides/TERMUX_GUIDE.md) | Uruchamianie OmniRoute na systemie Android za pomocą Termux |
-| [Podręcznik PWA](../../../docs/guides/PWA_GUIDE.md) | Instalacja Progressive Web App, buforowanie, architektura |
-| [Podręcznik odinstalowywania](docs/guides/UNINSTALL.md) | Czyste usuwanie dla wszystkich metod instalacji |
-| [Konfiguracja środowiska](docs/reference/ENVIRONMENT.md) | Pełny wykaz zmiennych .env i referencji |
+| Dokument                                                   | Opis                                                                              |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| [Podręcznik Docker](../../../docs/guides/DOCKER_GUIDE.md)  | Uruchamianie w Dockerze, profile Compose, HTTPS przez Caddy, tunele, tagi obrazów |
+| [Podręcznik Podman](../../../contrib/podman/README.md)     | Integracja Quadlet z systemd, podman-compose, SELinux                             |
+| [Wdrożenie na VM](docs/ops/VM_DEPLOYMENT_GUIDE.md)         | Pełny poradnik: konfiguracja VM + nginx + Cloudflare                              |
+| [Wdrożenie na Fly.io](docs/ops/FLY_IO_DEPLOYMENT_GUIDE.md) | Wdrażanie na Fly.io z trwałą pamięcią masową                                      |
+| [Podręcznik Termux](../../../docs/guides/TERMUX_GUIDE.md)  | Uruchamianie OmniRoute na systemie Android za pomocą Termux                       |
+| [Podręcznik PWA](../../../docs/guides/PWA_GUIDE.md)        | Instalacja Progressive Web App, buforowanie, architektura                         |
+| [Podręcznik odinstalowywania](docs/guides/UNINSTALL.md)    | Czyste usuwanie dla wszystkich metod instalacji                                   |
+| [Konfiguracja środowiska](docs/reference/ENVIRONMENT.md)   | Pełny wykaz zmiennych .env i referencji                                           |
 
 ### 🧠 Funkcje i architektura
 
-| Dokument | Opis |
-| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| [Architektura](docs/architecture/ARCHITECTURE.md) | Architektura systemu, przepływ danych i mechanizmy wewnętrzne |
-| [Podręcznik kompresji](../../../docs/compression/COMPRESSION_GUIDE.md) | 7-opcjowy potok: wyłączona / lite / standard / aggressive / ultra / RTK / kaskadowa |
-| [Kompresja RTK](../../../docs/compression/RTK_COMPRESSION.md) | Kompresja danych wyjściowych komend, filtry, zaufanie, weryfikacja, odzyskiwanie surowego wyjścia |
-| [Silniki kompresji](../../../docs/compression/COMPRESSION_ENGINES.md) | Caveman, RTK, potoki kaskadowe, interfejsy panelu/API/MCP |
-| [Format reguł kompresji](../../../docs/compression/COMPRESSION_RULES_FORMAT.md) | Schematy JSON pakietów reguł dla filtrów Caveman i RTK |
-| [Pakiety językowe kompresji](../../../docs/compression/COMPRESSION_LANGUAGE_PACKS.md) | Wykrywanie języka i tworzenie pakietów reguł Caveman |
-| [Podręcznik odporności](../../../docs/architecture/RESILIENCE_GUIDE.md) | Wyłączniki awaryjne, czasy schładzania, kolejka, ochrona przed kumulacją zapytań, podszywanie się pod TLS |
-| [Silnik Auto-Combo](docs/routing/AUTO-COMBO.md) | Ocenianie na bazie 12 czynników, pakiety trybów, samonaprawianie |
-| [Podręcznik proxy](../../../docs/ops/PROXY_GUIDE.md) | 3-poziomowy system proxy, rynek 1proxy, rejestr CRUD |
-| [Darmowe poziomy](../../../docs/reference/FREE_TIERS.md) | Skonsolidowany katalog ponad 25 darmowych dostawców API |
-| [Galeria funkcji](docs/guides/FEATURES.md) | Wizualny przegląd panelu ze zrzutami ekranu |
-| [Dokumentacja kodu źródłowego](docs/architecture/CODEBASE_DOCUMENTATION.md) | Przyjazne dla początkujących omówienie bazy kodu |
+| Dokument                                                                              | Opis                                                                                                      |
+| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| [Architektura](docs/architecture/ARCHITECTURE.md)                                     | Architektura systemu, przepływ danych i mechanizmy wewnętrzne                                             |
+| [Podręcznik kompresji](../../../docs/compression/COMPRESSION_GUIDE.md)                | 7-opcjowy potok: wyłączona / lite / standard / aggressive / ultra / RTK / kaskadowa                       |
+| [Kompresja RTK](../../../docs/compression/RTK_COMPRESSION.md)                         | Kompresja danych wyjściowych komend, filtry, zaufanie, weryfikacja, odzyskiwanie surowego wyjścia         |
+| [Silniki kompresji](../../../docs/compression/COMPRESSION_ENGINES.md)                 | Caveman, RTK, potoki kaskadowe, interfejsy panelu/API/MCP                                                 |
+| [Format reguł kompresji](../../../docs/compression/COMPRESSION_RULES_FORMAT.md)       | Schematy JSON pakietów reguł dla filtrów Caveman i RTK                                                    |
+| [Pakiety językowe kompresji](../../../docs/compression/COMPRESSION_LANGUAGE_PACKS.md) | Wykrywanie języka i tworzenie pakietów reguł Caveman                                                      |
+| [Podręcznik odporności](../../../docs/architecture/RESILIENCE_GUIDE.md)               | Wyłączniki awaryjne, czasy schładzania, kolejka, ochrona przed kumulacją zapytań, podszywanie się pod TLS |
+| [Silnik Auto-Combo](docs/routing/AUTO-COMBO.md)                                       | Ocenianie na bazie 12 czynników, pakiety trybów, samonaprawianie                                          |
+| [Podręcznik proxy](../../../docs/ops/PROXY_GUIDE.md)                                  | 3-poziomowy system proxy, rynek 1proxy, rejestr CRUD                                                      |
+| [Darmowe poziomy](../../../docs/reference/FREE_TIERS.md)                              | Skonsolidowany katalog ponad 25 darmowych dostawców API                                                   |
+| [Galeria funkcji](docs/guides/FEATURES.md)                                            | Wizualny przegląd panelu ze zrzutami ekranu                                                               |
+| [Dokumentacja kodu źródłowego](docs/architecture/CODEBASE_DOCUMENTATION.md)           | Przyjazne dla początkujących omówienie bazy kodu                                                          |
 
 ### 🤖 Protokoły i API
 
-| Dokument | Opis |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Referencja API](docs/reference/API_REFERENCE.md) | Wszystkie punkty końcowe z przykładami |
-| [Specyfikacja OpenAPI](../../../docs/openapi.yaml) | Specyfikacja OpenAPI 3.0 |
-| [Serwer MCP](../../../open-sse/mcp-server/README.md) | 104 narzędzia MCP, konfiguracje IDE, klienci Python/TS/Go |
-| [Podręcznik serwera MCP](docs/frameworks/MCP-SERVER.md) | Instalacja MCP, protokoły transportowe i referencja narzędzi |
-| [Serwer A2A](../../../src/lib/a2a/README.md) | Protokół JSON-RPC 2.0, umiejętności, strumieniowanie, zarządzanie zadaniami |
-| [Podręcznik serwera A2A](docs/frameworks/A2A-SERVER.md) | Karta agenta A2A, zadania, umiejętności i strumieniowanie |
+| Dokument                                                | Opis                                                                        |
+| ------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [Referencja API](docs/reference/API_REFERENCE.md)       | Wszystkie punkty końcowe z przykładami                                      |
+| [Specyfikacja OpenAPI](../../../docs/openapi.yaml)      | Specyfikacja OpenAPI 3.0                                                    |
+| [Serwer MCP](../../../open-sse/mcp-server/README.md)    | 104 narzędzia MCP, konfiguracje IDE, klienci Python/TS/Go                   |
+| [Podręcznik serwera MCP](docs/frameworks/MCP-SERVER.md) | Instalacja MCP, protokoły transportowe i referencja narzędzi                |
+| [Serwer A2A](../../../src/lib/a2a/README.md)            | Protokół JSON-RPC 2.0, umiejętności, strumieniowanie, zarządzanie zadaniami |
+| [Podręcznik serwera A2A](docs/frameworks/A2A-SERVER.md) | Karta agenta A2A, zadania, umiejętności i strumieniowanie                   |
 
 ### 📋 Projekt i Jakość
 
-| Dokument | Opis |
-| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Współtworzenie](CONTRIBUTING.md) | Konfiguracja środowiska deweloperskiego i wytyczne |
-| [Dziennik zmian](CHANGELOG.md) | Pełna historia wydań dla każdej wersji |
-| [Polityka bezpieczeństwa](SECURITY.md) | Zgłaszanie podatności i praktyki bezpieczeństwa |
-| [Podręcznik i18n](docs/guides/I18N.md) | Obsługa ponad 40 języków, przepływ tłumaczeń, kierunek tekstu RTL |
-| [Lista kontrolna wydania](docs/ops/RELEASE_CHECKLIST.md) | Kroki walidacji przedwydaniowej |
-| [Plan pokrycia testami](docs/ops/COVERAGE_PLAN.md) | Strategia pokrycia testami i zestaw ponad 25 000 testów |
+| Dokument                                                 | Opis                                                              |
+| -------------------------------------------------------- | ----------------------------------------------------------------- |
+| [Współtworzenie](CONTRIBUTING.md)                        | Konfiguracja środowiska deweloperskiego i wytyczne                |
+| [Dziennik zmian](CHANGELOG.md)                           | Pełna historia wydań dla każdej wersji                            |
+| [Polityka bezpieczeństwa](SECURITY.md)                   | Zgłaszanie podatności i praktyki bezpieczeństwa                   |
+| [Podręcznik i18n](docs/guides/I18N.md)                   | Obsługa ponad 40 języków, przepływ tłumaczeń, kierunek tekstu RTL |
+| [Lista kontrolna wydania](docs/ops/RELEASE_CHECKLIST.md) | Kroki walidacji przedwydaniowej                                   |
+| [Plan pokrycia testami](docs/ops/COVERAGE_PLAN.md)       | Strategia pokrycia testami i zestaw ponad 25 000 testów           |
 
 <br/>
 
@@ -1018,77 +1015,77 @@ OmniRoute stoi na barkach gigantów. Projekt powstał jako fork **[9router](http
 
 ### 🧬 Rodowód i bramka (gateway)
 
-| Projekt | ⭐ | Jak zainspirował OmniRoute |
-| ------------------------------------------------------------------------------- | ----: | ------------------------------------------------------------------------------------------------------------------------------------- |
-| **[9router](https://github.com/decolua/9router)** · decolua | 22.7k | Oryginalny projekt, na którym opiera się ten fork — rozbudowany tutaj o wielomodalne API i pełne przepisanie na TypeScript. |
-| **[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)** · router-for-me | 43.6k | Implementacja w Go, która zainspirowała ten port na JavaScript / TypeScript. |
-| **[LiteLLM](https://github.com/BerriAI/litellm)** · BerriAI | 54.0k | Bramka AI, której publiczny zbiór danych o cenach zasila naszą synchronizację śledzenia kosztów, a jej model normalizacji dostawców wpłynął na nasz routing. |
+| Projekt                                                                         |    ⭐ | Jak zainspirował OmniRoute                                                                                                                                   |
+| ------------------------------------------------------------------------------- | ----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **[9router](https://github.com/decolua/9router)** · decolua                     | 22.7k | Oryginalny projekt, na którym opiera się ten fork — rozbudowany tutaj o wielomodalne API i pełne przepisanie na TypeScript.                                  |
+| **[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)** · router-for-me | 43.6k | Implementacja w Go, która zainspirowała ten port na JavaScript / TypeScript.                                                                                 |
+| **[LiteLLM](https://github.com/BerriAI/litellm)** · BerriAI                     | 54.0k | Bramka AI, której publiczny zbiór danych o cenach zasila naszą synchronizację śledzenia kosztów, a jej model normalizacji dostawców wpłynął na nasz routing. |
 
 ### 🗜️ Kompresja kontekstu i tokenów — silniki
 
-| Projekt | ⭐ | Jak zainspirował OmniRoute |
-| ----------------------------------------------------------------------------- | ----: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **[Caveman](https://github.com/JuliusBrussee/caveman)** · JuliusBrussee | 90.8k | Wirusowy projekt "po co używać wielu tokenów, skoro kilka wystarczy" — jego filozofia "mowy jaskiniowca" zasila nasz standardowy tryb kompresji i ponad 30 reguł usuwania wypełniaczy/kondensacji. |
-| **[RTK – Rust Token Killer](https://github.com/rtk-ai/rtk)** · rtk-ai | 71.8k | Wydajna kompresja danych wyjściowych komend — zainspirowała nasz silnik RTK, DSL filtrów JSON, odzyskiwanie surowego wyjścia oraz kaskadowy potok RTK → Caveman. |
-| **[headroom](https://github.com/headroomlabs-ai/headroom)** · headroomlabs-ai | 60.1k | Odwracalna kompresja kontekstu (SmartCrusher) — zainspirowała nasz silnik headroom oraz wzorzec znaczników pobierania ccr. |
-| **[LLMLingua](https://github.com/microsoft/LLMLingua)** · Microsoft | 6.5k | Badania nad kompresją promptów (LLMLingua / LLMLingua-2) — zainspirowały nasz asynchroniczny, bezpieczny dla kodu i odporny na błędy (fail-open) silnik llmlingua. |
-| **[llmlingua-2-js](https://github.com/atjsh/llmlingua-2-js)** · atjsh | 30 | Port JS/ONNX (MobileBERT / XLM-RoBERTa) używany jako backend wątku roboczego (worker thread) dla naszego silnika LLMLingua. |
-| **[Troglodita](https://github.com/leninejunior/troglodita)** · Lenine Júnior | 26 | Kompresja tokenów dla języka portugalskiego (brazylijskiego) — zasila nasz pakiet językowy pt-BR: redukcja pleonazmów i usuwanie wypełniaczy dostosowane do gramatyki brazylijskiej odmiany języka portugalskiego. |
-| **[ponytail](https://github.com/DietrichGebert/ponytail)** · DietrichGebert | 86.0k | Wirusowa umiejętność "leniwego programisty seniora" stosującego zasadę YAGNI — zainspirowała nasz styl wyjściowy less-code: sterowanie najmniejszą działającą zmianą, które ogranicza wygenerowany kod (odpowiednik zwięzłej prozy Cavemana na osi wyjściowej). |
+| Projekt                                                                       |    ⭐ | Jak zainspirował OmniRoute                                                                                                                                                                                                                                      |
+| ----------------------------------------------------------------------------- | ----: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[Caveman](https://github.com/JuliusBrussee/caveman)** · JuliusBrussee       | 90.8k | Wirusowy projekt "po co używać wielu tokenów, skoro kilka wystarczy" — jego filozofia "mowy jaskiniowca" zasila nasz standardowy tryb kompresji i ponad 30 reguł usuwania wypełniaczy/kondensacji.                                                              |
+| **[RTK – Rust Token Killer](https://github.com/rtk-ai/rtk)** · rtk-ai         | 71.8k | Wydajna kompresja danych wyjściowych komend — zainspirowała nasz silnik RTK, DSL filtrów JSON, odzyskiwanie surowego wyjścia oraz kaskadowy potok RTK → Caveman.                                                                                                |
+| **[headroom](https://github.com/headroomlabs-ai/headroom)** · headroomlabs-ai | 60.1k | Odwracalna kompresja kontekstu (SmartCrusher) — zainspirowała nasz silnik headroom oraz wzorzec znaczników pobierania ccr.                                                                                                                                      |
+| **[LLMLingua](https://github.com/microsoft/LLMLingua)** · Microsoft           |  6.5k | Badania nad kompresją promptów (LLMLingua / LLMLingua-2) — zainspirowały nasz asynchroniczny, bezpieczny dla kodu i odporny na błędy (fail-open) silnik llmlingua.                                                                                              |
+| **[llmlingua-2-js](https://github.com/atjsh/llmlingua-2-js)** · atjsh         |    30 | Port JS/ONNX (MobileBERT / XLM-RoBERTa) używany jako backend wątku roboczego (worker thread) dla naszego silnika LLMLingua.                                                                                                                                     |
+| **[Troglodita](https://github.com/leninejunior/troglodita)** · Lenine Júnior  |    26 | Kompresja tokenów dla języka portugalskiego (brazylijskiego) — zasila nasz pakiet językowy pt-BR: redukcja pleonazmów i usuwanie wypełniaczy dostosowane do gramatyki brazylijskiej odmiany języka portugalskiego.                                              |
+| **[ponytail](https://github.com/DietrichGebert/ponytail)** · DietrichGebert   | 86.0k | Wirusowa umiejętność "leniwego programisty seniora" stosującego zasadę YAGNI — zainspirowała nasz styl wyjściowy less-code: sterowanie najmniejszą działającą zmianą, które ogranicza wygenerowany kod (odpowiednik zwięzłej prozy Cavemana na osi wyjściowej). |
 
 ### 🧩 Kompaktowe formaty, badania nad tokenami i narzędzia analizujące kod
 
-| Projekt | ⭐ | Jak zainspirował OmniRoute |
-| ---------------------------------------------------------------------------------------------- | ----: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **[TOON](https://github.com/toon-format/toon)** · toon-format | 24.9k | Token-Oriented Object Notation — jego kolumnowy model oparty na nagłówkach i wierszach ukształtował nasz etap tabelarycznego upakowania. |
-| **[GCF – Graph Compact Format](https://github.com/blackwell-systems/gcf)** · Blackwell Systems | 22 | Najpierw zainspirował nasz etap tabelarycznego upakowania; teraz jego bezstratny koder profili ogólnych bez zewnętrznych zależności jest bezpośrednio wbudowany (vendored) jako kodek Headroom (licencja MIT, oznaczenie SPDX), zgodny z wersją v3.2 specyfikacji GCF. |
-| **[token-optimizer-mcp](https://github.com/ooples/token-optimizer-mcp)** · ooples | 444 | Pamięć podręczna Brotli/SQLite + delta kontekstu na sesję — zainspirowały nasz silnik session-dedup. |
-| **[token-savior](https://github.com/Mibayy/token-savior)** · Mibayy | 1.1k | Upakowanie danych wyjściowych basha + profile MCP — zainspirowały naszą dyscyplinę wycofywania się z kompresji (bail-out) oraz redukcję kardynalności manifestu narzędzi MCP. |
-| **[token-saver](https://github.com/ppgranger/token-saver)** · ppgranger | 117 | Zorientowana na treść kompresja wyjściowa per typ pliku z wycofywaniem się w razie błędów — potwierdziła nasze podejście do obsługi per typ oraz pomijania przy minimalnym zysku. |
-| **[token-optimizer](https://github.com/alexgreensh/token-optimizer)** · alexgreensh | 1.7k | "Znajdź duchy-tokeny" — jego wzorzec odciążania i odzyskiwalnych uchwytów wpłynął na naszą koncepcję odciążania CCR. |
-| **[TokenMizer](https://github.com/Shweta-Mishra-ai/tokenmizer)** · Shweta-Mishra-ai | 16 | Schemat grafu sesji + deduplikacji linii między turami, który wpłynął na projekt naszego session-dedup. |
-| **[OmniCompress](https://github.com/jessefreitas/OmniCompress)** · jessefreitas | 3 | Kolumnowy JSON w Rust + pobieranie adresowane treścią + deduplikacja między wiadomościami — potwierdziły poprawność projektu naszych silników headroom/ccr/session-dedup oraz stabilnego dla cache niezmiennika "skompresowana forma jest niezależna od pozycji". |
-| **[mcp-compressor](https://github.com/atlassian-labs/mcp-compressor)** · Atlassian Labs | 98 | Kompresja schematów/opisów narzędzi MCP — wpłynęła na redukcję kardynalności manifestu narzędzi MCP. |
-| **[RepoMapper](https://github.com/pdavis68/RepoMapper)** · pdavis68 | 187 | Ranking mapy repozytorium w stylu Aider — wpłynął na nasze badania nad mapami repozytoriów i rankingami wyszukiwania. |
-| **[quiet-shell-mcp](https://github.com/mrsimpson/quiet-shell-mcp)** · mrsimpson | 4 | Deklaratywna redukcja danych wyjściowych powłoki przez MCP — potwierdziła poprawność naszego deklaratywnego upakowania wyjścia basha. |
-| **[ts-morph](https://github.com/dsherret/ts-morph)** · David Sherret | 6.1k | Zestaw narzędzi TypeScript Compiler API — zainspirował nasze usuwanie komentarzy oparte na parserze, które zachowuje ciągi znaków, szablony i literały wyrażeń regularnych. |
+| Projekt                                                                                        |    ⭐ | Jak zainspirował OmniRoute                                                                                                                                                                                                                                             |
+| ---------------------------------------------------------------------------------------------- | ----: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[TOON](https://github.com/toon-format/toon)** · toon-format                                  | 24.9k | Token-Oriented Object Notation — jego kolumnowy model oparty na nagłówkach i wierszach ukształtował nasz etap tabelarycznego upakowania.                                                                                                                               |
+| **[GCF – Graph Compact Format](https://github.com/blackwell-systems/gcf)** · Blackwell Systems |    22 | Najpierw zainspirował nasz etap tabelarycznego upakowania; teraz jego bezstratny koder profili ogólnych bez zewnętrznych zależności jest bezpośrednio wbudowany (vendored) jako kodek Headroom (licencja MIT, oznaczenie SPDX), zgodny z wersją v3.2 specyfikacji GCF. |
+| **[token-optimizer-mcp](https://github.com/ooples/token-optimizer-mcp)** · ooples              |   444 | Pamięć podręczna Brotli/SQLite + delta kontekstu na sesję — zainspirowały nasz silnik session-dedup.                                                                                                                                                                   |
+| **[token-savior](https://github.com/Mibayy/token-savior)** · Mibayy                            |  1.1k | Upakowanie danych wyjściowych basha + profile MCP — zainspirowały naszą dyscyplinę wycofywania się z kompresji (bail-out) oraz redukcję kardynalności manifestu narzędzi MCP.                                                                                          |
+| **[token-saver](https://github.com/ppgranger/token-saver)** · ppgranger                        |   117 | Zorientowana na treść kompresja wyjściowa per typ pliku z wycofywaniem się w razie błędów — potwierdziła nasze podejście do obsługi per typ oraz pomijania przy minimalnym zysku.                                                                                      |
+| **[token-optimizer](https://github.com/alexgreensh/token-optimizer)** · alexgreensh            |  1.7k | "Znajdź duchy-tokeny" — jego wzorzec odciążania i odzyskiwalnych uchwytów wpłynął na naszą koncepcję odciążania CCR.                                                                                                                                                   |
+| **[TokenMizer](https://github.com/Shweta-Mishra-ai/tokenmizer)** · Shweta-Mishra-ai            |    16 | Schemat grafu sesji + deduplikacji linii między turami, który wpłynął na projekt naszego session-dedup.                                                                                                                                                                |
+| **[OmniCompress](https://github.com/jessefreitas/OmniCompress)** · jessefreitas                |     3 | Kolumnowy JSON w Rust + pobieranie adresowane treścią + deduplikacja między wiadomościami — potwierdziły poprawność projektu naszych silników headroom/ccr/session-dedup oraz stabilnego dla cache niezmiennika "skompresowana forma jest niezależna od pozycji".      |
+| **[mcp-compressor](https://github.com/atlassian-labs/mcp-compressor)** · Atlassian Labs        |    98 | Kompresja schematów/opisów narzędzi MCP — wpłynęła na redukcję kardynalności manifestu narzędzi MCP.                                                                                                                                                                   |
+| **[RepoMapper](https://github.com/pdavis68/RepoMapper)** · pdavis68                            |   187 | Ranking mapy repozytorium w stylu Aider — wpłynął na nasze badania nad mapami repozytoriów i rankingami wyszukiwania.                                                                                                                                                  |
+| **[quiet-shell-mcp](https://github.com/mrsimpson/quiet-shell-mcp)** · mrsimpson                |     4 | Deklaratywna redukcja danych wyjściowych powłoki przez MCP — potwierdziła poprawność naszego deklaratywnego upakowania wyjścia basha.                                                                                                                                  |
+| **[ts-morph](https://github.com/dsherret/ts-morph)** · David Sherret                           |  6.1k | Zestaw narzędzi TypeScript Compiler API — zainspirował nasze usuwanie komentarzy oparte na parserze, które zachowuje ciągi znaków, szablony i literały wyrażeń regularnych.                                                                                            |
 
 ### 🧠 Pamięć i RAG
 
-| Projekt | ⭐ | Jak zainspirował OmniRoute |
-| ------------------------------------------------------------------ | ----: | ------------------------------------------------------------------------------------------------------------------- |
-| **[Mem0](https://github.com/mem0ai/mem0)** · mem0ai | 61.2k | Uniwersalna warstwa pamięci — jej model proxy jako granicy zapisu/odczytu ukształtował naszą architekturę pamięci. |
-| **[Letta (MemGPT)](https://github.com/letta-ai/letta)** · letta-ai | 23.9k | Agenci stanowi z warstwową pamięcią — zainspirowali nasz warstwowy model Context Control & Recovery (CCR). |
-| **[WFGY](https://github.com/onestardao/WFGY)** · onestardao | 1.8k | Taksonomia ProblemMap obejmująca 16 powtarzających się trybów awarii RAG/LLM — wspólny słownik w naszym podręczniku rozwiązywania problemów. |
+| Projekt                                                            |    ⭐ | Jak zainspirował OmniRoute                                                                                                                   |
+| ------------------------------------------------------------------ | ----: | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[Mem0](https://github.com/mem0ai/mem0)** · mem0ai                | 61.2k | Uniwersalna warstwa pamięci — jej model proxy jako granicy zapisu/odczytu ukształtował naszą architekturę pamięci.                           |
+| **[Letta (MemGPT)](https://github.com/letta-ai/letta)** · letta-ai | 23.9k | Agenci stanowi z warstwową pamięcią — zainspirowali nasz warstwowy model Context Control & Recovery (CCR).                                   |
+| **[WFGY](https://github.com/onestardao/WFGY)** · onestardao        |  1.8k | Taksonomia ProblemMap obejmująca 16 powtarzających się trybów awarii RAG/LLM — wspólny słownik w naszym podręczniku rozwiązywania problemów. |
 
 ### 🛰️ Inspekcja ruchu, MITM i przezroczyste proxy
 
-| Projekt | ⭐ | Jak zainspirował OmniRoute |
-| --------------------------------------------------------------------------------- | ---: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **[llm-interceptor](https://github.com/chouzz/llm-interceptor)** · chouzz | 49 | Przechwytywanie/analiza MITM ruchu asystent kodowania ↔ LLM — nasz Inspektor Ruchu przenosi jego scalanie SSE, normalizację rozmowy, przepuszczanie hosta i maskowanie sekretów (MIT). |
-| **[ProxyBridge](https://github.com/InterceptSuite/ProxyBridge)** · InterceptSuite | 5.5k | Przezroczysty routing proxy per proces — zainspirował nasze odporne na awarie zamykanie MITM, limity bezczynności gniazd, atrybucję procesów przez `/proc` i przechwytywanie TPROXY. |
+| Projekt                                                                           |   ⭐ | Jak zainspirował OmniRoute                                                                                                                                                             |
+| --------------------------------------------------------------------------------- | ---: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[llm-interceptor](https://github.com/chouzz/llm-interceptor)** · chouzz         |   49 | Przechwytywanie/analiza MITM ruchu asystent kodowania ↔ LLM — nasz Inspektor Ruchu przenosi jego scalanie SSE, normalizację rozmowy, przepuszczanie hosta i maskowanie sekretów (MIT). |
+| **[ProxyBridge](https://github.com/InterceptSuite/ProxyBridge)** · InterceptSuite | 5.5k | Przezroczysty routing proxy per proces — zainspirował nasze odporne na awarie zamykanie MITM, limity bezczynności gniazd, atrybucję procesów przez `/proc` i przechwytywanie TPROXY.   |
 
 ### 📚 Dane modeli, obserwowalność i UI
 
-| Projekt | ⭐ | Jak zainspirował OmniRoute |
-| -------------------------------------------------------------------------- | ----: | -------------------------------------------------------------------------------------------------------------------------- |
-| **[models.dev](https://github.com/anomalyco/models.dev)** · SST / OpenCode | 6.0k | Otwarta baza danych specyfikacji modeli AI, cen i możliwości — synchronizowana natywnie z naszym katalogiem modeli. |
-| **[React Flow / xyflow](https://github.com/xyflow/xyflow)** · xyflow | 37.7k | Oparta na węzłach biblioteka wykresów zasilająca nasze działające w czasie rzeczywistym Studio Kompresji oraz Studio Komb/Routingu. |
-| **[LangGraph](https://github.com/langchain-ai/langgraph)** · LangChain | 37.6k | Wizualizacja grafu przepływu pracy na żywo z LangGraph Studio zainspirowała widok kaskadowy w czasie rzeczywistym w naszych Studiach. |
-| **[Langfuse](https://github.com/langfuse/langfuse)** · Langfuse | 31.4k | Jej model obserwowalności ślad → rozpiętość → generowanie (trace → span → generation) ukształtował widok kaskadowy (waterfall) w naszym Studiu Kompresji. |
-| **[Kiali](https://github.com/kiali/kiali)** · Kiali | 3.6k | Obserwowalność siatki usług Istio — zainspirowała nasze plakietki wyłączników awaryjnych oraz wizualizacje krawędzi błędów w Studiu Routingu/Komb. |
-| **[lobe-icons](https://github.com/lobehub/lobe-icons)** · LobeHub | 2.2k | Logotypy marek AI/LLM, które renderują ikony dostawców w naszym panelu. |
+| Projekt                                                                    |    ⭐ | Jak zainspirował OmniRoute                                                                                                                                |
+| -------------------------------------------------------------------------- | ----: | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[models.dev](https://github.com/anomalyco/models.dev)** · SST / OpenCode |  6.0k | Otwarta baza danych specyfikacji modeli AI, cen i możliwości — synchronizowana natywnie z naszym katalogiem modeli.                                       |
+| **[React Flow / xyflow](https://github.com/xyflow/xyflow)** · xyflow       | 37.7k | Oparta na węzłach biblioteka wykresów zasilająca nasze działające w czasie rzeczywistym Studio Kompresji oraz Studio Komb/Routingu.                       |
+| **[LangGraph](https://github.com/langchain-ai/langgraph)** · LangChain     | 37.6k | Wizualizacja grafu przepływu pracy na żywo z LangGraph Studio zainspirowała widok kaskadowy w czasie rzeczywistym w naszych Studiach.                     |
+| **[Langfuse](https://github.com/langfuse/langfuse)** · Langfuse            | 31.4k | Jej model obserwowalności ślad → rozpiętość → generowanie (trace → span → generation) ukształtował widok kaskadowy (waterfall) w naszym Studiu Kompresji. |
+| **[Kiali](https://github.com/kiali/kiali)** · Kiali                        |  3.6k | Obserwowalność siatki usług Istio — zainspirowała nasze plakietki wyłączników awaryjnych oraz wizualizacje krawędzi błędów w Studiu Routingu/Komb.        |
+| **[lobe-icons](https://github.com/lobehub/lobe-icons)** · LobeHub          |  2.2k | Logotypy marek AI/LLM, które renderują ikony dostawców w naszym panelu.                                                                                   |
 
 ### 🛡️ Bezpieczeństwo
 
-| Projekt | ⭐ | Jak zainspirował OmniRoute |
-| ------------------------------------------------------------------------------------------- | --: | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Projekt                                                                                     |  ⭐ | Jak zainspirował OmniRoute                                                                                                                                                           |
+| ------------------------------------------------------------------------------------------- | --: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **[awesome-secure-defaults](https://github.com/tldrsec/awesome-secure-defaults)** · tldrsec | 710 | Starannie dobrana lista domyślnie bezpiecznych bibliotek, która kieruje naszymi wyborami w zakresie bezpieczeństwa (Helmet.js, DOMPurify, ssrf-req-filter, safe-regex, Google Tink). |
 
 ### 🧭 Narzędzia uzupełniające
 
-| Projekt | Jak współgra z OmniRoute |
-| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Projekt                                                                       | Jak współgra z OmniRoute                                                                                                                                                                                                                                                          |
+| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **[CodeWebChat](https://github.com/robertpiosik/CodeWebChat)** · robertpiosik | Towarzysz po stronie edytora — rozszerzenie VS Code + przeglądarki, które automatycznie uzupełnia ponad 15 interfejsów webowych chatbotów kontekstem z edytora. Obsługuje ścieżkę darmowego UI webowego obok ścieżki API OmniRoute; pozwala skierować swój tryb API na OmniRoute. |
 
 ## 💖 Sponsorzy

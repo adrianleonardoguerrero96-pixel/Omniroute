@@ -2,10 +2,7 @@ import { randomUUID } from "node:crypto";
 import { parseModel } from "@omniroute/open-sse/services/model.ts";
 import { getModelInfo } from "@/sse/services/model";
 import { getModelAliases } from "@/lib/db/models";
-import {
-  getResolvedModelCapabilities,
-  isNonChatCatalogSurface,
-} from "@/lib/modelCapabilities";
+import { getResolvedModelCapabilities, isNonChatCatalogSurface } from "@/lib/modelCapabilities";
 import {
   getAuthoritativeContextWindow,
   getAuthoritativeProviderContextWindow,

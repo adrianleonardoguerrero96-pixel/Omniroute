@@ -113,9 +113,9 @@ async function pollMysticTask(params: {
   return { status, imageUrl: typeof generated[0] === "string" ? generated[0] : undefined };
 }
 
-async function downloadGeneratedImage(imageUrl: string): Promise<
-  { state: "ok"; b64: string } | { state: "failed"; status: number; error: string }
-> {
+async function downloadGeneratedImage(
+  imageUrl: string
+): Promise<{ state: "ok"; b64: string } | { state: "failed"; status: number; error: string }> {
   const imgRes = await fetch(imageUrl);
   if (!imgRes.ok) {
     return {
@@ -172,8 +172,16 @@ async function pollUntilDone(params: {
   pollIntervalMs: number;
   pollTimeoutMs: number;
 }): Promise<FreepikImageResult> {
-  const { providerConfig, token, taskId, provider, model, startTime, pollIntervalMs, pollTimeoutMs } =
-    params;
+  const {
+    providerConfig,
+    token,
+    taskId,
+    provider,
+    model,
+    startTime,
+    pollIntervalMs,
+    pollTimeoutMs,
+  } = params;
   const deadline = Date.now() + pollTimeoutMs;
 
   while (Date.now() < deadline) {
@@ -216,7 +224,15 @@ async function submitAndGetTaskId(params: {
   const res = await submitMysticTask({ providerConfig, token, model, prompt, body });
   if (!res.ok) {
     const errorText = await res.text();
-    return { failed: await logAndFail({ provider, model, startTime, status: res.status, error: errorText }) };
+    return {
+      failed: await logAndFail({
+        provider,
+        model,
+        startTime,
+        status: res.status,
+        error: errorText,
+      }),
+    };
   }
 
   const submitJson = await res.json();
@@ -249,7 +265,10 @@ export async function handleFreepikImageGeneration({
   const pollIntervalMs = normalizePositiveNumber(body.poll_interval_ms, DEFAULT_POLL_INTERVAL_MS);
   const pollTimeoutMs = normalizePositiveNumber(body.poll_timeout_ms, DEFAULT_POLL_TIMEOUT_MS);
   if (log) {
-    log.info("IMAGE", `${provider}/${model} (freepik-mystic) | prompt: "${prompt.slice(0, 60)}..."`);
+    log.info(
+      "IMAGE",
+      `${provider}/${model} (freepik-mystic) | prompt: "${prompt.slice(0, 60)}..."`
+    );
   }
 
   try {

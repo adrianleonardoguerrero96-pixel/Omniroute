@@ -7,8 +7,7 @@ import { fileURLToPath } from "node:url";
 // (and right after a restart) the map went blank even though connections were healthy.
 // These guard the connection-health base layer that keeps "what is connected" visible.
 
-const read = (rel: string) =>
-  readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8");
+const read = (rel: string) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8");
 
 const homePageClientSrc = read("../../src/app/(dashboard)/dashboard/HomePageClient.tsx");
 const providerTopologySrc = read("../../src/app/(dashboard)/home/ProviderTopology.tsx");

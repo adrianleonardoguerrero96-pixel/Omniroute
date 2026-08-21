@@ -14,6 +14,7 @@ import {
 import { syncToCloud } from "@/lib/cloudSync";
 import { setQuotaCache } from "@/domain/quotaCache";
 import { buildClaudeExtraUsageConnectionUpdate } from "@/lib/providers/claudeExtraUsage";
+import { shouldPreserveScheduledQuotaCooldown } from "@/lib/quota/connectionRecovery";
 import { clearRecoveredProviderState } from "@/sse/services/auth";
 import { getMachineId } from "@/shared/utils/machine";
 import { USAGE_SUPPORTED_PROVIDERS } from "@/shared/constants/providers";
@@ -441,6 +442,16 @@ export async function maybeClearRecoveredQuotaState(
 ): Promise<ProviderConnectionLike> {
   if (!hasUsableQuota(usage)) return connection;
   if (isTerminalStatusForQuotaRecovery(connection.testStatus)) return connection;
+  if (
+    shouldPreserveScheduledQuotaCooldown({
+      id: connection.id,
+      testStatus: connection.testStatus,
+      lastErrorType: connection.lastErrorType,
+      rateLimitedUntil: connection.rateLimitedUntil,
+    })
+  ) {
+    return connection;
+  }
   if (
     connection.lastErrorType === "quota_exhausted" &&
     connection.rateLimitedUntil &&

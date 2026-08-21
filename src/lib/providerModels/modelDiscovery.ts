@@ -112,7 +112,8 @@ function parseEffortList(rawList: unknown): string[] | undefined {
         .map((entry) => {
           const entryParsed = effortEntrySchema.safeParse(entry);
           if (!entryParsed.success) return null;
-          const raw = typeof entryParsed.data === "string" ? entryParsed.data : entryParsed.data.effort;
+          const raw =
+            typeof entryParsed.data === "string" ? entryParsed.data : entryParsed.data.effort;
           return raw.length > 0 ? normalizeSupportedEffort(raw) : null;
         })
         .filter((effort): effort is string => effort !== null)

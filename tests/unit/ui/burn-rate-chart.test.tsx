@@ -43,16 +43,16 @@ vi.mock("next/dynamic", () => ({
   },
 }));
 
-const { default: BurnRateChart } = await import(
-  "../../../src/app/(dashboard)/dashboard/costs/quota-share/components/BurnRateChart"
-);
+const { default: BurnRateChart } =
+  await import("../../../src/app/(dashboard)/dashboard/costs/quota-share/components/BurnRateChart");
 
 let container: HTMLDivElement | null = null;
 let root: ReturnType<typeof createRoot> | null = null;
 
 async function render(props: Parameters<typeof BurnRateChart>[0]) {
-  (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
-    true;
+  (
+    globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+  ).IS_REACT_ACT_ENVIRONMENT = true;
   container = document.createElement("div");
   document.body.appendChild(container);
   await act(async () => {
