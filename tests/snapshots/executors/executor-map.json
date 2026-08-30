@@ -90,6 +90,11 @@
       "configSource": "<custom-config>",
       "provider": "chatgpt-web-codex"
     },
+    "chatgpt-web": {
+      "className": "ChatGptWebExecutor",
+      "configSource": "<custom-config>",
+      "provider": "chatgpt-web"
+    },
     "chatgpt-web-codex": {
       "className": "ChatGptWebCodexExecutor",
       "configSource": "<custom-config>",

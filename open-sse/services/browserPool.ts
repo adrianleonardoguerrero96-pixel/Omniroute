@@ -33,6 +33,7 @@ type Page = import("playwright").Page;
 export interface BrowserPoolContextOptions {
   cookieDomain: string;
   cookieString?: string | null;
+  storageState?: import("playwright").BrowserContextOptions["storageState"];
   localStorage?: Record<string, string>;
   localStorageOrigin?: string;
   warmupUrl?: string | null;
@@ -384,6 +385,7 @@ export async function acquireBrowserContext(
       locale: options.locale || "en-US",
       timezoneId: options.timezone || "America/New_York",
       viewport: { width: 1280, height: 800 },
+      ...(options.storageState ? { storageState: options.storageState } : {}),
       ...(proxy ? { proxy } : {}),
     });
 
