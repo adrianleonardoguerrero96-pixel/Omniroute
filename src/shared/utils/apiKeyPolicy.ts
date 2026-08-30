@@ -74,6 +74,7 @@ export interface ApiKeyMetadata {
   id: string;
   name?: string;
   allowedModels?: string[];
+  blockedModels?: string[];
   allowedCombos?: string[];
   allowedConnections?: string[];
   allowedQuotas?: string[];
@@ -536,7 +537,11 @@ async function validateModelAccess(context: PolicyContext): Promise<Response | n
       }
     }
   }
-  if (requestedComboName || !hasModelRestrictions) return null;
+  // A deny-list must be enforced even for keys with no allow-list: previously
+  // `!hasModelRestrictions` skipped isModelAllowedForKey entirely, so
+  // blockedModels was a silent no-op for unrestricted keys (empty allowedModels).
+  const hasDenyList = Boolean(apiKeyInfo.blockedModels?.length);
+  if (requestedComboName || (!hasModelRestrictions && !hasDenyList)) return null;
   if (await isModelAllowedForKey(apiKey, modelStr)) return null;
   return policyErrorResponse(
     request,
