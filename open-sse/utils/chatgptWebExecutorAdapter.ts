@@ -203,23 +203,37 @@ function normalizedModel(value: string): string {
 
 function resolveSelection(model: string, body: JsonRecord): ChatGptWebUiSelection {
   const normalized = normalizedModel(model);
+  if (normalized === "gpt-5-6-luna-free") {
+    return { kind: "free", thinkEnabled: false };
+  }
+  if (normalized === "gpt-5-6-luna-free-thinking") {
+    return { kind: "free", thinkEnabled: true };
+  }
   if (normalized === "gpt-5-6-pro") {
-    return { modelLabel: "GPT-5.6 Sol", effortIndex: 4 };
+    return { kind: "picker", modelLabel: "GPT-5.6 Sol", effortIndex: 4 };
   }
   if (normalized === "gpt-5-6-instant" || normalized === "gpt-5-6") {
-    return { modelLabel: "GPT-5.6 Sol", effortIndex: 0 };
+    return { kind: "picker", modelLabel: "GPT-5.6 Sol", effortIndex: 0 };
   }
   if (["gpt-5-6-thinking", "gpt-5-6-sol"].includes(normalized)) {
-    return { modelLabel: "GPT-5.6 Sol", effortIndex: effortIndex(reasoningEffort(body)) };
+    return {
+      kind: "picker",
+      modelLabel: "GPT-5.6 Sol",
+      effortIndex: effortIndex(reasoningEffort(body)),
+    };
   }
   if (normalized === "gpt-5-5-pro") {
-    return { modelLabel: "GPT-5.5", effortIndex: 4 };
+    return { kind: "picker", modelLabel: "GPT-5.5", effortIndex: 4 };
   }
   if (normalized === "gpt-5-5-instant") {
-    return { modelLabel: "GPT-5.5", effortIndex: 0 };
+    return { kind: "picker", modelLabel: "GPT-5.5", effortIndex: 0 };
   }
   if (["gpt-5-5", "gpt-5-5-thinking"].includes(normalized)) {
-    return { modelLabel: "GPT-5.5", effortIndex: effortIndex(reasoningEffort(body)) };
+    return {
+      kind: "picker",
+      modelLabel: "GPT-5.5",
+      effortIndex: effortIndex(reasoningEffort(body)),
+    };
   }
   throw new Error(`ChatGPT Web clean-room adapter received an unsupported model: ${model}`);
 }

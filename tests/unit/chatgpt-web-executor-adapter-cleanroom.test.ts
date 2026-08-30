@@ -18,26 +18,41 @@ describe("ChatGPT Web clean-room executor request adapter", () => {
       }),
       {
         prompt: "hello",
-        selection: { modelLabel: "GPT-5.6 Sol", effortIndex: 3 },
+        selection: { kind: "picker", modelLabel: "GPT-5.6 Sol", effortIndex: 3 },
       }
     );
     assert.deepEqual(
       prepareChatGptWebBrowserRequest("gpt-5-6-pro", {
         messages: [{ role: "user", content: "hello" }],
       }).selection,
-      { modelLabel: "GPT-5.6 Sol", effortIndex: 4 }
+      { kind: "picker", modelLabel: "GPT-5.6 Sol", effortIndex: 4 }
     );
     assert.deepEqual(
       prepareChatGptWebBrowserRequest("gpt-5-6-instant", {
         messages: [{ role: "user", content: "hello" }],
       }).selection,
-      { modelLabel: "GPT-5.6 Sol", effortIndex: 0 }
+      { kind: "picker", modelLabel: "GPT-5.6 Sol", effortIndex: 0 }
     );
     assert.deepEqual(
       prepareChatGptWebBrowserRequest("gpt-5-6", {
         messages: [{ role: "user", content: "hello" }],
       }).selection,
-      { modelLabel: "GPT-5.6 Sol", effortIndex: 0 }
+      { kind: "picker", modelLabel: "GPT-5.6 Sol", effortIndex: 0 }
+    );
+  });
+
+  test("maps the observed Free Luna routes to the first-party Think toggle", () => {
+    assert.deepEqual(
+      prepareChatGptWebBrowserRequest("gpt-5.6-luna-free", {
+        messages: [{ role: "user", content: "hello" }],
+      }).selection,
+      { kind: "free", thinkEnabled: false }
+    );
+    assert.deepEqual(
+      prepareChatGptWebBrowserRequest("gpt-5.6-luna-free-thinking", {
+        messages: [{ role: "user", content: "hello" }],
+      }).selection,
+      { kind: "free", thinkEnabled: true }
     );
   });
 
@@ -46,20 +61,20 @@ describe("ChatGPT Web clean-room executor request adapter", () => {
       prepareChatGptWebBrowserRequest("gpt-5-5-instant", {
         messages: [{ role: "user", content: "hello" }],
       }).selection,
-      { modelLabel: "GPT-5.5", effortIndex: 0 }
+      { kind: "picker", modelLabel: "GPT-5.5", effortIndex: 0 }
     );
     assert.deepEqual(
       prepareChatGptWebBrowserRequest("gpt-5-5-thinking", {
         messages: [{ role: "user", content: "hello" }],
         reasoning_effort: "max",
       }).selection,
-      { modelLabel: "GPT-5.5", effortIndex: 3 }
+      { kind: "picker", modelLabel: "GPT-5.5", effortIndex: 3 }
     );
     assert.deepEqual(
       prepareChatGptWebBrowserRequest("gpt-5-5-pro", {
         messages: [{ role: "user", content: "hello" }],
       }).selection,
-      { modelLabel: "GPT-5.5", effortIndex: 4 }
+      { kind: "picker", modelLabel: "GPT-5.5", effortIndex: 4 }
     );
   });
 
@@ -233,7 +248,11 @@ describe("ChatGPT Web clean-room executor response adapter", () => {
       }
     );
 
-    assert.deepEqual(observed?.selection, { modelLabel: "GPT-5.6 Sol", effortIndex: 4 });
+    assert.deepEqual(observed?.selection, {
+      kind: "picker",
+      modelLabel: "GPT-5.6 Sol",
+      effortIndex: 4,
+    });
     assert.deepEqual(observed?.storageState, { cookies: [], origins: [] });
     assert.equal(observed?.userAgent, "CleanRoomBrowser/1.0");
     assert.equal(response.status, 200);

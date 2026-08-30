@@ -51,10 +51,16 @@ export interface ChatGptWebBrowserTurnResult {
   endTurn: true;
 }
 
-export interface ChatGptWebUiSelection {
-  modelLabel: "GPT-5.6 Sol" | "GPT-5.5";
-  effortIndex: 0 | 1 | 2 | 3 | 4;
-}
+export type ChatGptWebUiSelection =
+  | {
+      kind: "picker";
+      modelLabel: "GPT-5.6 Sol" | "GPT-5.5";
+      effortIndex: 0 | 1 | 2 | 3 | 4;
+    }
+  | {
+      kind: "free";
+      thinkEnabled: boolean;
+    };
 
 export interface PlaywrightChatGptWebBrowserSessionOptions {
   pageUrl?: string;
@@ -419,6 +425,15 @@ export class PlaywrightChatGptWebBrowserSession implements ChatGptWebBrowserSess
 
   private async applySelection(): Promise<void> {
     if (!this.selection) return;
+    if (this.selection.kind === "free") {
+      // Free accounts expose no model picker or effort slider. The first-party UI routes
+      // ordinary Luna turns with Think off and reasoning turns with the same toggle on.
+      const thinkButton = this.page.getByRole("button", { name: "Think", exact: true });
+      await thinkButton.waitFor({ state: "visible", timeout: 30_000 });
+      const thinkEnabled = (await thinkButton.getAttribute("aria-pressed")) === "true";
+      if (thinkEnabled !== this.selection.thinkEnabled) await thinkButton.click();
+      return;
+    }
     const toggle = this.page
       .locator(
         'form:has(#prompt-textarea) button[aria-haspopup="menu"]' +

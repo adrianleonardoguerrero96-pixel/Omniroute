@@ -505,7 +505,7 @@ describe("ChatGPT Web clean-room browser-owned session", () => {
       keyboard: { press: async (key: string) => calls.push(`keyboard:${key}`) },
     } as unknown as import("playwright").Page;
     const session = new PlaywrightChatGptWebBrowserSession(page, {
-      selection: { modelLabel: "GPT-5.5", effortIndex: 3 },
+      selection: { kind: "picker", modelLabel: "GPT-5.5", effortIndex: 3 },
     });
 
     await session.submitPrompt("selected prompt");
@@ -526,6 +526,56 @@ describe("ChatGPT Web clean-room browser-owned session", () => {
       'wait:[data-testid="send-button"]',
       'click:[data-testid="send-button"]',
     ]);
+  });
+
+  test("Playwright binding controls the Free Luna Think toggle without opening a picker", async () => {
+    const run = async (current: boolean, desired: boolean): Promise<string[]> => {
+      const calls: string[] = [];
+      const action = (name: string) => ({
+        async waitFor() {
+          calls.push(`wait:${name}`);
+        },
+        async count() {
+          return 0;
+        },
+        async click() {
+          calls.push(`click:${name}`);
+        },
+        async fill(value: string) {
+          calls.push(`fill:${name}:${value}`);
+        },
+        async getAttribute(attribute: string) {
+          calls.push(`attribute:${name}:${attribute}`);
+          return attribute === "aria-pressed" ? String(current) : null;
+        },
+      });
+      const page = {
+        locator(selector: string) {
+          assert.equal(selector.includes('[aria-haspopup="menu"]'), false);
+          assert.equal(selector.includes('[role="slider"]'), false);
+          return action(selector);
+        },
+        getByRole(role: string, options: { name: string; exact?: boolean }) {
+          assert.deepEqual({ role, ...options }, { role: "button", name: "Think", exact: true });
+          return action("button:Think");
+        },
+      } as unknown as import("playwright").Page;
+      const session = new PlaywrightChatGptWebBrowserSession(page, {
+        selection: { kind: "free", thinkEnabled: desired },
+      });
+
+      await session.submitPrompt("free luna prompt");
+      return calls;
+    };
+
+    const enableCalls = await run(false, true);
+    assert.equal(enableCalls.includes("click:button:Think"), true);
+
+    const disableCalls = await run(true, false);
+    assert.equal(disableCalls.includes("click:button:Think"), true);
+
+    const unchangedCalls = await run(false, false);
+    assert.equal(unchangedCalls.includes("click:button:Think"), false);
   });
 
   test("Playwright binding skips a redundant click on the selected model", async () => {
@@ -567,7 +617,7 @@ describe("ChatGPT Web clean-room browser-owned session", () => {
       keyboard: { press: async (key: string) => calls.push(`keyboard:${key}`) },
     } as unknown as import("playwright").Page;
     const session = new PlaywrightChatGptWebBrowserSession(page, {
-      selection: { modelLabel: "GPT-5.6 Sol", effortIndex: 0 },
+      selection: { kind: "picker", modelLabel: "GPT-5.6 Sol", effortIndex: 0 },
     });
 
     await session.submitPrompt("same model");

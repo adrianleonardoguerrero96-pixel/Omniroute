@@ -16,6 +16,8 @@ const MODEL_IDS = [
   "gpt-5-6",
   "gpt-5-6-thinking",
   "gpt-5-6-pro",
+  "gpt-5.6-luna-free",
+  "gpt-5.6-luna-free-thinking",
   "gpt-5-5-instant",
   "gpt-5-5-thinking",
   "gpt-5-5-pro",
