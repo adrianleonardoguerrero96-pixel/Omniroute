@@ -8,12 +8,12 @@
  * where `require` is unavailable; the `createRequire(import.meta.url)` fallback
  * handles those callers.
  */
-import { createRequire } from "node:module";
+import * as nodeModule from "node:module";
 
 declare const require: NodeRequire | undefined;
 
 function esmRuntimeRequire(specifier: string): unknown {
-  return createRequire(import.meta.url)(specifier);
+  return nodeModule.createRequire(import.meta.url)(specifier);
 }
 
 export function runtimeRequire(specifier: string): unknown {
