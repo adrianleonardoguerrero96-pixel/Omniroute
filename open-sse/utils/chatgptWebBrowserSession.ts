@@ -1,6 +1,12 @@
 import { Buffer } from "node:buffer";
 
-import { ChatGptWebDeltaV1Decoder } from "./chatgptWebDeltaV1.ts";
+import type { ChatGptWebResolvedAttachment } from "./chatgptWebAttachments.ts";
+import {
+  executeChatGptWebFirstPartyTurn,
+  type ChatGptWebFirstPartyRequest,
+  type ChatGptWebUiSelection,
+} from "./chatgptWebFirstParty.ts";
+import { ChatGptWebDeltaV1Decoder, parseChatGptWebEncodedItem } from "./chatgptWebDeltaV1.ts";
 import {
   ChatGptWebTopicStream,
   parseChatGptWebConversationHandoff,
@@ -8,12 +14,8 @@ import {
 
 type JsonRecord = Record<string, unknown>;
 type Page = import("playwright").Page;
-type PlaywrightResponse = import("playwright").Response;
-type PlaywrightWebSocket = import("playwright").WebSocket;
 
 const CHATGPT_WEB_ORIGIN = "https://chatgpt.com";
-const CHATGPT_WEB_CONVERSATION_PATH = "/backend-api/f/conversation";
-const CHATGPT_WEB_SOCKET_ORIGIN = "wss://ws.chatgpt.com";
 const DEFAULT_TURN_TIMEOUT_MS = 180_000;
 const MAX_BUFFERED_FRAMES = 2_048;
 const MAX_BUFFERED_FRAME_BYTES = 16 * 1024 * 1024;
@@ -33,12 +35,19 @@ export interface ChatGptWebBrowserSessionHandlers {
 export interface ChatGptWebBrowserSession {
   url(): string;
   start(handlers: ChatGptWebBrowserSessionHandlers): Promise<() => Promise<void>>;
-  submitPrompt(prompt: string): Promise<void>;
+  submitPrompt(request: ChatGptWebBrowserSubmission): Promise<string | void>;
   readRenderedAssistantText?(timeoutMs?: number): Promise<string | null>;
+}
+
+export interface ChatGptWebBrowserSubmission {
+  prompt: string;
+  attachments: ChatGptWebResolvedAttachment[];
+  signal?: AbortSignal | null;
 }
 
 export interface ChatGptWebBrowserTurnRequest {
   prompt: string;
+  attachments?: ChatGptWebResolvedAttachment[];
   timeoutMs?: number;
   signal?: AbortSignal | null;
 }
@@ -51,21 +60,17 @@ export interface ChatGptWebBrowserTurnResult {
   endTurn: true;
 }
 
-export type ChatGptWebUiSelection =
-  | {
-      kind: "picker";
-      modelLabel: "GPT-5.6 Sol" | "GPT-5.5";
-      effortIndex: 0 | 1 | 2 | 3 | 4;
-    }
-  | {
-      kind: "free";
-      thinkEnabled: boolean;
-    };
+export type { ChatGptWebUiSelection } from "./chatgptWebFirstParty.ts";
 
 export interface PlaywrightChatGptWebBrowserSessionOptions {
   pageUrl?: string;
   selection?: ChatGptWebUiSelection;
   closePageOnCleanup?: boolean;
+  executePageRequest?: (
+    page: Page,
+    input: ChatGptWebFirstPartyRequest,
+    options?: { signal?: AbortSignal | null }
+  ) => Promise<string>;
 }
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -152,6 +157,44 @@ function terminalResult(
   throw new Error(`ChatGPT Web assistant document is incomplete (${summary})`);
 }
 
+function encodeParsedEvent(event: ReturnType<typeof parseChatGptWebEncodedItem>[number]): string {
+  const eventLine = event.event === "message" ? "" : `event: ${event.event}\n`;
+  return `${eventLine}data: ${event.data}\n\n`;
+}
+
+/** Decode the direct first-party `/f/conversation` SSE body. */
+export function parseChatGptWebDirectConversation(sseText: string): ChatGptWebBrowserTurnResult {
+  if (typeof sseText !== "string" || !sseText.trim()) {
+    throw new Error("ChatGPT Web direct conversation returned an empty stream");
+  }
+  let decoder = new ChatGptWebDeltaV1Decoder();
+  let conversationId = "";
+  let turnExchangeId = "";
+  let latestTerminal: ChatGptWebBrowserTurnResult | null = null;
+  for (const event of parseChatGptWebEncodedItem(sseText)) {
+    if (isRecord(event.json)) {
+      if (typeof event.json.conversation_id === "string") {
+        conversationId = event.json.conversation_id;
+      }
+      if (typeof event.json.turn_exchange_id === "string") {
+        turnExchangeId = event.json.turn_exchange_id;
+      }
+    }
+    if (event.event === "delta_encoding") {
+      latestTerminal =
+        maybeTerminalResult(decoder.snapshot(), conversationId, turnExchangeId) ?? latestTerminal;
+      decoder = new ChatGptWebDeltaV1Decoder();
+    }
+    decoder.ingest(encodeParsedEvent(event));
+    latestTerminal =
+      maybeTerminalResult(decoder.snapshot(), conversationId, turnExchangeId) ?? latestTerminal;
+  }
+  const result =
+    maybeTerminalResult(decoder.snapshot(), conversationId, turnExchangeId) ?? latestTerminal;
+  if (!result) return terminalResult(decoder.snapshot(), conversationId, turnExchangeId);
+  return { ...result, conversationId, turnExchangeId };
+}
+
 /** Run one turn while the first-party browser remains the sole challenge and auth owner. */
 export async function runChatGptWebBrowserTurn(
   session: ChatGptWebBrowserSession,
@@ -174,6 +217,7 @@ export async function runChatGptWebBrowserTurn(
   let latestTerminalAssistant: ChatGptWebBrowserTurnResult | null = null;
   let renderedReadPending = false;
   let settled = false;
+  const turnController = new AbortController();
   let resolveResult: (result: ChatGptWebBrowserTurnResult) => void = () => {};
   let rejectResult: (error: Error) => void = () => {};
 
@@ -187,6 +231,7 @@ export async function runChatGptWebBrowserTurn(
   const fail = (error: Error): void => {
     if (settled) return;
     settled = true;
+    turnController.abort();
     rejectResult(error);
   };
   const complete = (): void => {
@@ -304,13 +349,18 @@ export async function runChatGptWebBrowserTurn(
 
   try {
     cleanup = await session.start(handlers);
-    // Browser submission can remain pending inside Playwright while the caller aborts or the
-    // response stream finishes. Do not make turn settlement wait for that browser-side promise;
-    // cleanup closes the page and the rejection observer below consumes the resulting error.
     void Promise.resolve()
       .then(async () => {
         if (settled) return;
-        await session.submitPrompt(prompt);
+        const directResponse = await session.submitPrompt({
+          prompt,
+          attachments: request.attachments ?? [],
+          signal: turnController.signal,
+        });
+        if (typeof directResponse === "string" && !settled) {
+          settled = true;
+          resolveResult(parseChatGptWebDirectConversation(directResponse));
+        }
       })
       .catch((error: unknown) => {
         fail(error instanceof Error ? error : new Error("ChatGPT Web prompt submission failed"));
@@ -323,35 +373,19 @@ export async function runChatGptWebBrowserTurn(
   }
 }
 
-function isConversationResponse(response: PlaywrightResponse): boolean {
-  if (response.request().method() !== "POST") return false;
-  try {
-    const url = new URL(response.url());
-    return url.origin === CHATGPT_WEB_ORIGIN && url.pathname === CHATGPT_WEB_CONVERSATION_PATH;
-  } catch {
-    return false;
-  }
-}
-
-function isChatGptWebSocket(socket: PlaywrightWebSocket): boolean {
-  try {
-    return new URL(socket.url()).origin === CHATGPT_WEB_SOCKET_ORIGIN;
-  } catch {
-    return false;
-  }
-}
-
 /**
  * Playwright binding for a logged-in ChatGPT page.
  *
- * It deliberately drives the visible first-party composer. It never reads cookies, authorization
- * headers, Sentinel answers, or conduit tokens into Node.js.
+ * ChatGPT's own loaded module performs auth and Sentinel inside the page. The hot path never
+ * touches the composer, model picker, attachment input, cookies, or bearer tokens.
  */
 export class PlaywrightChatGptWebBrowserSession implements ChatGptWebBrowserSession {
   private readonly pageUrl: string;
   private readonly selection: ChatGptWebUiSelection | undefined;
   private readonly closePageOnCleanup: boolean;
-  private assistantCountBeforeSubmit: number | null = null;
+  private readonly executePageRequest: NonNullable<
+    PlaywrightChatGptWebBrowserSessionOptions["executePageRequest"]
+  >;
 
   constructor(
     private readonly page: Page,
@@ -361,10 +395,12 @@ export class PlaywrightChatGptWebBrowserSession implements ChatGptWebBrowserSess
       this.pageUrl = options;
       this.selection = undefined;
       this.closePageOnCleanup = false;
+      this.executePageRequest = executeChatGptWebFirstPartyTurn;
     } else {
       this.pageUrl = options.pageUrl ?? "https://chatgpt.com/?temporary-chat=true";
       this.selection = options.selection;
       this.closePageOnCleanup = options.closePageOnCleanup === true;
+      this.executePageRequest = options.executePageRequest ?? executeChatGptWebFirstPartyTurn;
     }
   }
 
@@ -373,48 +409,21 @@ export class PlaywrightChatGptWebBrowserSession implements ChatGptWebBrowserSess
   }
 
   async start(handlers: ChatGptWebBrowserSessionHandlers): Promise<() => Promise<void>> {
+    void handlers;
     requireFirstPartyUrl(this.pageUrl);
-    let pageTerminated = false;
-    const socketListeners = new Map<
-      PlaywrightWebSocket,
-      (data: { payload: string | Buffer }) => void
-    >();
-    const onPageTerminated = (): void => {
-      if (pageTerminated) return;
-      pageTerminated = true;
-      handlers.onError(new Error("ChatGPT Web first-party browser page terminated"));
-    };
-    const onResponse = (response: PlaywrightResponse): void => {
-      if (!isConversationResponse(response)) return;
-      void response
-        .text()
-        .then((body) => handlers.onBootstrap(body))
-        .catch(() => handlers.onError(new Error("ChatGPT Web bootstrap response was unreadable")));
-    };
-    const onWebSocket = (socket: PlaywrightWebSocket): void => {
-      if (!isChatGptWebSocket(socket)) return;
-      const onFrame = ({ payload }: { payload: string | Buffer }): void => {
-        handlers.onWebSocketFrame(typeof payload === "string" ? payload : payload.toString("utf8"));
-      };
-      socketListeners.set(socket, onFrame);
-      socket.on("framereceived", onFrame);
-    };
     const cleanup = async (): Promise<void> => {
-      this.page.off("response", onResponse);
-      this.page.off("websocket", onWebSocket);
-      this.page.off("crash", onPageTerminated);
-      this.page.off("close", onPageTerminated);
-      for (const [socket, listener] of socketListeners) socket.off("framereceived", listener);
-      socketListeners.clear();
       if (this.closePageOnCleanup) await this.page.close().catch(() => {});
     };
-
-    this.page.on("response", onResponse);
-    this.page.on("websocket", onWebSocket);
-    this.page.on("crash", onPageTerminated);
-    this.page.on("close", onPageTerminated);
     try {
-      await this.page.goto(this.pageUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+      let currentIsFirstParty = false;
+      try {
+        currentIsFirstParty = new URL(this.page.url()).origin === CHATGPT_WEB_ORIGIN;
+      } catch {
+        currentIsFirstParty = false;
+      }
+      if (!currentIsFirstParty) {
+        await this.page.goto(this.pageUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+      }
       requireFirstPartyUrl(this.page.url());
       return cleanup;
     } catch (error) {
@@ -423,71 +432,17 @@ export class PlaywrightChatGptWebBrowserSession implements ChatGptWebBrowserSess
     }
   }
 
-  private async applySelection(): Promise<void> {
-    if (!this.selection) return;
-    if (this.selection.kind === "free") {
-      // Free accounts expose no model picker or effort slider. The first-party UI routes
-      // ordinary Luna turns with Think off and reasoning turns with the same toggle on.
-      const thinkButton = this.page.getByRole("button", { name: "Think", exact: true });
-      await thinkButton.waitFor({ state: "visible", timeout: 30_000 });
-      const thinkEnabled = (await thinkButton.getAttribute("aria-pressed")) === "true";
-      if (thinkEnabled !== this.selection.thinkEnabled) await thinkButton.click();
-      return;
-    }
-    const toggle = this.page
-      .locator(
-        'form:has(#prompt-textarea) button[aria-haspopup="menu"]' +
-          ':not([data-testid="composer-plus-btn"])'
-      )
-      .last();
-    await toggle.waitFor({ state: "visible", timeout: 30_000 });
-    await toggle.click();
-
-    const menu = this.page.locator('[role="menu"]').last();
-    const modelControl = menu.locator('[role="menuitem"]').first();
-    await modelControl.click();
-    const modelOption = this.page.getByRole("menuitemradio", {
-      name: this.selection.modelLabel,
-      exact: true,
-    });
-    const modelAlreadySelected = (await modelOption.getAttribute("aria-checked")) === "true";
-    if (!modelAlreadySelected) {
-      await modelOption.click();
-    } else {
-      // The selected option remains inside the model submenu. Return to the already-open
-      // reasoning menu; selecting a different model performs this transition automatically.
-      await this.page.keyboard.press("Escape");
-    }
-
-    const slider = this.page.locator('[role="menu"] [role="slider"]').last();
-    await slider.press("Home");
-    for (let index = 0; index < this.selection.effortIndex; index += 1) {
-      await slider.press("ArrowRight");
-    }
-    await this.page.keyboard.press("Escape");
-  }
-
-  async submitPrompt(prompt: string): Promise<void> {
-    await this.applySelection();
-    const composer = this.page.locator("#prompt-textarea");
-    await composer.waitFor({ state: "visible", timeout: 30_000 });
-    await composer.fill(requirePrompt(prompt));
-    this.assistantCountBeforeSubmit = await this.page
-      .locator('[data-message-author-role="assistant"]')
-      .count();
-    const sendButton = this.page.locator('[data-testid="send-button"]');
-    await sendButton.waitFor({ state: "visible", timeout: 30_000 });
-    await sendButton.click();
-  }
-
-  async readRenderedAssistantText(timeoutMs = 10_000): Promise<string | null> {
-    const assistants = this.page.locator('[data-message-author-role="assistant"]');
-    const assistant =
-      this.assistantCountBeforeSubmit === null
-        ? assistants.last()
-        : assistants.nth(this.assistantCountBeforeSubmit);
-    await assistant.waitFor({ state: "visible", timeout: timeoutMs });
-    const text = (await assistant.innerText()).trim();
-    return text || null;
+  async submitPrompt(request: ChatGptWebBrowserSubmission): Promise<string> {
+    if (!this.selection) throw new Error("ChatGPT Web direct request requires a model selection");
+    requireFirstPartyUrl(this.page.url());
+    return this.executePageRequest(
+      this.page,
+      {
+        prompt: requirePrompt(request.prompt),
+        attachments: request.attachments,
+        selection: this.selection,
+      },
+      { signal: request.signal }
+    );
   }
 }

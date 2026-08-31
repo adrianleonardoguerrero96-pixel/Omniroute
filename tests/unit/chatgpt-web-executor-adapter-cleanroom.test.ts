@@ -6,7 +6,9 @@ import {
   executeChatGptWebCleanRoom,
   normalizeChatGptWebStorageState,
   prepareChatGptWebBrowserRequest,
+  resolveChatGptWebChromeExecutable,
 } from "../../open-sse/utils/chatgptWebExecutorAdapter.ts";
+import { resolveChatGptWebAttachments } from "../../open-sse/utils/chatgptWebAttachments.ts";
 import type { ChatGptWebBrowserSession } from "../../open-sse/utils/chatgptWebBrowserSession.ts";
 
 describe("ChatGPT Web clean-room executor request adapter", () => {
@@ -19,6 +21,7 @@ describe("ChatGPT Web clean-room executor request adapter", () => {
       {
         prompt: "hello",
         selection: { kind: "picker", modelLabel: "GPT-5.6 Sol", effortIndex: 3 },
+        attachments: [],
       }
     );
     assert.deepEqual(
@@ -110,7 +113,119 @@ describe("ChatGPT Web clean-room executor request adapter", () => {
     assert.equal(prepared.prompt, "System:\nBe concise.\n\nUser:\nQuestion");
   });
 
-  test("rejects unknown models, tool turns, and non-text content", () => {
+  test("extracts image and file inputs without serializing them into the prompt", async () => {
+    const prepared = prepareChatGptWebBrowserRequest("gpt-5.6-luna-free", {
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Inspect both attachments." },
+            {
+              type: "image_url",
+              image_url:
+                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+            },
+            {
+              type: "input_file",
+              filename: "notes.txt",
+              file_data: "data:text/plain;base64,aGVsbG8=",
+            },
+          ],
+        },
+      ],
+    });
+
+    assert.equal(prepared.prompt, "Inspect both attachments.");
+    assert.deepEqual(
+      prepared.attachments.map(({ kind, name }) => ({ kind, name })),
+      [
+        { kind: "image", name: "image-1.png" },
+        { kind: "file", name: "notes.txt" },
+      ]
+    );
+
+    const resolved = await resolveChatGptWebAttachments(prepared.attachments);
+    assert.deepEqual(
+      resolved.map(({ kind, mimeType, size, width, height }) => ({
+        kind,
+        mimeType,
+        size,
+        width,
+        height,
+      })),
+      [
+        { kind: "image", mimeType: "image/png", size: 68, width: 1, height: 1 },
+        {
+          kind: "file",
+          mimeType: "text/plain",
+          size: 5,
+          width: undefined,
+          height: undefined,
+        },
+      ]
+    );
+  });
+
+  test("pins DNS when resolving a remote attachment URL", async () => {
+    let observed: { input: string; options: Record<string, unknown> } | null = null;
+    const png = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+      "base64"
+    );
+    const resolved = await resolveChatGptWebAttachments(
+      [
+        {
+          kind: "image",
+          ref: "https://assets.example.test/pixel.png",
+          name: "pixel.png",
+        },
+      ],
+      {
+        fetchRemoteMedia: async (input, options) => {
+          observed = { input: String(input), options: { ...options } };
+          return {
+            buffer: png,
+            contentType: "image/png",
+            url: String(input),
+          };
+        },
+      }
+    );
+
+    assert.equal(resolved[0].mimeType, "image/png");
+    assert.deepEqual(observed, {
+      input: "https://assets.example.test/pixel.png",
+      options: {
+        guard: "public-only",
+        pinDns: true,
+        maxBytes: 20 * 1024 * 1024,
+        maxRedirects: 3,
+        timeoutMs: 20_000,
+      },
+    });
+  });
+
+  test("maps a DNS-rebinding rejection to a safe attachment error", async () => {
+    await assert.rejects(
+      resolveChatGptWebAttachments(
+        [
+          {
+            kind: "file",
+            ref: "https://rebinding.example.test/notes.txt",
+            name: "notes.txt",
+          },
+        ],
+        {
+          fetchRemoteMedia: async () => {
+            throw new Error("Remote image host resolves to a blocked private address");
+          },
+        }
+      ),
+      /invalid or blocked/
+    );
+  });
+
+  test("rejects unknown models, tool turns, and unsupported content", () => {
     assert.throws(
       () =>
         prepareChatGptWebBrowserRequest("unknown", {
@@ -129,14 +244,28 @@ describe("ChatGPT Web clean-room executor request adapter", () => {
     assert.throws(
       () =>
         prepareChatGptWebBrowserRequest("gpt-5.5", {
-          messages: [{ role: "user", content: [{ type: "image_url", image_url: "x" }] }],
+          messages: [{ role: "user", content: [{ type: "input_audio", input_audio: {} }] }],
         }),
-      /text content only/
+      /unsupported content/
     );
   });
 });
 
 describe("ChatGPT Web clean-room storage state", () => {
+  test("prefers an explicit installed Chrome path for the headed first-party session", () => {
+    const checked: string[] = [];
+    const resolved = resolveChatGptWebChromeExecutable("/custom/chrome", {
+      env: {},
+      exists: (candidate) => {
+        checked.push(candidate);
+        return candidate === "/custom/chrome";
+      },
+    });
+
+    assert.equal(resolved, "/custom/chrome");
+    assert.deepEqual(checked, ["/custom/chrome"]);
+  });
+
   test("accepts only first-party cookie/origin state and returns a detached copy", () => {
     const source = {
       cookies: [
@@ -218,7 +347,7 @@ describe("ChatGPT Web clean-room executor response adapter", () => {
     const session = {
       url: () => "https://chatgpt.com/?temporary-chat=true",
       start: async () => async () => {},
-      submitPrompt: async () => {},
+      submitPrompt: async () => "",
     } satisfies ChatGptWebBrowserSession;
     let observed: Record<string, unknown> | null = null;
     const response = await executeChatGptWebCleanRoom(
@@ -241,6 +370,7 @@ describe("ChatGPT Web clean-room executor response adapter", () => {
         },
         runTurn: async (_session, request) => {
           assert.equal(request.prompt, "hello");
+          assert.deepEqual(request.attachments, []);
           return turn;
         },
         id: () => "chatcmpl-cleanroom",

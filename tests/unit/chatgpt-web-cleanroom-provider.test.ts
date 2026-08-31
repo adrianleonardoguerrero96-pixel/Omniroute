@@ -118,3 +118,29 @@ test("specialized executor delegates to the clean-room browser adapter", async (
   assert.equal(body.choices[0].message.content, "CLEANROOM_PROVIDER_OK");
   assert.equal(JSON.stringify(body).includes("private-conversation"), false);
 });
+
+test("surfaces an exhausted Free image quota as 429 for sibling-account fallback", async () => {
+  const executor = new ChatGptWebExecutor({
+    createSession: async () => ({
+      url: () => "https://chatgpt.com/?temporary-chat=true",
+      start: async () => async () => {},
+      submitPrompt: async () => {},
+    }),
+    runTurn: async () => {
+      throw new Error("You've reached your image upload limit");
+    },
+  });
+
+  const response = await executor.execute({
+    model: "gpt-5.6-luna-free",
+    body: { messages: [{ role: "user", content: "image" }] },
+    stream: false,
+    credentials: {
+      connectionId: "free-connection",
+      apiKey: JSON.stringify({ cookies: [], origins: [] }),
+    },
+  });
+
+  assert.equal(response.response.status, 429);
+  assert.match(await response.response.text(), /image upload limit/);
+});

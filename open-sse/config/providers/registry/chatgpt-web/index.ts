@@ -4,12 +4,12 @@ const ADJUSTABLE_REASONING = {
   toolCalling: false,
   supportsReasoning: true,
   supportedThinkingEfforts: ["low", "medium", "high", "xhigh", "max"],
-  supportsVision: false,
+  supportsVision: true,
 } as const;
 
 const FIXED_TEXT = {
   toolCalling: false,
-  supportsVision: false,
+  supportsVision: true,
 } as const;
 
 /** Routes observed from first-party ChatGPT Pro and Free UIs through 2026-08-31. */

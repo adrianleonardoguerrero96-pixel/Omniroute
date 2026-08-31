@@ -70,8 +70,8 @@ class FakeBrowserSession implements ChatGptWebBrowserSession {
     };
   }
 
-  async submitPrompt(prompt: string): Promise<void> {
-    this.submittedPrompt = prompt;
+  async submitPrompt(request: { prompt: string }): Promise<void> {
+    this.submittedPrompt = request.prompt;
     if (!this.handlers) throw new Error("session not started");
     this.execute(this.handlers);
   }
@@ -82,6 +82,38 @@ class FakeBrowserSession implements ChatGptWebBrowserSession {
 }
 
 describe("ChatGPT Web clean-room browser-owned session", () => {
+  test("decodes a direct first-party conversation response without DOM or WebSocket handoff", async () => {
+    const directSse =
+      'event: delta_encoding\ndata: "v1"\n\n' +
+      'event: delta\ndata: {"p":"","o":"add","v":{"message":{' +
+      '"id":"assistant-message","author":{"role":"assistant"},' +
+      '"content":{"content_type":"text","parts":["DIRECT_OK"]},' +
+      '"status":"finished_successfully","end_turn":true}}}\n\n' +
+      'data: {"type":"message_stream_complete","conversation_id":"conversation"}\n\n' +
+      "data: [DONE]\n\n";
+    let submitted: unknown = null;
+    const session = {
+      url: () => "https://chatgpt.com/?temporary-chat=true",
+      start: async () => async () => {},
+      submitPrompt: async (request: unknown) => {
+        submitted = request;
+        return directSse;
+      },
+    } satisfies ChatGptWebBrowserSession;
+
+    const result = await runChatGptWebBrowserTurn(session, {
+      prompt: "direct prompt",
+      attachments: [],
+      timeoutMs: 1_000,
+    });
+
+    assert.equal((submitted as { prompt: string }).prompt, "direct prompt");
+    assert.deepEqual((submitted as { attachments: unknown[] }).attachments, []);
+    assert.ok((submitted as { signal: AbortSignal }).signal instanceof AbortSignal);
+    assert.equal(result.text, "DIRECT_OK");
+    assert.equal(result.conversationId, "conversation");
+  });
+
   test("buffers WebSocket frames until handoff and returns only decoded output", async () => {
     const root =
       'event: delta_encoding\ndata: "v1"\n\n' +
@@ -296,342 +328,49 @@ describe("ChatGPT Web clean-room browser-owned session", () => {
     assert.equal(cleanupCount, 1);
   });
 
-  test("Playwright binding attaches before navigation and removes every listener", async () => {
-    type Listener = (...args: unknown[]) => void;
-    const pageListeners = new Map<string, Set<Listener>>();
-    const socketListeners = new Map<string, Set<Listener>>();
-    const calls: string[] = [];
-    const locator = (selector: string) => ({
-      async waitFor() {
-        calls.push(`wait:${selector}`);
-      },
-      async count() {
-        return 0;
-      },
-      async fill(value: string) {
-        calls.push(`fill:${selector}:${value}`);
-      },
-      async click() {
-        calls.push(`click:${selector}`);
-      },
-    });
-    const page = {
+  test("aborts the browser-owned request when the turn timeout expires", async () => {
+    let submittedSignal: AbortSignal | null | undefined;
+    const session = {
       url: () => "https://chatgpt.com/?temporary-chat=true",
-      on(event: string, listener: Listener) {
-        const listeners = pageListeners.get(event) ?? new Set<Listener>();
-        listeners.add(listener);
-        pageListeners.set(event, listeners);
+      start: async () => async () => {},
+      submitPrompt: async (request: { signal?: AbortSignal | null }) => {
+        submittedSignal = request.signal;
+        return new Promise<string>(() => {});
       },
-      off(event: string, listener: Listener) {
-        pageListeners.get(event)?.delete(listener);
-      },
-      async goto() {
-        calls.push("goto");
-      },
-      locator,
-    } as unknown as import("playwright").Page;
-    const socket = {
-      url: () => "wss://ws.chatgpt.com/socket.io/",
-      on(event: string, listener: Listener) {
-        const listeners = socketListeners.get(event) ?? new Set<Listener>();
-        listeners.add(listener);
-        socketListeners.set(event, listeners);
-      },
-      off(event: string, listener: Listener) {
-        socketListeners.get(event)?.delete(listener);
-      },
-    };
-    const observed = { bootstraps: [] as string[], frames: [] as string[], errors: 0 };
-    const session = new PlaywrightChatGptWebBrowserSession(page);
-    const cleanup = await session.start({
-      onBootstrap: (body) => observed.bootstraps.push(body),
-      onWebSocketFrame: (frame) => observed.frames.push(frame),
-      onError: () => {
-        observed.errors += 1;
-      },
-    });
+    } satisfies ChatGptWebBrowserSession;
 
-    assert.equal(calls[0], "goto");
-    for (const listener of pageListeners.get("websocket") ?? []) listener(socket);
-    for (const listener of socketListeners.get("framereceived") ?? []) {
-      listener({ payload: "frame" });
-    }
-    for (const listener of pageListeners.get("response") ?? []) {
-      listener({
-        url: () => "https://chatgpt.com/backend-api/f/conversation",
-        request: () => ({ method: () => "POST" }),
-        text: async () => HANDOFF_SSE,
-      });
-    }
-    await Promise.resolve();
-    await session.submitPrompt("selector test");
-
-    assert.deepEqual(observed, { bootstraps: [HANDOFF_SSE], frames: ["frame"], errors: 0 });
-    assert.deepEqual(calls.slice(1), [
-      "wait:#prompt-textarea",
-      "fill:#prompt-textarea:selector test",
-      'wait:[data-testid="send-button"]',
-      'click:[data-testid="send-button"]',
-    ]);
-
-    await cleanup();
-    assert.equal(pageListeners.get("response")?.size, 0);
-    assert.equal(pageListeners.get("websocket")?.size, 0);
-    assert.equal(socketListeners.get("framereceived")?.size, 0);
-  });
-
-  test("Playwright binding reports an unexpected page termination and removes lifecycle listeners", async () => {
-    type Listener = (...args: unknown[]) => void;
-    const pageListeners = new Map<string, Set<Listener>>();
-    const page = {
-      url: () => "https://chatgpt.com/?temporary-chat=true",
-      on(event: string, listener: Listener) {
-        const listeners = pageListeners.get(event) ?? new Set<Listener>();
-        listeners.add(listener);
-        pageListeners.set(event, listeners);
-      },
-      off(event: string, listener: Listener) {
-        pageListeners.get(event)?.delete(listener);
-      },
-      async goto() {},
-    } as unknown as import("playwright").Page;
-    let errors = 0;
-    const session = new PlaywrightChatGptWebBrowserSession(page);
-    const cleanup = await session.start({
-      onBootstrap: () => {},
-      onWebSocketFrame: () => {},
-      onError: () => {
-        errors += 1;
-      },
-    });
-
-    for (const listener of pageListeners.get("crash") ?? []) listener();
-    assert.equal(errors, 1);
-
-    await cleanup();
-    assert.equal(pageListeners.get("crash")?.size, 0);
-    assert.equal(pageListeners.get("close")?.size, 0);
-  });
-
-  test("Playwright binding ignores a stale rendered assistant from before submission", async () => {
-    const calls: string[] = [];
-    const composer = {
-      async waitFor() {},
-      async fill() {},
-    };
-    const sendButton = {
-      async waitFor() {},
-      async click() {},
-    };
-    const assistant = {
-      async count() {
-        calls.push("count:assistant");
-        return 2;
-      },
-      last() {
-        return {
-          async waitFor() {},
-          async innerText() {
-            calls.push("read:stale");
-            return "STALE_ASSISTANT";
-          },
-        };
-      },
-      nth(index: number) {
-        return {
-          async waitFor() {
-            calls.push(`wait:fresh:${index}`);
-          },
-          async innerText() {
-            calls.push(`read:fresh:${index}`);
-            return "FRESH_ASSISTANT";
-          },
-        };
-      },
-    };
-    const page = {
-      locator(selector: string) {
-        if (selector === "#prompt-textarea") return composer;
-        if (selector === '[data-testid="send-button"]') return sendButton;
-        if (selector === '[data-message-author-role="assistant"]') return assistant;
-        throw new Error(`Unexpected selector: ${selector}`);
-      },
-    } as unknown as import("playwright").Page;
-    const session = new PlaywrightChatGptWebBrowserSession(page);
-
-    await session.submitPrompt("fresh answer only");
-    const rendered = await session.readRenderedAssistantText(100);
-
-    assert.equal(rendered, "FRESH_ASSISTANT");
-    assert.deepEqual(calls, ["count:assistant", "wait:fresh:2", "read:fresh:2"]);
-  });
-
-  test("Playwright binding selects the observed model and slider index before submit", async () => {
-    const calls: string[] = [];
-    const action = (name: string, checked = false) => ({
-      async waitFor() {
-        calls.push(`wait:${name}`);
-      },
-      async count() {
-        return 0;
-      },
-      async click() {
-        calls.push(`click:${name}`);
-      },
-      async fill(value: string) {
-        calls.push(`fill:${name}:${value}`);
-      },
-      async press(key: string) {
-        calls.push(`press:${name}:${key}`);
-      },
-      async getAttribute(attribute: string) {
-        calls.push(`attribute:${name}:${attribute}`);
-        return attribute === "aria-checked" && checked ? "true" : null;
-      },
-      first() {
-        return action(`${name}:first`);
-      },
-      last() {
-        return action(`${name}:last`);
-      },
-      locator(selector: string) {
-        return action(`${name}>${selector}`);
-      },
-    });
-    const page = {
-      locator: (selector: string) => action(selector),
-      getByRole: (role: string, options: { name: string }) =>
-        action(`${role}:${options.name}`, false),
-      keyboard: { press: async (key: string) => calls.push(`keyboard:${key}`) },
-    } as unknown as import("playwright").Page;
-    const session = new PlaywrightChatGptWebBrowserSession(page, {
-      selection: { kind: "picker", modelLabel: "GPT-5.5", effortIndex: 3 },
-    });
-
-    await session.submitPrompt("selected prompt");
-
-    assert.deepEqual(calls, [
-      'wait:form:has(#prompt-textarea) button[aria-haspopup="menu"]:not([data-testid="composer-plus-btn"]):last',
-      'click:form:has(#prompt-textarea) button[aria-haspopup="menu"]:not([data-testid="composer-plus-btn"]):last',
-      'click:[role="menu"]:last>[role="menuitem"]:first',
-      "attribute:menuitemradio:GPT-5.5:aria-checked",
-      "click:menuitemradio:GPT-5.5",
-      'press:[role="menu"] [role="slider"]:last:Home',
-      'press:[role="menu"] [role="slider"]:last:ArrowRight',
-      'press:[role="menu"] [role="slider"]:last:ArrowRight',
-      'press:[role="menu"] [role="slider"]:last:ArrowRight',
-      "keyboard:Escape",
-      "wait:#prompt-textarea",
-      "fill:#prompt-textarea:selected prompt",
-      'wait:[data-testid="send-button"]',
-      'click:[data-testid="send-button"]',
-    ]);
-  });
-
-  test("Playwright binding controls the Free Luna Think toggle without opening a picker", async () => {
-    const run = async (current: boolean, desired: boolean): Promise<string[]> => {
-      const calls: string[] = [];
-      const action = (name: string) => ({
-        async waitFor() {
-          calls.push(`wait:${name}`);
-        },
-        async count() {
-          return 0;
-        },
-        async click() {
-          calls.push(`click:${name}`);
-        },
-        async fill(value: string) {
-          calls.push(`fill:${name}:${value}`);
-        },
-        async getAttribute(attribute: string) {
-          calls.push(`attribute:${name}:${attribute}`);
-          return attribute === "aria-pressed" ? String(current) : null;
-        },
-      });
-      const page = {
-        locator(selector: string) {
-          assert.equal(selector.includes('[aria-haspopup="menu"]'), false);
-          assert.equal(selector.includes('[role="slider"]'), false);
-          return action(selector);
-        },
-        getByRole(role: string, options: { name: string; exact?: boolean }) {
-          assert.deepEqual({ role, ...options }, { role: "button", name: "Think", exact: true });
-          return action("button:Think");
-        },
-      } as unknown as import("playwright").Page;
-      const session = new PlaywrightChatGptWebBrowserSession(page, {
-        selection: { kind: "free", thinkEnabled: desired },
-      });
-
-      await session.submitPrompt("free luna prompt");
-      return calls;
-    };
-
-    const enableCalls = await run(false, true);
-    assert.equal(enableCalls.includes("click:button:Think"), true);
-
-    const disableCalls = await run(true, false);
-    assert.equal(disableCalls.includes("click:button:Think"), true);
-
-    const unchangedCalls = await run(false, false);
-    assert.equal(unchangedCalls.includes("click:button:Think"), false);
-  });
-
-  test("Playwright binding skips a redundant click on the selected model", async () => {
-    const calls: string[] = [];
-    const action = (name: string, checked = false) => ({
-      async waitFor() {
-        calls.push(`wait:${name}`);
-      },
-      async count() {
-        return 0;
-      },
-      async click() {
-        calls.push(`click:${name}`);
-      },
-      async fill(value: string) {
-        calls.push(`fill:${name}:${value}`);
-      },
-      async press(key: string) {
-        calls.push(`press:${name}:${key}`);
-      },
-      async getAttribute(attribute: string) {
-        calls.push(`attribute:${name}:${attribute}`);
-        return attribute === "aria-checked" && checked ? "true" : null;
-      },
-      first() {
-        return action(`${name}:first`);
-      },
-      last() {
-        return action(`${name}:last`);
-      },
-      locator(selector: string) {
-        return action(`${name}>${selector}`);
-      },
-    });
-    const page = {
-      locator: (selector: string) => action(selector),
-      getByRole: (role: string, options: { name: string }) =>
-        action(`${role}:${options.name}`, true),
-      keyboard: { press: async (key: string) => calls.push(`keyboard:${key}`) },
-    } as unknown as import("playwright").Page;
-    const session = new PlaywrightChatGptWebBrowserSession(page, {
-      selection: { kind: "picker", modelLabel: "GPT-5.6 Sol", effortIndex: 0 },
-    });
-
-    await session.submitPrompt("same model");
-
-    assert.equal(calls.includes("click:menuitemradio:GPT-5.6 Sol"), false);
-    assert.equal(
-      calls.filter(
-        (call) =>
-          call ===
-          'click:form:has(#prompt-textarea) button[aria-haspopup="menu"]:not([data-testid="composer-plus-btn"]):last'
-      ).length,
-      1
+    await assert.rejects(
+      runChatGptWebBrowserTurn(session, { prompt: "timeout", timeoutMs: 10 }),
+      /timed out/
     );
-    assert.equal(calls.includes("keyboard:Escape"), true);
-    assert.equal(calls.includes('press:[role="menu"] [role="slider"]:last:Home'), true);
+    assert.equal(submittedSignal?.aborted, true);
+  });
+
+  test("Playwright binding delegates to the direct first-party request runner", async () => {
+    const observed: unknown[] = [];
+    const page = {
+      url: () => "https://chatgpt.com/?temporary-chat=true",
+      locator() {
+        throw new Error("DOM hot path must not be used");
+      },
+    } as unknown as import("playwright").Page;
+    const session = new PlaywrightChatGptWebBrowserSession(page, {
+      selection: { kind: "free", thinkEnabled: true },
+      executePageRequest: async (_page, input) => {
+        observed.push(input);
+        return "DIRECT_SSE";
+      },
+    });
+
+    const response = await session.submitPrompt({ prompt: "direct", attachments: [] });
+
+    assert.equal(response, "DIRECT_SSE");
+    assert.deepEqual(observed, [
+      {
+        prompt: "direct",
+        attachments: [],
+        selection: { kind: "free", thinkEnabled: true },
+      },
+    ]);
   });
 });

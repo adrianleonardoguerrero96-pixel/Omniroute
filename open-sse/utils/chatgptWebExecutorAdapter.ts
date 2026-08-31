@@ -1,7 +1,15 @@
 import { createHash, randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 
 import { acquireBrowserContext, openPage } from "../services/browserPool.ts";
 import type { ExecuteInput, ProviderCredentials } from "../executors/base.ts";
+import {
+  extractChatGptWebAttachmentSources,
+  isChatGptWebAttachmentContentPart,
+  resolveChatGptWebAttachments,
+  type ChatGptWebAttachmentSource,
+} from "./chatgptWebAttachments.ts";
 import {
   PlaywrightChatGptWebBrowserSession,
   runChatGptWebBrowserTurn,
@@ -41,6 +49,7 @@ export interface ChatGptWebStorageState {
 export interface PreparedChatGptWebBrowserRequest {
   prompt: string;
   selection: ChatGptWebUiSelection;
+  attachments: ChatGptWebAttachmentSource[];
 }
 
 export interface ChatGptWebSessionFactoryInput {
@@ -50,6 +59,7 @@ export interface ChatGptWebSessionFactoryInput {
   userAgent?: string;
   locale?: string;
   timezone?: string;
+  chromeExecutablePath?: string;
 }
 
 export interface ChatGptWebExecutorAdapterDeps {
@@ -132,13 +142,15 @@ function contentText(value: unknown): string {
   const parts: string[] = [];
   for (const part of value) {
     if (
-      !isRecord(part) ||
-      (part.type !== "text" && part.type !== "input_text") ||
-      typeof part.text !== "string"
+      isRecord(part) &&
+      (part.type === "text" || part.type === "input_text") &&
+      typeof part.text === "string"
     ) {
-      throw new Error("ChatGPT Web clean-room adapter supports text content only");
+      parts.push(part.text);
+      continue;
     }
-    parts.push(part.text);
+    if (isChatGptWebAttachmentContentPart(part)) continue;
+    throw new Error("ChatGPT Web clean-room adapter received unsupported content");
   }
   return parts.join("");
 }
@@ -243,7 +255,11 @@ export function prepareChatGptWebBrowserRequest(
   body: unknown
 ): PreparedChatGptWebBrowserRequest {
   if (!isRecord(body)) throw new Error("ChatGPT Web clean-room adapter requires an object body");
-  return { prompt: buildPrompt(body), selection: resolveSelection(model, body) };
+  const prompt = buildPrompt(body);
+  const attachments = extractChatGptWebAttachmentSources(
+    body.messages as Array<{ role?: string; content?: unknown }>
+  );
+  return { prompt, selection: resolveSelection(model, body), attachments };
 }
 
 function readStorageState(credentials: ProviderCredentials): ChatGptWebStorageState {
@@ -266,6 +282,39 @@ function optionalString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
+export function resolveChatGptWebChromeExecutable(
+  explicit?: string,
+  deps: {
+    env?: NodeJS.ProcessEnv;
+    exists?: (path: string) => boolean;
+  } = {}
+): string | undefined {
+  const env = deps.env ?? process.env;
+  const exists = deps.exists ?? existsSync;
+  const candidates = [
+    explicit,
+    env.CHATGPT_WEB_CHROME_PATH,
+    env.CHROME_PATH,
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/usr/bin/google-chrome",
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    ...(env.PROGRAMFILES
+      ? [join(env.PROGRAMFILES, "Google", "Chrome", "Application", "chrome.exe")]
+      : []),
+    ...(env["PROGRAMFILES(X86)"]
+      ? [join(env["PROGRAMFILES(X86)"], "Google", "Chrome", "Application", "chrome.exe")]
+      : []),
+    ...(env.LOCALAPPDATA
+      ? [join(env.LOCALAPPDATA, "Google", "Chrome", "Application", "chrome.exe")]
+      : []),
+  ];
+  return candidates.find((candidate): candidate is string =>
+    Boolean(candidate?.trim() && exists(candidate.trim()))
+  );
+}
+
 async function createDefaultSession(
   input: ChatGptWebSessionFactoryInput
 ): Promise<ChatGptWebBrowserSession> {
@@ -281,12 +330,17 @@ async function createDefaultSession(
     locale: input.locale,
     timezone: input.timezone,
     proxyProviderKey: "chatgpt-web",
+    warmupUrl: CHATGPT_WEB_PAGE_URL,
+    headless: false,
+    executablePath: input.chromeExecutablePath,
   });
-  const page = await openPage(pooled);
+  const page =
+    pooled.warmupPage && !pooled.warmupPage.isClosed() ? pooled.warmupPage : await openPage(pooled);
+  if (pooled.warmupPage !== page) pooled.warmupPage = page;
   return new PlaywrightChatGptWebBrowserSession(page, {
     pageUrl: CHATGPT_WEB_PAGE_URL,
     selection: input.selection,
-    closePageOnCleanup: true,
+    closePageOnCleanup: false,
   });
 }
 
@@ -348,6 +402,7 @@ export async function executeChatGptWebCleanRoom(
   deps: ChatGptWebExecutorAdapterDeps = {}
 ): Promise<Response> {
   const prepared = prepareChatGptWebBrowserRequest(input.model, input.body);
+  const attachments = await resolveChatGptWebAttachments(prepared.attachments);
   const storageState = readStorageState(input.credentials);
   const connectionId = optionalString(input.credentials.connectionId);
   if (!connectionId) throw new Error("ChatGPT Web clean-room adapter requires a connection ID");
@@ -359,9 +414,13 @@ export async function executeChatGptWebCleanRoom(
     userAgent: optionalString(providerData?.customUserAgent),
     locale: optionalString(providerData?.locale),
     timezone: optionalString(providerData?.timezone),
+    chromeExecutablePath: resolveChatGptWebChromeExecutable(
+      optionalString(providerData?.chromeExecutablePath)
+    ),
   });
   const result = await (deps.runTurn ?? runChatGptWebBrowserTurn)(session, {
     prompt: prepared.prompt,
+    attachments,
     signal: input.signal,
   });
   return buildChatGptWebOpenAiResponse(input.model, result, input.stream, {

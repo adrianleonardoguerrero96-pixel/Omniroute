@@ -10,6 +10,15 @@ const CHATGPT_WEB_URL = "https://chatgpt.com";
 
 function statusForAdapterError(message: string): number {
   if (/storage state|credentials|connection ID/i.test(message)) return 401;
+  // Preserve upstream quota semantics so the shared account-fallback loop can exclude a
+  // depleted Free session and immediately try the next configured ChatGPT Web account.
+  if (
+    /(?:\bHTTP[_\s-]*429\b|\bstatus\s+429\b|\brate[-_\s]?limit(?:ed)?\b|\bquota\s+(?:exhausted|reached|exceeded)\b|\b(?:image(?:\s+upload)?|upload|usage)\s+limit\s+(?:reached|exceeded)\b|\breached\s+(?:your\s+)?(?:image(?:\s+upload)?|upload|usage)\s+limit\b)/i.test(
+      message
+    )
+  ) {
+    return 429;
+  }
   if (/request|messages|prompt|model|tools|text content|reasoning effort/i.test(message))
     return 400;
   return 502;
