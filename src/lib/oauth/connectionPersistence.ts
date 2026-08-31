@@ -52,13 +52,40 @@ function isSameCodexAccount(
 }
 
 /**
+ * Does this existing Claude connection represent the SAME account as the
+ * incoming login? One Anthropic identity can belong to several organizations
+ * at once — the personal workspace (`organizationType` `claude_max`/
+ * `claude_pro`) plus any Team/Enterprise organization (`claude_team`) — and
+ * they all authenticate with the same email and the same `accountUUID`, each
+ * with its own tokens, plan and rate limits. `organizationUUID` is the only
+ * field that separates them, so an email-only match silently overwrote
+ * whichever organization had been connected first. Require `organizationUUID`
+ * to agree whenever BOTH sides carry it; when either side lacks it (rows
+ * stored before Claude started returning it) the legacy bare-email match
+ * still applies, so re-authenticating an existing connection keeps updating
+ * it in place instead of forking a duplicate.
+ */
+function isSameClaudeAccount(
+  existingProviderData: Record<string, any> | null | undefined,
+  incomingProviderData: Record<string, any> | null | undefined
+): boolean {
+  const incomingOrganization = incomingProviderData?.organizationUUID;
+  const existingOrganization = existingProviderData?.organizationUUID;
+  if (incomingOrganization && existingOrganization) {
+    return safeEqual(existingOrganization, incomingOrganization);
+  }
+  return true;
+}
+
+/**
  * Find the existing OAuth connection (if any) that an incoming token payload
  * should be merged into, shared by every OAuth-completion call site
  * (persistOAuthConnection, and the exchange/poll/poll-callback branches in
  * `src/app/api/oauth/[provider]/[action]/route.ts`). Matches by explicit
  * connectionId first, then by same email + auth type — with Codex requiring
- * workspaceId/chatgptUserId agreement (#7737) to avoid silently overwriting
- * a different Codex account that merely shares an email.
+ * workspaceId/chatgptUserId agreement (#7737) and Claude requiring
+ * organizationUUID agreement, to avoid silently overwriting a different
+ * account that merely shares an email.
  */
 export function findExistingOAuthConnectionMatch(
   existing: Array<Record<string, any>>,
@@ -75,6 +102,9 @@ export function findExistingOAuthConnectionMatch(
     if (!safeEqual(c.email, tokenData.email) || c.authType !== "oauth") return false;
     if (provider === "codex") {
       return isSameCodexAccount(c.providerSpecificData, tokenData.providerSpecificData);
+    }
+    if (provider === "claude") {
+      return isSameClaudeAccount(c.providerSpecificData, tokenData.providerSpecificData);
     }
     return true;
   });
