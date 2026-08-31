@@ -569,7 +569,7 @@ export function buildUniversalHandoffSystemMessage(
 <transfer_reason>${escapedReason}</transfer_reason>
 <previous_model>${escapedPrev}</previous_model>
 <current_model>${escapedCurr}</current_model>
-<note>A continuación se resume toda la conversacion para continuar sin perder el hilo.</note>
+<note>The conversation continues below without losing context.</note>
 </context_handoff>`;
   }
 

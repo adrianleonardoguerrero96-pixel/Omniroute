@@ -225,7 +225,10 @@ test("buildUniversalHandoffSystemMessage basic when payload null", () => {
 
 test("buildUniversalHandoffSystemMessage basic when payload summary empty", () => {
   const msg = buildUniversalHandoffSystemMessage(PREV, CURR, REASON, makePayload({ summary: "" }));
-  assert.ok(msg.includes("continuar sin perder el hilo"));
+  // This system-role message is sent verbatim to whatever model the handoff
+  // lands on; a non-English fallback note here silently steers replies into
+  // that language regardless of what the user was actually speaking.
+  assert.ok(msg.includes("The conversation continues below without losing context."));
 });
 
 test("buildUniversalHandoffSystemMessage full XML with valid payload", () => {
