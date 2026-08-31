@@ -55,9 +55,7 @@ export interface RetrievePreviewBundle {
   budgetMaxTokens: number;
 }
 
-export { estimateTokens } from "./retrieval/scoring";
-
-// ──────────────── Helpers ────────────────
+export { estimateTokens, sanitizeFts5Query } from "./retrieval/scoring";
 
 function hasTable(tableName: string): boolean {
   const db = getDbInstance();
@@ -104,6 +102,8 @@ interface FtsColConfig {
  */
 function buildFtsRows(apiKeyId: string, config: FtsColConfig): MemoryRow[] {
   if (!config.query) return [];
+  const safeQuery = sanitizeFts5Query(config.query);
+  if (!safeQuery) return [];
   const db = getDbInstance();
   const {
     apiKeyCol,
@@ -111,7 +111,6 @@ function buildFtsRows(apiKeyId: string, config: FtsColConfig): MemoryRow[] {
     createdCol,
     sessionCol,
     tableName,
-    query: q,
     scope,
     sessionId,
     retentionDays,
@@ -130,7 +129,7 @@ function buildFtsRows(apiKeyId: string, config: FtsColConfig): MemoryRow[] {
   }
   ftsQueryStr += ` ORDER BY f.rank LIMIT 100`;
 
-  const ftsParams: unknown[] = [q, apiKeyId];
+  const ftsParams: unknown[] = [safeQuery, apiKeyId];
   if (scope === "session" && sessionId) ftsParams.push(sessionId);
   if (retentionDays && retentionDays > 0) {
     const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000).toISOString();
