@@ -297,11 +297,6 @@
       "count": 1
     }
   },
-  "open-sse/handlers/videoGeneration/openai.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
   "open-sse/mcp-server/__tests__/a2aLifecycle.test.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 1
@@ -803,11 +798,6 @@
   },
   "open-sse/utils/streamHelpers.ts": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "open-sse/utils/streamPayloadCollector.ts": {
-    "no-restricted-syntax": {
       "count": 1
     }
   },
@@ -1517,11 +1507,6 @@
   "src/lib/copilot/tools.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 2
-    }
-  },
-  "src/lib/credentialHealth/scheduler.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
     }
   },
   "src/lib/db/apiKeys.ts": {
@@ -3130,9 +3115,6 @@
   "tests/unit/cli-nodes-commands.test.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 15
-    },
-    "@typescript-eslint/no-unused-vars": {
-      "count": 2
     }
   },
   "tests/unit/cli-oauth-commands.test.ts": {
@@ -5116,11 +5098,6 @@
       "count": 1
     }
   },
-  "tests/unit/stream-payload-collector.test.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 2
-    }
-  },
   "tests/unit/stream-prompt-tokens-zero-upstream.test.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
@@ -5263,11 +5240,6 @@
   "tests/unit/transform-stream-hwm.test.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 5
-    }
-  },
-  "tests/unit/translator-antigravity-to-openai.test.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 4
     }
   },
   "tests/unit/translator-claude-helper-thinking.test.ts": {
