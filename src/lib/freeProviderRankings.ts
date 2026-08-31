@@ -295,6 +295,12 @@ export interface FreeProviderRankingFilterOptions {
   withUsage?: boolean;
   /** Window for `withUsage`. Defaults to `24h`, the health matrix's own default. */
   usageRange?: ProviderHealthMatrixRange;
+  /**
+   * Ordering. `elo` (default) keeps the published behaviour: rank by the top
+   * model's Arena score. `reliability` puts providers whose success rate can be
+   * stated first, which requires the usage aggregate — hence the snapshot.
+   */
+  sortBy?: "elo" | "reliability";
 }
 
 /**
@@ -307,7 +313,9 @@ export interface FreeProviderRankingFilterOptions {
  * unfiltered caller still gets every provider back.
  */
 export function needsConnectionSnapshot(opts: FreeProviderRankingFilterOptions): boolean {
-  return Boolean(opts.configuredOnly || opts.availableOnly || opts.withUsage);
+  return Boolean(
+    opts.configuredOnly || opts.availableOnly || opts.withUsage || opts.sortBy === "reliability"
+  );
 }
 
 /** Group connection states by provider id (shared by filter and reliability attach). */
@@ -558,7 +566,7 @@ export async function computeFreeProviderRankings(
     // Third dimension, opt-in: what the provider actually served. `state` above
     // reads the connection as it stands now and cannot see a provider that
     // answers every call with an error — only the call log can.
-    if (opts.withUsage) {
+    if (opts.withUsage || opts.sortBy === "reliability") {
       const range = opts.usageRange ?? "24h";
       const windowMs = RANGE_MS[range];
       const since = new Date(Date.now() - windowMs).toISOString();
@@ -570,5 +578,13 @@ export async function computeFreeProviderRankings(
     }
   }
 
-  return filtered.slice(0, limit);
+  // Ordering runs after enrichment and before the slice, so `limit` still counts
+  // providers that survived the filters — and so the caller gets the top N of the
+  // order they asked for, not the top N of the ELO order re-sorted.
+  const ordered =
+    opts.sortBy === "reliability"
+      ? (await import("./freeProviderRankingsUsage")).sortRankingsByReliability(filtered)
+      : filtered;
+
+  return ordered.slice(0, limit);
 }

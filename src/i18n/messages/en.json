@@ -12524,6 +12524,8 @@
     "typeApikey": "API Key",
     "sortTypeFirst": "Easiest first",
     "sortTypeFirstHelp": "Group by signup effort (No Signup → OAuth Login → API Key), keeping quality order within each group",
+    "sortByReliability": "Most reliable first",
+    "sortByReliabilityHelp": "Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "No Signup = zero setup · OAuth Login = sign in with your own account · API Key = bring your own key or that provider's free tier",
     "colReliability": "Reliability",
     "colReliabilityHelp": "Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
