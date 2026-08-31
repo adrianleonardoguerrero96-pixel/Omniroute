@@ -210,8 +210,17 @@ export function applyFeed(input: ApplyFeedInput): MergedEntry[] {
     const overrides = localOverrides.get(key);
 
     if (!feedEntry) {
-      // No feed entry: baseline passes through (rule 3: user-added survives)
-      resultMap.set(key, { ...baseEntry });
+      // No feed entry: still honour a local override (e.g. enabled:false) and
+      // mark the origin, so `computeFreeModelTotals` sees the operator's state
+      // even when the feed does not mention this baseline entry.
+      if (overrides) {
+        const localEntry: MergedEntry = { ...baseEntry, origin: "local" as const };
+        if (overrides.displayName !== undefined) localEntry.displayName = overrides.displayName;
+        if (overrides.enabled !== undefined) localEntry.enabled = overrides.enabled;
+        resultMap.set(key, localEntry);
+      } else {
+        resultMap.set(key, { ...baseEntry });
+      }
       continue;
     }
 
