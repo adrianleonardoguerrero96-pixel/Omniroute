@@ -61,6 +61,7 @@ import {
   getModelLockoutInfo,
   lockModel,
   hasPerModelQuota,
+  hasPerModelFailureScope,
   getRuntimeProviderProfile,
   recordModelLockoutFailure,
   retryHintBypassesMaxCooldownMs,
@@ -2753,6 +2754,14 @@ export async function markAccountUnavailable(
     const disableCooling = connProviderSpecificData.disableCooling === true;
 
     const isPerModelQuotaProvider = hasPerModelQuota(provider, model, connectionPassthroughModels);
+    // #12334: quota scope and failure scope are different questions. A Claude OAuth
+    // connection serves every Claude model behind one credential, so a 404 or a 5xx
+    // belongs to the model that produced it — while a 429 stays account-wide, which is
+    // what shouldMarkAccountExhaustedFrom429() already encodes for this provider.
+    const isPerModelFailureProvider =
+      status === 429
+        ? isPerModelQuotaProvider
+        : hasPerModelFailureScope(provider, model, connectionPassthroughModels);
 
     // #10334 — agentrouter EXCLUSIVE: the matched provider rule declared scope
     // "connection" for account-wide quota exhaustion ("额度不足"). agentrouter is
@@ -2876,7 +2885,7 @@ export async function markAccountUnavailable(
     const isNvidiaModelGone = provider === "nvidia" && status === 410;
     const modelLockoutOptions = { maxCooldownMs: effectiveProviderProfile?.maxCooldownMs };
     if (
-      isPerModelQuotaProvider &&
+      isPerModelFailureProvider &&
       provider &&
       provider !== "codex" &&
       model &&
