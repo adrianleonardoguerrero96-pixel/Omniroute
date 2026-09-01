@@ -137,6 +137,27 @@ test("resolveNextBuildEnv honors the OMNIROUTE_BUILD_MEMORY_MB override", () => 
   assert.match(env.NODE_OPTIONS, /--max-old-space-size=6144/);
 });
 
+// #perf-lazy-boot: an operator shell exporting NODE_OPTIONS=--max-old-space-size=1024
+// (common dotfile leftover) used to be "respected" verbatim, capping the build at a
+// ceiling the webpack pass measurably exceeds (OOMs at 2 GB; 2026-09-01 macOS 16 GB
+// measurements). Below the floor the inherited value must be REPLACED, not appended.
+test("resolveNextBuildEnv replaces an inherited heap ceiling below the measured floor", () => {
+  const env = resolveNextBuildEnv({ NODE_OPTIONS: "--max-old-space-size=1024" });
+  const occurrences = (env.NODE_OPTIONS.match(/--max-old-space-size=/g) || []).length;
+  assert.equal(occurrences, 1, "must replace, not duplicate, the inherited heap flag");
+  const match = env.NODE_OPTIONS.match(/--max-old-space-size=(\d+)/);
+  assert.ok(match);
+  assert.ok(
+    Number(match[1]) >= 4096,
+    `inherited 1024 must be raised to the >= 4096 MB floor; got ${match[1]}`
+  );
+});
+test("resolveNextBuildEnv keeps unrelated NODE_OPTIONS flags when replacing the heap flag", () => {
+  const env = resolveNextBuildEnv({ NODE_OPTIONS: "--max-old-space-size=2048 --foo=bar" });
+  assert.match(env.NODE_OPTIONS, /--foo=bar/);
+  assert.doesNotMatch(env.NODE_OPTIONS, /2048/);
+});
+
 test("getTransientBuildPaths leaves _tasks in place by default", () => {
   const paths = getTransientBuildPaths("/repo", {});
 

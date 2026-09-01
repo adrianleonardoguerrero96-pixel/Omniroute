@@ -471,6 +471,26 @@ export async function runQuotaAutoPingTick(
 let schedulerInterval: ReturnType<typeof setInterval> | null = null;
 const schedulerState = createQuotaAutoPingState();
 
+/**
+ * True when at least one provider connection has opted in to quota auto-ping
+ * (`settings.codexAutoPing.connections[id] === true`).
+ *
+ * Boot-lazy gate (#perf-lazy-boot): the scheduler interval is only armed when some
+ * connection actually opted in, mirroring decolua/9router#27b37705 ("skip inactive
+ * background services on startup"). With zero opt-ins the timer previously still
+ * woke every tick to read settings and find nothing to do.
+ */
+export function hasQuotaAutoPingOptIns(settings: JsonRecord): boolean {
+  for (const providerConfig of Object.values(QUOTA_AUTOPING_PROVIDERS)) {
+    const enabledMap = getEnabledConnectionIds(settings, providerConfig);
+    // Match the tick filter exactly: only `=== true` entries are real opt-ins.
+    if (Object.values(enabledMap).some((enabled) => enabled === true)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /** Start the in-process scheduler. Idempotent — a second call is a no-op. */
 export function startQuotaAutoPing(): void {
   if (schedulerInterval) return;

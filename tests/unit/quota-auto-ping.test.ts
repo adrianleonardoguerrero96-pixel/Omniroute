@@ -21,7 +21,7 @@ import path from "node:path";
 // exercises the real DB, this only prevents an accidental production open).
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "omniroute-quota-autoping-"));
 
-const { runQuotaAutoPingTick, createQuotaAutoPingState } =
+const { runQuotaAutoPingTick, createQuotaAutoPingState, hasQuotaAutoPingOptIns } =
   await import("../../src/lib/services/quotaAutoPing.ts");
 const { resetDbInstance } = await import("../../src/lib/db/core.ts");
 
@@ -457,4 +457,20 @@ test("does not consume a throttle slot when the connection is skipped before fet
   await runQuotaAutoPingTick(deps, createQuotaAutoPingState(), () => NOW_MS);
 
   assert.deepEqual(order, []);
+});
+
+test("#perf-lazy-boot hasQuotaAutoPingOptIns is false with no opt-ins and true with one", () => {
+  // Boot gate: instrumentation only arms the scheduler interval when this
+  // returns true, so the false case must hold for absent/empty shapes.
+  assert.equal(hasQuotaAutoPingOptIns({}), false);
+  assert.equal(hasQuotaAutoPingOptIns({ codexAutoPing: {} }), false);
+  assert.equal(hasQuotaAutoPingOptIns({ codexAutoPing: { connections: {} } }), false);
+  assert.equal(
+    hasQuotaAutoPingOptIns({ codexAutoPing: { connections: { "codex-1": false } } }),
+    false
+  );
+  assert.equal(
+    hasQuotaAutoPingOptIns({ codexAutoPing: { connections: { "codex-1": true } } }),
+    true
+  );
 });

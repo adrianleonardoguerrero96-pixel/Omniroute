@@ -513,6 +513,31 @@ export async function PATCH(request: Request) {
       });
     }
 
+    // Boot-lazy parity with instrumentation-node (#perf-lazy-boot): when a PATCH
+    // touches the quota auto-ping opt-in keys, re-arm (start/stop) the scheduler
+    // so a first opt-in after boot starts it and unchecking every box stops it —
+    // without waiting for a server restart. Mirrors 9router #27b37705.
+    if (
+      Object.keys(rawBody).some((k) =>
+        ["codexAutoPing"].some((base) => k === base || k.startsWith(`${base}.`))
+      )
+    ) {
+      try {
+        const { hasQuotaAutoPingOptIns, startQuotaAutoPing, stopQuotaAutoPing } =
+          await import("@/lib/services/quotaAutoPing");
+        if (hasQuotaAutoPingOptIns(settings as Record<string, unknown>)) {
+          startQuotaAutoPing();
+        } else {
+          stopQuotaAutoPing();
+        }
+      } catch (err) {
+        console.warn(
+          "[STARTUP] Quota auto-ping re-arm after settings PATCH failed (non-fatal):",
+          err instanceof Error ? err.message : String(err)
+        );
+      }
+    }
+
     // Audit success — diff of changed keys only. Idempotent PATCH (no diff)
     // intentionally writes NO row (spec §Observability + AC-9/AC-11).
     try {

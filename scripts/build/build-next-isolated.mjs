@@ -199,18 +199,37 @@ export function resolveNextBuildEnv(baseEnv = process.env, platform = process.pl
   // this only in the Docker builder stage (ENV NODE_OPTIONS); the local/native path
   // was left unprotected. Respect an existing --max-old-space-size (Docker already
   // sets one — don't clobber/duplicate) and let OMNIROUTE_BUILD_MEMORY_MB override.
-  // NOTE (#6409): --max-old-space-size only bounds V8's JS heap — it does NOT bound
-  // Turbopack's native (Rust, off-V8-heap) memory, which is the default bundler as of
-  // #6283. On memory-constrained machines, set OMNIROUTE_USE_TURBOPACK=0 (webpack
-  // fallback) instead of raising this heap value; see docs/reference/ENVIRONMENT.md.
-  if (!/--max-old-space-size/.test(env.NODE_OPTIONS || "")) {
+  //
+  // Guard against INHERITED low ceilings (#perf-lazy-boot): an operator shell that
+  // exports NODE_OPTIONS=--max-old-space-size=1024 (a common dotfile leftover) made
+  // the check above "respect" a ceiling far below what the compile actually needs —
+  // measured 2026-09-01 on a 16 GB macOS host: the webpack production pass OOMs at
+  // a 2 GB heap and keeps consuming whatever ceiling it is given (3 GB backend-only
+  // build also exhausted its heap; full-build peak RSS ~2.5–4 GB per process). If
+  // the inherited ceiling is below the measured floor, raise it to the floor
+  // instead of failing 30–90 s into the compile with an opaque SIGABRT.
+  const MEASURED_HEAP_FLOOR_MB = 4096;
+  const inheritedMatch = (env.NODE_OPTIONS || "").match(/--max-old-space-size=(\d+)/);
+  const inheritedMb = inheritedMatch ? Number(inheritedMatch[1]) : 0;
+  if (!inheritedMatch || inheritedMb < MEASURED_HEAP_FLOOR_MB) {
     // Default 8 GB (was 4 GB): the clean module graph peaks ~3.9 GB during the webpack
     // production pass, which brushed the old 4 GB ceiling on a borderline OOM. 8 GB gives
     // headroom without risk. NOTE: heap size does NOT fix a poisoned scope — if the build
     // OOMs/livelocks far above this, check for worktrees/cruft leaking into the tsconfig
     // scope (run `npm run check:build-scope`), not for "more heap". See incident 2026-06-25.
-    const heapMb = Number(baseEnv.OMNIROUTE_BUILD_MEMORY_MB) || 8192;
-    env.NODE_OPTIONS = `${env.NODE_OPTIONS || ""} --max-old-space-size=${heapMb}`.trim();
+    const heapMb =
+      Number(baseEnv.OMNIROUTE_BUILD_MEMORY_MB) || Math.max(inheritedMb, MEASURED_HEAP_FLOOR_MB);
+    // Replace any inherited ceiling in place (instead of appending a second flag) so
+    // NODE_OPTIONS stays single-valued and self-documenting. Node honors the LAST
+    // repeated flag, but a duplicated value reads like a bug and confuses CI logs.
+    if (inheritedMatch) {
+      env.NODE_OPTIONS = (env.NODE_OPTIONS || "").replace(
+        /--max-old-space-size=\d+/,
+        `--max-old-space-size=${heapMb}`
+      );
+    } else {
+      env.NODE_OPTIONS = `${env.NODE_OPTIONS || ""} --max-old-space-size=${heapMb}`.trim();
+    }
   }
 
   return env;
