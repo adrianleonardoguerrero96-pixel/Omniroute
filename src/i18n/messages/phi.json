@@ -6448,7 +6448,12 @@
     "savedModelEndpointSettings": "Naka-save na mga setting ng endpoint ng modelo",
     "searchByModelAria": "Maghanap ayon sa modelo",
     "selectSupportedEndpoint": "Pumili ng hindi bababa sa isang sinusuportahang endpoint",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Clear cooldown",
+    "clearConnectionCooldownInProgress": "Clearing…",
+    "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
+    "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
+    "failedClearConnectionCooldown": "Failed to clear cooldown"
   },
   "settings": {
     "title": "Mga setting",

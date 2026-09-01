@@ -6448,7 +6448,12 @@
     "savedModelEndpointSettings": "Mipangilio ya mwisho wa mfano uliohifadhiwa",
     "searchByModelAria": "Tafuta kwa mfano",
     "selectSupportedEndpoint": "Chagua angalau kiunganishi kimoja kinachoungwa mkono",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Clear cooldown",
+    "clearConnectionCooldownInProgress": "Clearing…",
+    "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
+    "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
+    "failedClearConnectionCooldown": "Failed to clear cooldown"
   },
   "settings": {
     "title": "Settings",
