@@ -7,15 +7,10 @@ import {
   stubContributorInstrumentation,
 } from "../../../scripts/build/backendOnlyPages.mjs";
 
-const packageJson = JSON.parse(
-  fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")
-);
+const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8"));
 
 test("contributor build profile selects the webpack fallback", () => {
-  assert.match(
-    packageJson.scripts["build:contributor"],
-    /OMNIROUTE_USE_TURBOPACK=0/
-  );
+  assert.match(packageJson.scripts["build:contributor"], /OMNIROUTE_USE_TURBOPACK=0/);
 });
 
 test("contributor build profile skips standalone packaging", () => {
@@ -39,6 +34,16 @@ test("contributor instrumentation stubs are reversible", async () => {
   }
   const stubbed = stubContributorInstrumentation(tempRoot, { warn() {} });
   assert.equal(stubbed.length, 2);
+  // Each stub must declare the symbol its own file really exports — instrumentation.ts
+  // owns Next's register(), instrumentation-node.ts owns registerNodejs().
+  assert.match(
+    await fs.readFile(path.join(instrumentationDir, "instrumentation.ts"), "utf8"),
+    /export async function register\(\) \{\}/
+  );
+  assert.match(
+    await fs.readFile(path.join(instrumentationDir, "instrumentation-node.ts"), "utf8"),
+    /export async function registerNodejs\(\) \{\}/
+  );
   for (const entry of stubbed) await fs.writeFile(entry.file, entry.original);
   for (const [target, source] of originals) assert.equal(await fs.readFile(target, "utf8"), source);
   await fs.rm(tempRoot, { recursive: true, force: true });
