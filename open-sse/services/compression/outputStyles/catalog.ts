@@ -81,6 +81,36 @@ export const OUTPUT_STYLE_CATALOG: Record<string, OutputStyle> = {
         full: `Bertindak seperti dev senior malas yang menerapkan YAGNI. Hanya perubahan terkecil yang berfungsi. Tanpa abstraksi yang tidak diminta, generalisasi prematur, lapisan ekstra, atau scaffolding defensif yang tidak diminta. Pakai ulang kode yang ada daripada menambah kode baru. ${SHARED_BOUNDARIES}`,
         ultra: `Disiplin diff minimal. Sentuh baris sesedikit mungkin yang membuatnya berfungsi. Nol file, kelas, atau config baru kecuali sangat diperlukan. Inline daripada abstract. Tanpa tambahan "mumpung di sini". ${SHARED_BOUNDARIES}`,
       },
+      es: {
+        lite: `Escribe el cambio más pequeño que satisfaga la petición. Evita abstracciones especulativas. ${SHARED_BOUNDARIES}`,
+        full: `Actúa como un dev senior perezoso aplicando YAGNI. Solo el cambio funcional más pequeño. Sin abstracciones no pedidas, sin generalización prematura, sin capas extra, sin andamiaje defensivo que la petición no pidió. Reutiliza código existente antes que añadir código nuevo. ${SHARED_BOUNDARIES}`,
+        ultra: `Disciplina de diff mínimo. Toca las menos líneas que lo hagan funcionar. Cero archivos, clases o config nuevos salvo estricta necesidad. Inline antes que abstracto. Sin extras de "ya que estamos". ${SHARED_BOUNDARIES}`,
+      },
+      de: {
+        lite: `Schreibe die kleinste Änderung, die die Anforderung erfüllt. Keine spekulativen Abstraktionen. ${SHARED_BOUNDARIES}`,
+        full: `Handle wie ein fauler Senior-Entwickler mit YAGNI. Nur die kleinste funktionierende Änderung. Keine unbestellten Abstraktionen, keine vorzeitige Generalisierung, keine Extra-Schichten, kein defensives Gerüst, das die Anforderung nicht verlangt hat. Bestehenden Code wiederverwenden statt neuen hinzufügen. ${SHARED_BOUNDARIES}`,
+        ultra: `Minimal-Diff-Disziplin. So wenige Zeilen anfassen wie nötig. Null neue Dateien, Klassen oder Config, außer zwingend erforderlich. Inline statt abstrakt. Keine "Wenn wir schon dabei sind"-Extras. ${SHARED_BOUNDARIES}`,
+      },
+      fr: {
+        lite: `Écris le plus petit changement qui satisfait la demande. Évite les abstractions spéculatives. ${SHARED_BOUNDARIES}`,
+        full: `Agis comme un dev senior paresseux appliquant YAGNI. Uniquement le plus petit changement fonctionnel. Pas d'abstractions non demandées, pas de généralisation prématurée, pas de couches en plus, pas d'échafaudage défensif que la demande n'a pas exigé. Réutilise le code existant plutôt que d'en ajouter. ${SHARED_BOUNDARIES}`,
+        ultra: `Discipline du diff minimal. Touche le moins de lignes possible pour que ça marche. Zéro nouveau fichier, classe ou config sauf stricte nécessité. Inline plutôt qu'abstrait. Pas d'extras « tant qu'on y est ». ${SHARED_BOUNDARIES}`,
+      },
+      it: {
+        lite: `Scrivi la modifica più piccola che soddisfa la richiesta. Evita astrazioni speculative. ${SHARED_BOUNDARIES}`,
+        full: `Agisci come un dev senior pigro che applica YAGNI. Solo la modifica funzionante più piccola. Niente astrazioni non richieste, niente generalizzazione prematura, niente strati extra, niente impalcature difensive che la richiesta non ha chiesto. Riusa il codice esistente invece di aggiungerne di nuovo. ${SHARED_BOUNDARIES}`,
+        ultra: `Disciplina del diff minimo. Tocca il minor numero di righe che lo fa funzionare. Zero nuovi file, classi o config se non strettamente necessari. Inline invece che astratto. Niente extra "già che ci siamo". ${SHARED_BOUNDARIES}`,
+      },
+      ru: {
+        lite: `Пиши наименьшее изменение, которое закрывает запрос. Без спекулятивных абстракций. ${SHARED_BOUNDARIES}`,
+        full: `Действуй как ленивый сеньор с YAGNI. Только наименьшее работающее изменение. Без незапрошенных абстракций, без преждевременного обобщения, без лишних слоёв, без защитных лесов, которых запрос не требовал. Переиспользуй существующий код вместо добавления нового. ${SHARED_BOUNDARIES}`,
+        ultra: `Дисциплина минимального diff. Трогай как можно меньше строк. Ноль новых файлов, классов или конфигов без строгой необходимости. Inline вместо абстракции. Без довесков «раз уж мы здесь». ${SHARED_BOUNDARIES}`,
+      },
+      zh: {
+        lite: `写出满足需求的最小改动。跳过投机性的抽象。${SHARED_BOUNDARIES}`,
+        full: `像一名践行 YAGNI 的懒惰资深开发者。只做最小的可用改动。不写未被要求的抽象，不做过早的泛化，不加多余的层，不搭需求没要的防御性脚手架。优先复用现有代码而不是新增代码。${SHARED_BOUNDARIES}`,
+        ultra: `最小 diff 纪律。只动让它能工作的最少行数。除非绝对必要，零新文件、新类、新配置。内联优于抽象。不做"顺手再改点"的额外事。${SHARED_BOUNDARIES}`,
+      },
     },
   },
   // Ponytail (lazy-senior-dev mode) — integrated into the output-style registry
