@@ -87,6 +87,7 @@ export default function OrchestrationPageClient() {
     (s: OrchSource) => setParams({ collapsed: toggleCsv(collapsed, s) }),
     [collapsed, setParams]
   );
+  const closeDrawer = useCallback(() => setParams({ node: null }), [setParams]);
 
   const selectedNode = nodeId ? (snapshot.nodes.find((n) => n.id === nodeId) ?? null) : null;
   const onNodeClick = (id: string) =>
@@ -149,11 +150,7 @@ export default function OrchestrationPageClient() {
           )}
         </div>
       </div>
-      <OrchestrationDrawer
-        node={selectedNode}
-        onClose={() => setParams({ node: null })}
-        onActionDone={refetch}
-      />
+      <OrchestrationDrawer node={selectedNode} onClose={closeDrawer} onActionDone={refetch} />
     </div>
   );
 }

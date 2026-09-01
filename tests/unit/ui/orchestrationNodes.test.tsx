@@ -22,6 +22,9 @@ vi.mock("next-intl", () => ({
 import type { EdgeProps } from "@xyflow/react";
 import { WorkNode } from "@/app/(dashboard)/dashboard/orchestration/nodes/WorkNode";
 import { SourceNode } from "@/app/(dashboard)/dashboard/orchestration/nodes/SourceNode";
+import { OrchestratorNode } from "@/app/(dashboard)/dashboard/orchestration/nodes/OrchestratorNode";
+import { ActivityNode } from "@/app/(dashboard)/dashboard/orchestration/nodes/ActivityNode";
+import { OverflowNode } from "@/app/(dashboard)/dashboard/orchestration/nodes/OverflowNode";
 import { StatusEdge } from "@/app/(dashboard)/dashboard/orchestration/edges/StatusEdge";
 
 function render(el: React.ReactElement) {
@@ -69,6 +72,28 @@ describe("orchestration nodes", () => {
     const { c, cleanup } = render(<SourceNode data={data as never} />);
     expect(c.textContent).toContain("⚠");
     cleanup();
+  });
+
+  it("SourceNode with sourceIssue=error shows the sourceStale text", () => {
+    const data = {
+      id: "source:a2a",
+      kind: "source",
+      source: "a2a",
+      label: "A2A",
+      sublabel: "error",
+      sourceIssue: "error",
+    };
+    const { c, cleanup } = render(<SourceNode data={data as never} />);
+    expect(c.textContent).toContain("sourceStale");
+    cleanup();
+  });
+
+  it("all 5 memo'd orchestration node components have a displayName", () => {
+    expect(WorkNode.displayName).toBe("WorkNode");
+    expect(SourceNode.displayName).toBe("SourceNode");
+    expect(OrchestratorNode.displayName).toBe("OrchestratorNode");
+    expect(ActivityNode.displayName).toBe("ActivityNode");
+    expect(OverflowNode.displayName).toBe("OverflowNode");
   });
 
   it("SourceNode shows a collapse caret + aria-expanded + title reflecting !data.collapsed", () => {

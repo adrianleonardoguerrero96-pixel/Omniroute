@@ -246,14 +246,17 @@ function DrawerActions({
   );
 }
 
-/** Closes the drawer on Escape while `node` is set. */
+/** Closes the drawer on Escape while `node` is set. Rebinds by id, not by object
+ * identity, so a fresh `node` reference for the same task (e.g. a refetch) does not
+ * tear down and re-add the listener. */
 function useCloseOnEscape(node: OrchNode | null, onClose: () => void) {
+  const nodeId = node?.id ?? null;
   useEffect(() => {
-    if (!node) return;
+    if (!nodeId) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [node, onClose]);
+  }, [nodeId, onClose]);
 }
 
 /**

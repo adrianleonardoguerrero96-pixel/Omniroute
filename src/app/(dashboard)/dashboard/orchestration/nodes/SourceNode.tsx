@@ -32,6 +32,7 @@ function SourceNodeImpl({ data }: { data: OrchNode }) {
         {stale && <span aria-hidden>⚠</span>}
         {label}
       </div>
+      {stale && <div className="text-[10px] text-warning">{t("sourceStale")}</div>}
       {data.sourceIssue === "offline" && (
         <div className="text-[10px] text-muted">{t("sourceOffline")}</div>
       )}
@@ -53,3 +54,4 @@ function SourceNodeImpl({ data }: { data: OrchNode }) {
 }
 
 export const SourceNode = memo(SourceNodeImpl);
+SourceNode.displayName = "SourceNode";
