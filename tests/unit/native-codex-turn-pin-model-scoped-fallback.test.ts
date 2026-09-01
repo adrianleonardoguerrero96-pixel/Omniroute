@@ -19,6 +19,7 @@ const {
 } = await import("../../open-sse/services/combo/nativeCodexTurnPin.ts");
 const { recordProviderCooldown, isProviderInCooldown, clearCooldownState } =
   await import("../../open-sse/services/providerCooldownTracker.ts");
+const { PROVIDER_PROFILES } = await import("../../open-sse/config/constants.ts");
 const { getCircuitBreaker, resetAllCircuitBreakers } =
   await import("../../src/shared/utils/circuitBreaker.ts");
 const { resolveResilienceSettings } = await import("../../src/lib/resilience/settings.ts");
@@ -403,7 +404,9 @@ describe("Native Codex Turn Pin model-scoped fallback", () => {
       allCombos: null,
     });
 
-    recordProviderCooldown("antigravity", undefined, settings);
+    for (let i = 0; i < PROVIDER_PROFILES.oauth.providerFailureThreshold; i += 1) {
+      recordProviderCooldown("antigravity", undefined, settings);
+    }
     assert.equal(isProviderInCooldown("antigravity", undefined, settings), true);
 
     const attempted: string[] = [];
