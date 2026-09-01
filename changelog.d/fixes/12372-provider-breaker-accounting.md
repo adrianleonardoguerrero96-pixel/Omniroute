@@ -1,0 +1,1 @@
+- **fix(sse):** `CircuitBreaker.execute()` counted a resolved upstream `{success:false, status:5xx}` result as a success, silently capping the provider breaker's failure count and preventing it from ever opening under sustained genuine failures ([#12372](https://github.com/diegosouzapw/OmniRoute/pull/12372))
