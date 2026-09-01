@@ -55,13 +55,14 @@ describe("orchestration nodes", () => {
     expect(c.querySelector("[aria-label]")).toBeTruthy();
     cleanup();
   });
-  it("SourceNode with sublabel=error shows the warning marker", () => {
+  it("SourceNode with sourceIssue=error shows the warning marker", () => {
     const data = {
       id: "source:a2a",
       kind: "source",
       source: "a2a",
       label: "A2A",
       sublabel: "error",
+      sourceIssue: "error",
     };
     const { c, cleanup } = render(<SourceNode data={data as never} />);
     expect(c.textContent).toContain("⚠");

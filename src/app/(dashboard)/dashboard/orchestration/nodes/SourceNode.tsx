@@ -12,7 +12,7 @@ const LABEL_KEY: Record<string, string> = {
 
 function SourceNodeImpl({ data }: { data: OrchNode }) {
   const t = useTranslations("orchestration");
-  const stale = data.sublabel === "error"; // set by mergeSnapshot for failed sources
+  const stale = data.sourceIssue === "error"; // set by mergeSnapshot for failed sources
   const label = data.source && LABEL_KEY[data.source] ? t(LABEL_KEY[data.source]) : data.label;
   return (
     <div
@@ -23,7 +23,7 @@ function SourceNodeImpl({ data }: { data: OrchNode }) {
         {stale && <span aria-hidden>⚠</span>}
         {label}
       </div>
-      {data.sublabel === "offline" && (
+      {data.sourceIssue === "offline" && (
         <div className="text-[10px] text-muted">{t("sourceOffline")}</div>
       )}
       <div className="flex flex-wrap gap-1 mt-1">

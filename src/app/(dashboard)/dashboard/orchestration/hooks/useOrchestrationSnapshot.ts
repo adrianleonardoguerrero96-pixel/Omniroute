@@ -31,6 +31,29 @@ async function fetchJson<T>(url: string, signal: AbortSignal): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+/**
+ * A cheap structural fingerprint of the fields that actually affect rendering.
+ * `polledAt`/`raw` change on every 5s poll even when nothing meaningful moved,
+ * which would otherwise re-mint every node/edge array each tick and defeat the
+ * `React.memo` on the canvas node components. Exported for the test.
+ */
+export function snapshotContentKey(s: OrchSnapshot): string {
+  return JSON.stringify([
+    s.nodes.map((n) => [
+      n.id,
+      n.state,
+      n.updatedAt,
+      n.label,
+      n.sublabel,
+      n.cost,
+      n.counts,
+      n.sourceIssue,
+    ]),
+    s.edges.map((e) => [e.id, e.active]),
+    s.sources,
+  ]);
+}
+
 /** Builds the 3-source status list from a `Promise.allSettled` triple. */
 function buildSourceStatuses(
   ca: PromiseSettledResult<{ data: CloudAgentTask[] }>,
@@ -153,5 +176,19 @@ export function useOrchestrationSnapshot() {
     [raw, statuses, showCompleted, polledAt]
   );
 
-  return { snapshot, isLoading, showCompleted, setShowCompleted, refetch };
+  // `polledAt` advances every poll tick and re-mints every node/edge array in
+  // `snapshot` above even when nothing meaningful changed, which would defeat
+  // the canvas node components' `React.memo`. Render-time-sync idiom (same
+  // pattern as `useSyncedNodeIdentity` in `useDrawerDetail.ts`): only adopt the
+  // freshly computed snapshot when its content key actually differs, so
+  // `stableSnapshot` keeps referential identity across no-op ticks.
+  const [syncedKey, setSyncedKey] = useState("");
+  const [stableSnapshot, setStableSnapshot] = useState<OrchSnapshot>(snapshot);
+  const key = snapshotContentKey(snapshot);
+  if (key !== syncedKey) {
+    setSyncedKey(key);
+    setStableSnapshot(snapshot);
+  }
+
+  return { snapshot: stableSnapshot, isLoading, showCompleted, setShowCompleted, refetch };
 }

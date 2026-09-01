@@ -118,4 +118,61 @@ describe("useOrchestrationSnapshot", () => {
     // Two burst events → exactly ONE extra round of 3 fetches (debounce), not two.
     expect(fetchMock.mock.calls.length).toBe(callsAfterMount + 3);
   });
+
+  it("keeps snapshot referential identity across polls with an unchanged payload, and mints a new one when it changes", async () => {
+    let latest: ReturnType<typeof useOrchestrationSnapshot> | null = null;
+    const task = {
+      id: "t1",
+      providerId: "devin",
+      status: "running",
+      prompt: "p",
+      source: { repoName: "r", repoUrl: "https://x" },
+      options: {},
+      activities: [],
+      createdAt: "2026-08-30T10:00:00Z",
+      updatedAt: "2026-08-30T10:00:00Z",
+    };
+    const fetchMock = vi.fn((url: string) => {
+      if (url.startsWith("/api/v1/agents/tasks")) return okJson({ data: [task] });
+      if (url.startsWith("/api/a2a/tasks"))
+        return okJson({ tasks: [], total: 0, limit: 200, offset: 0 });
+      return okJson({ offline: false, runners: [], tasks: [] });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await act(async () => {
+      root.render(
+        <HookProbe
+          onRender={(v) => {
+            latest = v;
+          }}
+        />
+      );
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10);
+    });
+    const firstSnapshot = latest!.snapshot;
+    expect(firstSnapshot.nodes.some((n) => n.id === "cloud-agent:t1")).toBe(true);
+
+    // Same payload next poll tick → `polledAt` advances but content doesn't,
+    // so the hook must keep returning the SAME snapshot object.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_100);
+    });
+    expect(latest!.snapshot).toBe(firstSnapshot);
+
+    // Payload actually changes → a new snapshot identity is expected.
+    fetchMock.mockImplementation((url: string) => {
+      if (url.startsWith("/api/v1/agents/tasks"))
+        return okJson({ data: [{ ...task, status: "completed" }] });
+      if (url.startsWith("/api/a2a/tasks"))
+        return okJson({ tasks: [], total: 0, limit: 200, offset: 0 });
+      return okJson({ offline: false, runners: [], tasks: [] });
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_100);
+    });
+    expect(latest!.snapshot).not.toBe(firstSnapshot);
+  });
 });

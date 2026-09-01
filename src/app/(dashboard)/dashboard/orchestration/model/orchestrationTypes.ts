@@ -8,6 +8,9 @@ export type OrchState =
   "queued" | "running" | "waiting_approval" | "succeeded" | "failed" | "cancelled";
 export type OrchSource = "cloud-agent" | "a2a" | "conductor" | "routing";
 export type OrchNodeKind = "orchestrator" | "source" | "work" | "activity" | "overflow";
+// SourceNode only: why a source placeholder was materialized — replaces the
+// magic-string comparison against `sublabel` ("error"/"offline") with a typed union.
+export type SourceIssue = "error" | "offline";
 
 export interface OrchNode {
   id: string; // `${source}:${sourceId}` for work nodes
@@ -31,6 +34,9 @@ export interface OrchNode {
   // SourceNode only: set to `true` by orchestrationToFlow's `opts.collapsed` when this
   // source is currently collapsed by the operator. Never set on any other node kind.
   collapsed?: boolean;
+  // SourceNode only: set by mergeSnapshot's buildRootAndSourceEdges placeholder for a
+  // failed/offline source. `sublabel` still carries the same value for display compat.
+  sourceIssue?: SourceIssue;
 }
 
 export interface OrchEdge {

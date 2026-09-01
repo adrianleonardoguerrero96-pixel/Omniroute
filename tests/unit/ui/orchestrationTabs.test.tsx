@@ -138,6 +138,35 @@ describe("OverviewTab", () => {
     expect(clicked).toBe("cloud-agent:1");
     cleanup();
   });
+  it("formatElapsed guards against an unparseable startedAt and renders an em dash", () => {
+    const snapBadStart = {
+      ...snap,
+      nodes: [
+        ...snap.nodes,
+        {
+          id: "a2a:bad",
+          kind: "work",
+          source: "a2a",
+          state: "running",
+          label: "task bad start",
+          startedAt: "not-a-date",
+        },
+      ],
+    };
+    const { c, cleanup } = render(
+      <OverviewTab
+        snapshot={snapBadStart as never}
+        comboEvents={[]}
+        onCardClick={() => {}}
+        onSeeInGraph={() => {}}
+      />
+    );
+    const card = Array.from(c.querySelectorAll("[data-orch-card]")).find((el) =>
+      el.textContent?.includes("task bad start")
+    );
+    expect(card?.textContent).toContain("—");
+    cleanup();
+  });
 });
 
 describe("RoutingTab", () => {
