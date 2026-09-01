@@ -516,3 +516,29 @@ test("#12273 single compatible target that fits is still collapsed", () => {
     ["unit-collapse/big"]
   );
 });
+
+// #12278: unknown context is advisory, not "known too small". Collapsing to a
+// single survivor whose context limit is unknown must NOT restore hard-rejected
+// targets (output_tokens here; vision is covered by combo-vision-aware-routing).
+test("#12273 unknown-context sole survivor does not restore hard-rejected targets", () => {
+  saveModelsDevCapabilities({
+    "unit-output": {
+      tiny: capabilityEntryWithLimits(128_000, 128_000, 4096),
+    },
+  });
+  const body = {
+    messages: [{ role: "user", content: "hello" }],
+    max_tokens: 32_000,
+  };
+
+  const out = filterTargetsByRequestCompatibility(
+    [target("unit-unknown/mystery"), target("unit-output/tiny")],
+    body,
+    noopLog
+  );
+
+  assert.deepEqual(
+    out.map((entry) => entry.modelStr),
+    ["unit-unknown/mystery"]
+  );
+});

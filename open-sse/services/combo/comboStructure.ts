@@ -776,21 +776,25 @@ export function filterTargetsByRequestCompatibility(
     return [];
   }
 
-  // #12273: When the filter collapses to a single compatible target whose known
-  // context window is smaller than the request, routing to it is a guaranteed
-  // context_length_exceeded failure. Fall back to the full pool so combo.ts can
-  // try targets that may have larger context at runtime even if the catalog
-  // marked them incompatible for a softer reason.
+  // #12273: a sole survivor whose catalog window is known-too-small is a
+  // guaranteed context_length_exceeded. Restore the remaining pool so combo.ts
+  // can still try larger-context targets. Unknown context (`null`) is advisory
+  // and must not resurrect hard-rejected targets (vision / output / tools).
   if (
     compatible.length === 1 &&
-    requirements.requiredContextTokens > 0 &&
-    !hasKnownCompatibleContextLimit(compatible[0], requirements)
+    (targetReasons.get(compatible[0]) || []).includes("context_window")
   ) {
-    log.warn(
-      "COMBO",
-      `${label}: single compatible target ${compatible[0].modelStr} has known context too small for ${requirements.requiredContextTokens} token request; falling back to full pool (#12273)`
-    );
-    return targets;
+    // #8332: never restore a confirmed-non-vision target onto an image request.
+    const restored = requirements.requiresVision
+      ? targets.filter((target) => !isVisionIncompatibleTarget(target, requirements))
+      : targets;
+    if (restored.length > compatible.length) {
+      log.warn(
+        "COMBO",
+        `${label}: single compatible target ${compatible[0].modelStr} has known context too small for ${requirements.requiredContextTokens} token request; falling back to full pool (#12273)`
+      );
+      return restored;
+    }
   }
 
   log.info(
