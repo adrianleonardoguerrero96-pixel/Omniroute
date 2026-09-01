@@ -80,7 +80,6 @@ import {
   validatePoeProvider,
 } from "./validation/audioMiscProviders";
 import { validateChatGptWebCodexProvider } from "./validation/chatgptWebCodex";
-import { validateChatGptWebProvider } from "./validation/chatgptWeb";
 import { validateZaiWebProvider } from "./validation/zaiWeb";
 import { validateSearchProvider, SEARCH_VALIDATOR_CONFIGS } from "./validation/searchProviders";
 import {
@@ -310,7 +309,6 @@ export async function validateProviderApiKey({ provider, apiKey, providerSpecifi
     "grok-web": validateGrokWebProvider,
     "kimi-web": validateKimiWebProvider,
     "chatgpt-web-codex": validateChatGptWebCodexProvider,
-    "chatgpt-web": validateChatGptWebProvider,
     "perplexity-web": validatePerplexityWebProvider,
     "blackbox-web": validateBlackboxWebProvider,
     "muse-spark-web": validateMuseSparkWebProvider,

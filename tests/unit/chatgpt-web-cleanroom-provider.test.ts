@@ -6,6 +6,7 @@ import { ChatGptWebExecutor } from "../../open-sse/executors/chatgpt-web.ts";
 import { REGISTRY, getRegistryEntry } from "../../open-sse/config/providerRegistry.ts";
 import { hasSpecializedExecutor } from "../../open-sse/executors/index.ts";
 import { validateChatGptWebProvider } from "../../src/lib/providers/validation/chatgptWeb.ts";
+import { validateWebCookieProvider } from "../../src/lib/providers/validation/webCookie.ts";
 import { AI_PROVIDERS, WEB_COOKIE_PROVIDERS } from "../../src/shared/constants/providers.ts";
 import {
   assertCommonChatGptWebProviderAvailable,
@@ -66,6 +67,10 @@ test("validates encrypted-at-rest storage-state input without echoing secrets", 
     error: null,
     unsupported: false,
   });
+  assert.deepEqual(
+    await validateWebCookieProvider({ provider: "chatgpt-web", apiKey: storageState }),
+    { valid: true, error: null, unsupported: false }
+  );
   const invalid = await validateChatGptWebProvider({
     apiKey: JSON.stringify({
       cookies: [

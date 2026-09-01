@@ -40,11 +40,22 @@ interface BrowserRegisteredAttachment {
   uploadUrl: string;
 }
 
+interface BrowserConversationAttachment {
+  fileId: string;
+  kind: ChatGptWebResolvedAttachment["kind"];
+  mimeType: string;
+  name: string;
+  size: number;
+  width?: number;
+  height?: number;
+}
+
 const CHATGPT_ORIGIN = "https://chatgpt.com";
 const CHATGPT_ASSET_PATH_RE = /^\/cdn\/assets\/[A-Za-z0-9_-]+\.js$/;
 const OAI_UPLOAD_HOST_RE = /(?:^|\.)oaiusercontent\.com$/i;
 const FIRST_PARTY_BRIDGE_KEY = "__omnirouteChatGptFirstPartyV1";
 const FIRST_PARTY_ABORT_KEY = "__omnirouteChatGptAbortV1";
+const FIRST_PARTY_REQUEST_KEY = "__omnirouteChatGptRequestV1";
 const MAX_ASSET_SOURCE_BYTES = 24 * 1024 * 1024;
 const MAX_CONVERSATION_RESPONSE_BYTES = 16 * 1024 * 1024;
 const ASSET_FETCH_TIMEOUT_MS = 20_000;
@@ -175,78 +186,110 @@ async function readAssetSource(url: string): Promise<string> {
   }
 }
 
-async function discoverFirstPartyModule(page: Page): Promise<{
+interface FirstPartyModuleResult {
   assetUrl: string;
   contract: ChatGptWebFirstPartyModuleContract;
-}> {
-  const queue = [...(lastKnownModuleAssetUrl ? [lastKnownModuleAssetUrl] : [])];
-  const visited = new Set<string>();
-  let lastError: Error | null = null;
-  let index = 0;
+}
+
+interface FirstPartyDiscoveryState {
+  queue: string[];
+  visited: Set<string>;
+  index: number;
+  lastError: Error | null;
+}
+
+function discoveryError(error: unknown, fallback: string): Error {
+  return error instanceof Error ? error : new Error(fallback);
+}
+
+async function collectPageAssetCandidates(page: Page): Promise<string[]> {
+  const sources = await page.evaluate(() => ({
+    modulePreloadUrls: Array.from(
+      document.querySelectorAll<HTMLLinkElement>('link[rel="modulepreload"][href]'),
+      (link) => link.href
+    ),
+    resourceUrls: performance.getEntriesByType("resource").map((entry) => entry.name),
+  }));
+  return collectChatGptWebFirstPartyAssetCandidates(
+    sources.resourceUrls,
+    sources.modulePreloadUrls
+  );
+}
+
+async function inspectFirstPartyAsset(
+  candidate: string,
+  state: FirstPartyDiscoveryState
+): Promise<FirstPartyModuleResult | null> {
+  let assetUrl: string;
+  try {
+    assetUrl = requireChatGptAssetUrl(candidate);
+  } catch (error) {
+    state.lastError = discoveryError(error, "Invalid ChatGPT asset URL");
+    return null;
+  }
+  if (state.visited.has(assetUrl)) return null;
+  state.visited.add(assetUrl);
+
+  const cached = contractCache.get(assetUrl);
+  if (cached) {
+    try {
+      return { assetUrl, contract: await cached };
+    } catch {
+      contractCache.delete(assetUrl);
+    }
+  }
+
+  let source: string;
+  try {
+    source = await readAssetSource(assetUrl);
+  } catch (error) {
+    state.lastError = discoveryError(error, "ChatGPT asset discovery failed");
+    return null;
+  }
+  try {
+    const contract = parseChatGptWebFirstPartyModuleContract(source);
+    contractCache.set(assetUrl, Promise.resolve(contract));
+    lastKnownModuleAssetUrl = assetUrl;
+    return { assetUrl, contract };
+  } catch (error) {
+    state.lastError = discoveryError(error, "ChatGPT module discovery failed");
+    const references = extractChatGptWebFirstPartyAssetReferences(source, assetUrl);
+    state.queue.push(...references.filter((reference) => !state.visited.has(reference)));
+    return null;
+  }
+}
+
+async function scanQueuedFirstPartyAssets(
+  state: FirstPartyDiscoveryState
+): Promise<FirstPartyModuleResult | null> {
+  while (state.index < state.queue.length && state.visited.size < MAX_DISCOVERY_ASSETS) {
+    const candidate = state.queue[state.index];
+    state.index += 1;
+    const result = await inspectFirstPartyAsset(candidate, state);
+    if (result) return result;
+  }
+  return null;
+}
+
+async function discoverFirstPartyModule(page: Page): Promise<FirstPartyModuleResult> {
+  const state: FirstPartyDiscoveryState = {
+    queue: [...(lastKnownModuleAssetUrl ? [lastKnownModuleAssetUrl] : [])],
+    visited: new Set<string>(),
+    index: 0,
+    lastError: null,
+  };
   const deadline = Date.now() + MODULE_DISCOVERY_TIMEOUT_MS;
 
-  while (Date.now() <= deadline && visited.size < MAX_DISCOVERY_ASSETS) {
-    const candidateSources = await page.evaluate(() => ({
-      modulePreloadUrls: Array.from(
-        document.querySelectorAll<HTMLLinkElement>('link[rel="modulepreload"][href]'),
-        (link) => link.href
-      ),
-      resourceUrls: performance.getEntriesByType("resource").map((entry) => entry.name),
-    }));
-    const candidates = collectChatGptWebFirstPartyAssetCandidates(
-      candidateSources.resourceUrls,
-      candidateSources.modulePreloadUrls
-    );
-    queue.push(...candidates);
-
-    while (index < queue.length && visited.size < MAX_DISCOVERY_ASSETS) {
-      const candidate = queue[index];
-      index += 1;
-      let assetUrl: string;
-      try {
-        assetUrl = requireChatGptAssetUrl(candidate);
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error("Invalid ChatGPT asset URL");
-        continue;
-      }
-      if (visited.has(assetUrl)) continue;
-      visited.add(assetUrl);
-
-      const cached = contractCache.get(assetUrl);
-      if (cached) {
-        try {
-          return { assetUrl, contract: await cached };
-        } catch {
-          contractCache.delete(assetUrl);
-        }
-      }
-
-      let source: string;
-      try {
-        source = await readAssetSource(assetUrl);
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error("ChatGPT asset discovery failed");
-        continue;
-      }
-      try {
-        const contract = parseChatGptWebFirstPartyModuleContract(source);
-        contractCache.set(assetUrl, Promise.resolve(contract));
-        lastKnownModuleAssetUrl = assetUrl;
-        return { assetUrl, contract };
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error("ChatGPT module discovery failed");
-        for (const reference of extractChatGptWebFirstPartyAssetReferences(source, assetUrl)) {
-          if (!visited.has(reference)) queue.push(reference);
-        }
-      }
-    }
-
+  while (Date.now() <= deadline && state.visited.size < MAX_DISCOVERY_ASSETS) {
+    state.queue.push(...(await collectPageAssetCandidates(page)));
+    const result = await scanQueuedFirstPartyAssets(state);
+    if (result) return result;
     if (Date.now() < deadline) {
       await new Promise((resolve) => setTimeout(resolve, MODULE_DISCOVERY_POLL_MS));
     }
   }
   throw new Error("ChatGPT Web first-party request module was not loaded", {
-    ...(lastError ? { cause: lastError } : {}),
+    ...(state.lastError ? { cause: state.lastError } : {}),
   });
 }
 
@@ -420,45 +463,37 @@ async function uploadRegisteredAttachments(
   }
 }
 
-async function processAndSubmit(
-  page: Page,
-  input: ChatGptWebFirstPartyRequest,
-  requestId: string,
+function browserConversationAttachments(
   registered: RegisteredAttachment[]
-): Promise<string> {
-  const mode = directModel(input.selection);
-  return page.evaluate(
-    async ({ abortKey, bridgeKey, mode, prompt, registered, requestId, responseLimit }) => {
+): BrowserConversationAttachment[] {
+  return registered.map(({ attachment, fileId }) => ({
+    fileId,
+    kind: attachment.kind,
+    mimeType: attachment.mimeType,
+    name: attachment.name,
+    size: attachment.size,
+    width: attachment.width,
+    height: attachment.height,
+  }));
+}
+
+async function processRegisteredAttachments(
+  page: Page,
+  requestId: string,
+  registered: BrowserConversationAttachment[]
+): Promise<void> {
+  await page.evaluate(
+    async ({ abortKey, bridgeKey, registered, requestId }) => {
       const root = globalThis as typeof globalThis & Record<string, unknown>;
       const bridge = root[bridgeKey] as {
-        finalizeRequirements?: (cache?: boolean, source?: string) => Promise<JsonRecord>;
-        proofManager?: {
-          getEnforcementToken(value: JsonRecord, options: JsonRecord): Promise<string>;
-        };
-        turnstileManager?: { getEnforcementToken(value: JsonRecord): Promise<string> };
-        buildSentinelHeaders?: (
-          requirements: JsonRecord,
-          turnstile: string,
-          proof: string,
-          sentinel: null,
-          observer: null,
-          telemetry: null
-        ) => Record<string, string>;
         requestClient?: { safePost(path: string, options: JsonRecord): Promise<unknown> };
       };
-      if (
-        typeof bridge?.finalizeRequirements !== "function" ||
-        typeof bridge?.proofManager?.getEnforcementToken !== "function" ||
-        typeof bridge?.turnstileManager?.getEnforcementToken !== "function" ||
-        typeof bridge?.buildSentinelHeaders !== "function" ||
-        typeof bridge?.requestClient?.safePost !== "function"
-      ) {
-        throw new Error("ChatGPT Web first-party request bridge is incomplete");
+      if (typeof bridge?.requestClient?.safePost !== "function") {
+        throw new Error("ChatGPT Web first-party request client is unavailable");
       }
       const abortStore = root[abortKey] as Record<string, AbortController> | undefined;
       const controller = abortStore?.[requestId];
       if (!controller) throw new Error("ChatGPT Web request cancellation scope is unavailable");
-      const messageId = crypto.randomUUID();
 
       for (const item of registered) {
         const useCase = item.kind === "image" ? "multimodal" : "my_files";
@@ -491,39 +526,36 @@ async function processAndSubmit(
           }
         }
       }
+    },
+    { abortKey: FIRST_PARTY_ABORT_KEY, bridgeKey: FIRST_PARTY_BRIDGE_KEY, registered, requestId }
+  );
+}
 
-      const requirements = await bridge.finalizeRequirements(false, "none");
-      if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
-      const [proof, turnstile] = await Promise.all([
-        bridge.proofManager.getEnforcementToken(requirements, { forceSync: true }),
-        bridge.turnstileManager.getEnforcementToken(requirements),
-      ]);
-      const additionalHeaders = bridge.buildSentinelHeaders(
-        requirements,
-        turnstile,
-        proof,
-        null,
-        null,
-        null
-      );
+async function storeConversationDraft(
+  page: Page,
+  input: ChatGptWebFirstPartyRequest,
+  requestId: string,
+  registered: BrowserConversationAttachment[]
+): Promise<void> {
+  const mode = directModel(input.selection);
+  await page.evaluate(
+    ({ mode, prompt, registered, requestId, requestKey }) => {
+      const root = globalThis as typeof globalThis & Record<string, unknown>;
       const images = registered.filter((item) => item.kind === "image");
-      const messageMetadata: JsonRecord = {
+      const attachments = registered.map((item) => ({
+        id: item.fileId,
+        size: item.size,
+        name: item.name,
+        mime_type: item.mimeType,
+        ...(item.kind === "image"
+          ? { width: item.width, height: item.height }
+          : { non_library_my_files_injest_upload: true }),
+        source: "local",
+        is_big_paste: false,
+      }));
+      const metadata: JsonRecord = {
         ...(mode.reason ? { system_hints: ["reason"] } : {}),
-        ...(registered.length
-          ? {
-              attachments: registered.map((item) => ({
-                id: item.fileId,
-                size: item.size,
-                name: item.name,
-                mime_type: item.mimeType,
-                ...(item.kind === "image"
-                  ? { width: item.width, height: item.height }
-                  : { non_library_my_files_injest_upload: true }),
-                source: "local",
-                is_big_paste: false,
-              })),
-            }
-          : {}),
+        ...(attachments.length ? { attachments } : {}),
         serialization_metadata: { custom_symbol_offsets: [] },
       };
       const content = images.length
@@ -541,30 +573,115 @@ async function processAndSubmit(
             ],
           }
         : { content_type: "text", parts: [prompt] };
-      const body = {
-        action: "next",
-        messages: [
-          {
-            id: messageId,
-            author: { role: "user" },
-            create_time: Date.now() / 1000,
-            content,
-            metadata: messageMetadata,
-          },
-        ],
-        parent_message_id: "client-created-root",
-        model: mode.model,
-        timezone_offset_min: new Date().getTimezoneOffset(),
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        history_and_training_disabled: true,
-        conversation_mode: { kind: "primary_assistant" },
-        system_hints: mode.reason ? ["reason"] : [],
-        supports_buffering: true,
-        supported_encodings: ["v1"],
+      const requestStore = (root[requestKey] ??= {}) as Record<string, JsonRecord>;
+      requestStore[requestId] = {
+        body: {
+          action: "next",
+          messages: [
+            {
+              id: crypto.randomUUID(),
+              author: { role: "user" },
+              create_time: Date.now() / 1000,
+              content,
+              metadata,
+            },
+          ],
+          parent_message_id: "client-created-root",
+          model: mode.model,
+          timezone_offset_min: new Date().getTimezoneOffset(),
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          history_and_training_disabled: true,
+          conversation_mode: { kind: "primary_assistant" },
+          system_hints: mode.reason ? ["reason"] : [],
+          supports_buffering: true,
+          supported_encodings: ["v1"],
+        },
       };
-      const response = await bridge.requestClient.safePost("/f/conversation", {
-        requestBody: body,
-        additionalHeaders,
+    },
+    {
+      mode,
+      prompt: input.prompt,
+      registered,
+      requestId,
+      requestKey: FIRST_PARTY_REQUEST_KEY,
+    }
+  );
+}
+
+async function storeConversationHeaders(page: Page, requestId: string): Promise<void> {
+  await page.evaluate(
+    async ({ abortKey, bridgeKey, requestId, requestKey }) => {
+      const root = globalThis as typeof globalThis & Record<string, unknown>;
+      const bridge = root[bridgeKey] as {
+        finalizeRequirements?: (cache?: boolean, source?: string) => Promise<JsonRecord>;
+        proofManager?: {
+          getEnforcementToken(value: JsonRecord, options: JsonRecord): Promise<string>;
+        };
+        turnstileManager?: { getEnforcementToken(value: JsonRecord): Promise<string> };
+        buildSentinelHeaders?: (
+          requirements: JsonRecord,
+          turnstile: string,
+          proof: string,
+          sentinel: null,
+          observer: null,
+          telemetry: null
+        ) => Record<string, string>;
+      };
+      const bridgeReady = [
+        bridge?.finalizeRequirements,
+        bridge?.proofManager?.getEnforcementToken,
+        bridge?.turnstileManager?.getEnforcementToken,
+        bridge?.buildSentinelHeaders,
+      ].every((member) => typeof member === "function");
+      if (!bridgeReady) {
+        throw new Error("ChatGPT Web first-party challenge bridge is incomplete");
+      }
+      const controller = (root[abortKey] as Record<string, AbortController>)?.[requestId];
+      const draft = (root[requestKey] as Record<string, JsonRecord>)?.[requestId];
+      if (!controller || !draft) throw new Error("ChatGPT Web request scope is unavailable");
+
+      const requirements = await bridge.finalizeRequirements!(false, "none");
+      if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
+      const [proof, turnstile] = await Promise.all([
+        bridge.proofManager!.getEnforcementToken(requirements, { forceSync: true }),
+        bridge.turnstileManager!.getEnforcementToken(requirements),
+      ]);
+      const additionalHeaders = bridge.buildSentinelHeaders!(
+        requirements,
+        turnstile,
+        proof,
+        null,
+        null,
+        null
+      );
+      draft.additionalHeaders = additionalHeaders;
+    },
+    {
+      abortKey: FIRST_PARTY_ABORT_KEY,
+      bridgeKey: FIRST_PARTY_BRIDGE_KEY,
+      requestId,
+      requestKey: FIRST_PARTY_REQUEST_KEY,
+    }
+  );
+}
+
+async function submitConversationRequest(page: Page, requestId: string): Promise<void> {
+  await page.evaluate(
+    async ({ abortKey, bridgeKey, requestId, requestKey }) => {
+      const root = globalThis as typeof globalThis & Record<string, unknown>;
+      const requestClient = (
+        root[bridgeKey] as {
+          requestClient?: { safePost(path: string, options: JsonRecord): Promise<unknown> };
+        }
+      )?.requestClient;
+      const controller = (root[abortKey] as Record<string, AbortController>)?.[requestId];
+      const draft = (root[requestKey] as Record<string, JsonRecord>)?.[requestId];
+      if (typeof requestClient?.safePost !== "function" || !controller || !draft) {
+        throw new Error("ChatGPT Web conversation request scope is unavailable");
+      }
+      const response = await requestClient.safePost("/f/conversation", {
+        requestBody: draft.body,
+        additionalHeaders: draft.additionalHeaders,
         signal: controller.signal,
         skipJsonTransform: true,
       });
@@ -575,6 +692,26 @@ async function processAndSubmit(
         const status = response.status;
         await response.body?.cancel().catch(() => {});
         throw new Error(`ChatGPT Web conversation failed with status ${status}`);
+      }
+      draft.response = response;
+    },
+    {
+      abortKey: FIRST_PARTY_ABORT_KEY,
+      bridgeKey: FIRST_PARTY_BRIDGE_KEY,
+      requestId,
+      requestKey: FIRST_PARTY_REQUEST_KEY,
+    }
+  );
+}
+
+async function readConversationResponse(page: Page, requestId: string): Promise<string> {
+  return page.evaluate(
+    async ({ requestId, requestKey, responseLimit }) => {
+      const root = globalThis as typeof globalThis & Record<string, unknown>;
+      const draft = (root[requestKey] as Record<string, JsonRecord>)?.[requestId];
+      const response = draft?.response;
+      if (!(response instanceof Response)) {
+        throw new Error("ChatGPT Web conversation response is unavailable");
       }
       const reader = response.body?.getReader();
       if (!reader) throw new Error("ChatGPT Web conversation returned an empty stream");
@@ -604,34 +741,38 @@ async function processAndSubmit(
       return chunks.join("");
     },
     {
-      abortKey: FIRST_PARTY_ABORT_KEY,
-      bridgeKey: FIRST_PARTY_BRIDGE_KEY,
-      mode,
-      prompt: input.prompt,
-      registered: registered.map(({ attachment, fileId }) => ({
-        fileId,
-        kind: attachment.kind,
-        mimeType: attachment.mimeType,
-        name: attachment.name,
-        size: attachment.size,
-        width: attachment.width,
-        height: attachment.height,
-      })),
       requestId,
+      requestKey: FIRST_PARTY_REQUEST_KEY,
       responseLimit: MAX_CONVERSATION_RESPONSE_BYTES,
     }
   );
 }
 
+async function processAndSubmit(
+  page: Page,
+  input: ChatGptWebFirstPartyRequest,
+  requestId: string,
+  registered: RegisteredAttachment[]
+): Promise<string> {
+  const browserRegistered = browserConversationAttachments(registered);
+  await processRegisteredAttachments(page, requestId, browserRegistered);
+  await storeConversationDraft(page, input, requestId, browserRegistered);
+  await storeConversationHeaders(page, requestId);
+  await submitConversationRequest(page, requestId);
+  return readConversationResponse(page, requestId);
+}
+
 async function cleanupRequest(page: Page, requestId: string): Promise<void> {
   await page
     .evaluate(
-      ({ abortKey, requestId }) => {
+      ({ abortKey, requestId, requestKey }) => {
         const root = globalThis as typeof globalThis & Record<string, unknown>;
-        const store = root[abortKey] as Record<string, AbortController> | undefined;
-        delete store?.[requestId];
+        const abortStore = root[abortKey] as Record<string, AbortController> | undefined;
+        const requestStore = root[requestKey] as Record<string, JsonRecord> | undefined;
+        delete abortStore?.[requestId];
+        delete requestStore?.[requestId];
       },
-      { abortKey: FIRST_PARTY_ABORT_KEY, requestId }
+      { abortKey: FIRST_PARTY_ABORT_KEY, requestId, requestKey: FIRST_PARTY_REQUEST_KEY }
     )
     .catch(() => {});
 }

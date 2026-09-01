@@ -101,47 +101,80 @@ function optionTopic(options: unknown, type: string): string | null {
   return null;
 }
 
-/** Parse the short bootstrap SSE response that hands a turn over to the shared WebSocket. */
-export function parseChatGptWebConversationHandoff(sseText: string): ChatGptWebConversationHandoff {
-  let resumeToken: string | null = null;
-  let resumeConversationId: string | null = null;
-  let conversationId: string | null = null;
-  let turnExchangeId: string | null = null;
-  let resumeTopicId: string | null = null;
-  let websocketTopicId: string | null = null;
+interface ConversationHandoffState {
+  resumeToken: string | null;
+  resumeConversationId: string | null;
+  conversationId: string | null;
+  turnExchangeId: string | null;
+  resumeTopicId: string | null;
+  websocketTopicId: string | null;
+}
 
-  for (const event of parseChatGptWebEncodedItem(sseText)) {
-    if (!isRecord(event.json)) continue;
-    if (event.json.type === "resume_conversation_token") {
-      resumeToken = requireNonEmptyString(event.json.token, "resume conversation token");
-      resumeConversationId = requireNonEmptyString(
-        event.json.conversation_id,
-        "resume conversation_id"
-      );
-    } else if (event.json.type === "stream_handoff") {
-      conversationId = requireNonEmptyString(event.json.conversation_id, "conversation_id");
-      turnExchangeId = requireNonEmptyString(event.json.turn_exchange_id, "turn_exchange_id");
-      resumeTopicId = optionTopic(event.json.options, "resume_sse_endpoint");
-      websocketTopicId = optionTopic(event.json.options, "subscribe_ws_topic");
-    }
+function consumeConversationHandoffEvent(state: ConversationHandoffState, event: JsonRecord): void {
+  if (event.type === "resume_conversation_token") {
+    state.resumeToken = requireNonEmptyString(event.token, "resume conversation token");
+    state.resumeConversationId = requireNonEmptyString(
+      event.conversation_id,
+      "resume conversation_id"
+    );
+    return;
   }
+  if (event.type !== "stream_handoff") return;
+  state.conversationId = requireNonEmptyString(event.conversation_id, "conversation_id");
+  state.turnExchangeId = requireNonEmptyString(event.turn_exchange_id, "turn_exchange_id");
+  state.resumeTopicId = optionTopic(event.options, "resume_sse_endpoint");
+  state.websocketTopicId = optionTopic(event.options, "subscribe_ws_topic");
+}
 
-  if (resumeTopicId && websocketTopicId && resumeTopicId !== websocketTopicId) {
+function finalizeConversationHandoff(
+  state: ConversationHandoffState
+): ChatGptWebConversationHandoff {
+  if (
+    state.resumeTopicId &&
+    state.websocketTopicId &&
+    state.resumeTopicId !== state.websocketTopicId
+  ) {
     throw new Error("ChatGPT Web handoff topic mismatch");
   }
-  if (resumeConversationId && conversationId && resumeConversationId !== conversationId) {
+  if (
+    state.resumeConversationId &&
+    state.conversationId &&
+    state.resumeConversationId !== state.conversationId
+  ) {
     throw new Error("ChatGPT Web handoff conversation mismatch");
   }
-  if (!resumeToken || !conversationId || !turnExchangeId || !resumeTopicId || !websocketTopicId) {
+  if (
+    !state.resumeToken ||
+    !state.conversationId ||
+    !state.turnExchangeId ||
+    !state.resumeTopicId ||
+    !state.websocketTopicId
+  ) {
     throw new Error("ChatGPT Web handoff is incomplete");
   }
-
   return {
-    conversationId,
-    turnExchangeId,
-    topicId: websocketTopicId,
-    resumeToken,
+    conversationId: state.conversationId,
+    turnExchangeId: state.turnExchangeId,
+    topicId: state.websocketTopicId,
+    resumeToken: state.resumeToken,
   };
+}
+
+/** Parse the short bootstrap SSE response that hands a turn over to the shared WebSocket. */
+export function parseChatGptWebConversationHandoff(sseText: string): ChatGptWebConversationHandoff {
+  const state: ConversationHandoffState = {
+    resumeToken: null,
+    resumeConversationId: null,
+    conversationId: null,
+    turnExchangeId: null,
+    resumeTopicId: null,
+    websocketTopicId: null,
+  };
+
+  for (const event of parseChatGptWebEncodedItem(sseText)) {
+    if (isRecord(event.json)) consumeConversationHandoffEvent(state, event.json);
+  }
+  return finalizeConversationHandoff(state);
 }
 
 /** Build the array-framed subscription command observed on the first-party WebSocket. */
@@ -195,24 +228,36 @@ export class ChatGptWebTopicStream {
   private consumeItem(item: unknown, encodedItems: string[], lifecycleTypes: string[]): void {
     if (!isRecord(item)) return;
     if (item.type === "reply") {
-      const reply = item.reply;
-      if (isRecord(reply) && Array.isArray(reply.catchups)) {
-        for (const catchup of reply.catchups) {
-          this.consumeItem(catchup, encodedItems, lifecycleTypes);
-        }
-      }
+      this.consumeReply(item.reply, encodedItems, lifecycleTypes);
       return;
     }
     if (item.type !== "message" || item.topic_id !== this.topicId) return;
 
-    const envelope = item.payload;
+    this.consumeMessage(item.payload, encodedItems, lifecycleTypes);
+  }
+
+  private consumeReply(value: unknown, encodedItems: string[], lifecycleTypes: string[]): void {
+    if (!isRecord(value) || !Array.isArray(value.catchups)) return;
+    for (const catchup of value.catchups) {
+      this.consumeItem(catchup, encodedItems, lifecycleTypes);
+    }
+  }
+
+  private consumeMessage(
+    envelope: unknown,
+    encodedItems: string[],
+    lifecycleTypes: string[]
+  ): void {
     if (!isRecord(envelope) || typeof envelope.type !== "string") return;
     if (envelope.type !== "conversation-turn-stream") {
       lifecycleTypes.push(envelope.type);
       return;
     }
 
-    const payload = envelope.payload;
+    this.consumeTurnPayload(envelope.payload, encodedItems);
+  }
+
+  private consumeTurnPayload(payload: unknown, encodedItems: string[]): void {
     if (!isRecord(payload) || typeof payload.type !== "string") return;
     if (payload.type === "done") {
       this.streamDone = true;

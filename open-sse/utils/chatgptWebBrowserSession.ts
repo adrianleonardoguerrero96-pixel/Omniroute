@@ -195,6 +195,199 @@ export function parseChatGptWebDirectConversation(sseText: string): ChatGptWebBr
   return { ...result, conversationId, turnExchangeId };
 }
 
+function turnError(error: unknown, fallback: string): Error {
+  return error instanceof Error ? error : new Error(fallback);
+}
+
+class ChatGptWebBrowserTurnRunner {
+  private decoder = new ChatGptWebDeltaV1Decoder();
+  private readonly bufferedFrames: string[] = [];
+  private bufferedFrameBytes = 0;
+  private topicStream: ChatGptWebTopicStream | null = null;
+  private conversationId = "";
+  private turnExchangeId = "";
+  private latestTerminalAssistant: ChatGptWebBrowserTurnResult | null = null;
+  private renderedReadPending = false;
+  private settled = false;
+  private readonly turnController = new AbortController();
+  private readonly resultPromise: Promise<ChatGptWebBrowserTurnResult>;
+  private resolveResult: (result: ChatGptWebBrowserTurnResult) => void = () => {};
+  private rejectResult: (error: Error) => void = () => {};
+
+  constructor(
+    private readonly session: ChatGptWebBrowserSession,
+    private readonly prompt: string,
+    private readonly attachments: ChatGptWebResolvedAttachment[]
+  ) {
+    this.resultPromise = new Promise((resolve, reject) => {
+      this.resolveResult = resolve;
+      this.rejectResult = reject;
+    });
+    // Browser events can finish while Playwright is still resolving submission.
+    void this.resultPromise.catch(() => {});
+  }
+
+  private fail(error: Error): void {
+    if (this.settled) return;
+    this.settled = true;
+    this.turnController.abort();
+    this.rejectResult(error);
+  }
+
+  private complete(): void {
+    if (this.settled) return;
+    try {
+      const result =
+        this.latestTerminalAssistant ??
+        terminalResult(this.decoder.snapshot(), this.conversationId, this.turnExchangeId);
+      this.settled = true;
+      this.resolveResult(result);
+    } catch (error) {
+      this.fail(turnError(error, "ChatGPT Web browser turn failed"));
+    }
+  }
+
+  private completeFromRenderedAssistant(): void {
+    if (this.renderedReadPending || !this.session.readRenderedAssistantText) return;
+    this.renderedReadPending = true;
+    void this.session
+      .readRenderedAssistantText(10_000)
+      .then((text) => this.acceptRenderedAssistant(text))
+      .catch(() => {
+        this.renderedReadPending = false;
+      });
+  }
+
+  private acceptRenderedAssistant(text: string | null): void {
+    this.renderedReadPending = false;
+    if (this.settled || typeof text !== "string" || !text.trim()) return;
+    this.settled = true;
+    this.resolveResult({
+      conversationId: this.conversationId,
+      turnExchangeId: this.turnExchangeId,
+      text: text.trim(),
+      status: "finished_successfully",
+      endTurn: true,
+    });
+  }
+
+  private finishFrame(): void {
+    if (this.latestTerminalAssistant) {
+      this.complete();
+      return;
+    }
+    if (snapshotMessageRole(this.decoder.snapshot()) !== "tool") {
+      this.complete();
+      return;
+    }
+    this.topicStream = null;
+    this.decoder = new ChatGptWebDeltaV1Decoder();
+    this.completeFromRenderedAssistant();
+  }
+
+  private ingestFrame(frameText: string): void {
+    if (!this.topicStream || this.settled) return;
+    try {
+      const frame = this.topicStream.ingestFrame(frameText);
+      for (const encodedItem of frame.encodedItems) {
+        if (!this.decoder.ingest(encodedItem).changed) continue;
+        this.latestTerminalAssistant =
+          maybeTerminalResult(this.decoder.snapshot(), this.conversationId, this.turnExchangeId) ??
+          this.latestTerminalAssistant;
+      }
+      if (frame.done) this.finishFrame();
+    } catch (error) {
+      this.fail(turnError(error, "ChatGPT Web stream decoding failed"));
+    }
+  }
+
+  private handleBootstrap(sseText: string): void {
+    if (this.settled) return;
+    if (this.topicStream) {
+      this.fail(new Error("ChatGPT Web browser turn received more than one handoff"));
+      return;
+    }
+    try {
+      const handoff = parseChatGptWebConversationHandoff(sseText);
+      if (this.conversationId && handoff.conversationId !== this.conversationId) {
+        this.fail(new Error("ChatGPT Web browser turn changed conversation during handoff"));
+        return;
+      }
+      this.conversationId = handoff.conversationId;
+      this.turnExchangeId = handoff.turnExchangeId;
+      this.decoder = new ChatGptWebDeltaV1Decoder();
+      this.latestTerminalAssistant = null;
+      this.topicStream = new ChatGptWebTopicStream(handoff.topicId);
+      for (const frame of this.bufferedFrames.splice(0)) this.ingestFrame(frame);
+      this.bufferedFrameBytes = 0;
+    } catch (error) {
+      this.fail(turnError(error, "ChatGPT Web handoff parsing failed"));
+    }
+  }
+
+  private handleWebSocketFrame(frameText: string): void {
+    if (this.settled) return;
+    if (this.topicStream) {
+      this.ingestFrame(frameText);
+      return;
+    }
+    this.bufferedFrameBytes += Buffer.byteLength(frameText);
+    if (
+      this.bufferedFrames.length >= MAX_BUFFERED_FRAMES ||
+      this.bufferedFrameBytes > MAX_BUFFERED_FRAME_BYTES
+    ) {
+      this.fail(new Error("ChatGPT Web browser turn exceeded the pre-handoff frame buffer"));
+      return;
+    }
+    this.bufferedFrames.push(frameText);
+  }
+
+  private handlers(): ChatGptWebBrowserSessionHandlers {
+    return {
+      onBootstrap: (sseText) => this.handleBootstrap(sseText),
+      onWebSocketFrame: (frameText) => this.handleWebSocketFrame(frameText),
+      onError: () => this.fail(new Error("ChatGPT Web first-party browser session failed")),
+    };
+  }
+
+  private submitPrompt(): void {
+    void this.session
+      .submitPrompt({
+        prompt: this.prompt,
+        attachments: this.attachments,
+        signal: this.turnController.signal,
+      })
+      .then((directResponse) => {
+        if (typeof directResponse !== "string" || this.settled) return;
+        this.settled = true;
+        this.resolveResult(parseChatGptWebDirectConversation(directResponse));
+      })
+      .catch((error: unknown) => {
+        this.fail(turnError(error, "ChatGPT Web prompt submission failed"));
+      });
+  }
+
+  async run(timeoutMs: number, signal?: AbortSignal | null): Promise<ChatGptWebBrowserTurnResult> {
+    let cleanup: (() => Promise<void>) | null = null;
+    const timeout = setTimeout(
+      () => this.fail(new Error("ChatGPT Web browser turn timed out")),
+      timeoutMs
+    );
+    timeout.unref?.();
+    const abort = (): void => this.fail(new Error("ChatGPT Web browser turn aborted"));
+    signal?.addEventListener("abort", abort, { once: true });
+    try {
+      cleanup = await this.session.start(this.handlers());
+      if (!this.settled) this.submitPrompt();
+      return await this.resultPromise;
+    } finally {
+      clearTimeout(timeout);
+      signal?.removeEventListener("abort", abort);
+      await cleanup?.();
+    }
+  }
+}
+
 /** Run one turn while the first-party browser remains the sole challenge and auth owner. */
 export async function runChatGptWebBrowserTurn(
   session: ChatGptWebBrowserSession,
@@ -207,170 +400,8 @@ export async function runChatGptWebBrowserTurn(
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
     throw new Error("ChatGPT Web browser turn requires a positive timeout");
   }
-
-  let decoder = new ChatGptWebDeltaV1Decoder();
-  const bufferedFrames: string[] = [];
-  let bufferedFrameBytes = 0;
-  let topicStream: ChatGptWebTopicStream | null = null;
-  let conversationId = "";
-  let turnExchangeId = "";
-  let latestTerminalAssistant: ChatGptWebBrowserTurnResult | null = null;
-  let renderedReadPending = false;
-  let settled = false;
-  const turnController = new AbortController();
-  let resolveResult: (result: ChatGptWebBrowserTurnResult) => void = () => {};
-  let rejectResult: (error: Error) => void = () => {};
-
-  const resultPromise = new Promise<ChatGptWebBrowserTurnResult>((resolve, reject) => {
-    resolveResult = resolve;
-    rejectResult = reject;
-  });
-  // Browser events can finish while Playwright is still resolving the click promise. Attach a
-  // rejection observer immediately, then return the same result promise below.
-  void resultPromise.catch(() => {});
-  const fail = (error: Error): void => {
-    if (settled) return;
-    settled = true;
-    turnController.abort();
-    rejectResult(error);
-  };
-  const complete = (): void => {
-    if (settled) return;
-    try {
-      const result =
-        latestTerminalAssistant ??
-        terminalResult(decoder.snapshot(), conversationId, turnExchangeId);
-      settled = true;
-      resolveResult(result);
-    } catch (error) {
-      fail(error instanceof Error ? error : new Error("ChatGPT Web browser turn failed"));
-    }
-  };
-  const tryCompleteFromRenderedAssistant = (): void => {
-    if (renderedReadPending || !session.readRenderedAssistantText) return;
-    renderedReadPending = true;
-    void session
-      .readRenderedAssistantText(10_000)
-      .then((text) => {
-        renderedReadPending = false;
-        if (settled || typeof text !== "string" || !text.trim()) return;
-        settled = true;
-        resolveResult({
-          conversationId,
-          turnExchangeId,
-          text: text.trim(),
-          status: "finished_successfully",
-          endTurn: true,
-        });
-      })
-      .catch(() => {
-        renderedReadPending = false;
-      });
-  };
-  const ingestFrame = (frameText: string): void => {
-    if (!topicStream || settled) return;
-    try {
-      const frame = topicStream.ingestFrame(frameText);
-      for (const encodedItem of frame.encodedItems) {
-        const decoded = decoder.ingest(encodedItem);
-        if (!decoded.changed) continue;
-        latestTerminalAssistant =
-          maybeTerminalResult(decoder.snapshot(), conversationId, turnExchangeId) ??
-          latestTerminalAssistant;
-      }
-      if (frame.done) {
-        if (latestTerminalAssistant) {
-          complete();
-        } else if (snapshotMessageRole(decoder.snapshot()) === "tool") {
-          topicStream = null;
-          decoder = new ChatGptWebDeltaV1Decoder();
-          tryCompleteFromRenderedAssistant();
-        } else {
-          complete();
-        }
-      }
-    } catch (error) {
-      fail(error instanceof Error ? error : new Error("ChatGPT Web stream decoding failed"));
-    }
-  };
-  const handlers: ChatGptWebBrowserSessionHandlers = {
-    onBootstrap(sseText) {
-      if (settled) return;
-      if (topicStream) {
-        fail(new Error("ChatGPT Web browser turn received more than one handoff"));
-        return;
-      }
-      try {
-        const handoff = parseChatGptWebConversationHandoff(sseText);
-        if (conversationId && handoff.conversationId !== conversationId) {
-          fail(new Error("ChatGPT Web browser turn changed conversation during handoff"));
-          return;
-        }
-        conversationId = handoff.conversationId;
-        turnExchangeId = handoff.turnExchangeId;
-        decoder = new ChatGptWebDeltaV1Decoder();
-        latestTerminalAssistant = null;
-        topicStream = new ChatGptWebTopicStream(handoff.topicId);
-        for (const frame of bufferedFrames.splice(0)) ingestFrame(frame);
-        bufferedFrameBytes = 0;
-      } catch (error) {
-        fail(error instanceof Error ? error : new Error("ChatGPT Web handoff parsing failed"));
-      }
-    },
-    onWebSocketFrame(frameText) {
-      if (settled) return;
-      if (topicStream) {
-        ingestFrame(frameText);
-        return;
-      }
-      bufferedFrameBytes += Buffer.byteLength(frameText);
-      if (
-        bufferedFrames.length >= MAX_BUFFERED_FRAMES ||
-        bufferedFrameBytes > MAX_BUFFERED_FRAME_BYTES
-      ) {
-        fail(new Error("ChatGPT Web browser turn exceeded the pre-handoff frame buffer"));
-        return;
-      }
-      bufferedFrames.push(frameText);
-    },
-    onError() {
-      fail(new Error("ChatGPT Web first-party browser session failed"));
-    },
-  };
-
-  let cleanup: (() => Promise<void>) | null = null;
-  const timeout = setTimeout(
-    () => fail(new Error("ChatGPT Web browser turn timed out")),
-    timeoutMs
-  );
-  timeout.unref?.();
-  const abort = (): void => fail(new Error("ChatGPT Web browser turn aborted"));
-  request.signal?.addEventListener("abort", abort, { once: true });
-
-  try {
-    cleanup = await session.start(handlers);
-    void Promise.resolve()
-      .then(async () => {
-        if (settled) return;
-        const directResponse = await session.submitPrompt({
-          prompt,
-          attachments: request.attachments ?? [],
-          signal: turnController.signal,
-        });
-        if (typeof directResponse === "string" && !settled) {
-          settled = true;
-          resolveResult(parseChatGptWebDirectConversation(directResponse));
-        }
-      })
-      .catch((error: unknown) => {
-        fail(error instanceof Error ? error : new Error("ChatGPT Web prompt submission failed"));
-      });
-    return await resultPromise;
-  } finally {
-    clearTimeout(timeout);
-    request.signal?.removeEventListener("abort", abort);
-    await cleanup?.();
-  }
+  const runner = new ChatGptWebBrowserTurnRunner(session, prompt, request.attachments ?? []);
+  return runner.run(timeoutMs, request.signal);
 }
 
 /**

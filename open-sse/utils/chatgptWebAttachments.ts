@@ -127,7 +127,7 @@ export function isChatGptWebAttachmentContentPart(value: unknown): boolean {
   return ["file", "image", "image_url", "input_file", "input_image"].includes(type ?? "");
 }
 
-export function extractChatGptWebAttachmentSources(
+function extractImageAttachmentSources(
   messages: ReadonlyArray<{ role?: string; content?: unknown }>
 ): ChatGptWebAttachmentSource[] {
   const sources: ChatGptWebAttachmentSource[] = [];
@@ -146,7 +146,7 @@ export function extractChatGptWebAttachmentSources(
     ];
     const record = isRecord(part) ? part : null;
     const explicitName = optionalString(record?.filename ?? record?.name);
-    const index = sources.filter((source) => source.kind === "image").length + 1;
+    const index = sources.length + 1;
     const mimeType = mimeFromDataUrl(image.ref);
     sources.push({
       kind: "image",
@@ -155,7 +155,13 @@ export function extractChatGptWebAttachmentSources(
       ...(mimeType ? { mimeType } : {}),
     });
   }
+  return sources;
+}
 
+function extractFileAttachmentSources(
+  messages: ReadonlyArray<{ role?: string; content?: unknown }>
+): ChatGptWebAttachmentSource[] {
+  const sources: ChatGptWebAttachmentSource[] = [];
   for (const message of messages) {
     if (!Array.isArray(message.content)) continue;
     for (const part of message.content) {
@@ -164,7 +170,16 @@ export function extractChatGptWebAttachmentSources(
       if (type === "file" || type === "input_file") sources.push(fileSourceFromPart(part));
     }
   }
+  return sources;
+}
 
+export function extractChatGptWebAttachmentSources(
+  messages: ReadonlyArray<{ role?: string; content?: unknown }>
+): ChatGptWebAttachmentSource[] {
+  const sources = [
+    ...extractImageAttachmentSources(messages),
+    ...extractFileAttachmentSources(messages),
+  ];
   if (sources.length > MAX_CHATGPT_WEB_ATTACHMENTS) {
     throw new ChatGptWebAttachmentError(
       `ChatGPT Web accepts at most ${MAX_CHATGPT_WEB_ATTACHMENTS} attachments per request`

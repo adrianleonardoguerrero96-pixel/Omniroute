@@ -255,6 +255,19 @@ function setCurrentBrowser(headless: boolean, browser: Browser | null): void {
   else state.headedBrowser = browser;
 }
 
+function currentBrowserLaunch(headless: boolean): Promise<Browser> | null {
+  return headless ? state.launching : state.headedLaunching;
+}
+
+function setBrowserLaunch(headless: boolean, launch: Promise<Browser> | null): void {
+  if (headless) state.launching = launch;
+  else state.headedLaunching = launch;
+}
+
+function clearBrowserLaunch(headless: boolean, launch: Promise<Browser>): void {
+  if (currentBrowserLaunch(headless) === launch) setBrowserLaunch(headless, null);
+}
+
 export function resolvePlainBrowserLaunchOptions(
   options: Pick<BrowserPoolContextOptions, "headless" | "executablePath">
 ): import("playwright").LaunchOptions {
@@ -271,32 +284,38 @@ export function resolvePlainBrowserLaunchOptions(
   };
 }
 
+async function launchBrowserInstance(
+  options: BrowserPoolContextOptions,
+  headless: boolean
+): Promise<Browser> {
+  if (!headless) {
+    const { chromium } = await import("playwright");
+    return chromium.launch(resolvePlainBrowserLaunchOptions(options));
+  }
+
+  const cloakLaunch = await resolveCloakLaunch();
+  if (cloakLaunch) {
+    return cloakLaunch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-dev-shm-usage"],
+    });
+  }
+
+  // Fallback: plain Playwright. Works for Claude web (cookie-only auth) but
+  // DDG's VQD challenge will detect this Chromium build.
+  const { chromium } = await import("playwright");
+  return chromium.launch(resolvePlainBrowserLaunchOptions(options));
+}
+
 async function launchBrowser(options: BrowserPoolContextOptions): Promise<Browser> {
   const headless = options.headless !== false;
   const existing = currentBrowser(headless);
   if (existing) return existing;
-  const pending = headless ? state.launching : state.headedLaunching;
+  const pending = currentBrowserLaunch(headless);
   if (pending) return pending;
   const generation = state.generation;
   const launch = (async () => {
-    let browser: Browser;
-    if (!headless) {
-      const { chromium } = await import("playwright");
-      browser = await chromium.launch(resolvePlainBrowserLaunchOptions(options));
-    } else {
-      const cloakLaunch = await resolveCloakLaunch();
-      if (cloakLaunch) {
-        browser = await cloakLaunch({
-          headless: true,
-          args: ["--no-sandbox", "--disable-dev-shm-usage"],
-        });
-      } else {
-        // Fallback: plain Playwright. Works for Claude web (cookie-only
-        // auth) but DDG's VQD challenge will detect this Chromium build.
-        const { chromium } = await import("playwright");
-        browser = await chromium.launch(resolvePlainBrowserLaunchOptions(options));
-      }
-    }
+    const browser = await launchBrowserInstance(options, headless);
 
     if (state.generation !== generation) {
       await browser.close().catch(() => {});
@@ -306,16 +325,13 @@ async function launchBrowser(options: BrowserPoolContextOptions): Promise<Browse
     state.metrics.browserLaunches++;
     return browser;
   })();
-  if (headless) state.launching = launch;
-  else state.headedLaunching = launch;
+  setBrowserLaunch(headless, launch);
   try {
     const browser = await launch;
-    if (headless && state.launching === launch) state.launching = null;
-    if (!headless && state.headedLaunching === launch) state.headedLaunching = null;
+    clearBrowserLaunch(headless, launch);
     return browser;
   } catch (err) {
-    if (headless && state.launching === launch) state.launching = null;
-    if (!headless && state.headedLaunching === launch) state.headedLaunching = null;
+    clearBrowserLaunch(headless, launch);
     state.metrics.browserLaunchFailures++;
     throw err;
   }
@@ -407,6 +423,25 @@ async function seedContextSession(
   );
 }
 
+async function createWarmupPage(
+  context: BrowserContext,
+  warmupUrl: string | null | undefined
+): Promise<Page | null> {
+  if (!warmupUrl) return null;
+  let page: Page | null = null;
+  try {
+    page = await context.newPage();
+    await page.goto(warmupUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
+    // Give the warmup a moment for upstream status/auth/country requests. The
+    // first chat request otherwise pays this cost on the hot path.
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    return page;
+  } catch {
+    await page?.close().catch(() => {});
+    return null;
+  }
+}
+
 export async function acquireBrowserContext(
   key: string,
   options: BrowserPoolContextOptions
@@ -447,29 +482,7 @@ export async function acquireBrowserContext(
     });
 
     await seedContextSession(context, options);
-
-    let warmupPage: Page | null = null;
-    if (options.warmupUrl) {
-      try {
-        warmupPage = await context.newPage();
-        await warmupPage.goto(options.warmupUrl, {
-          waitUntil: "domcontentloaded",
-          timeout: 30000,
-        });
-        // Give the warmup a moment for the upstream's status/auth/country
-        // JSON endpoints to fire. Without this, the first chat request would
-        // pay the warmup cost on the hot path.
-        await new Promise((r) => setTimeout(r, 1500));
-      } catch (err) {
-        try {
-          await warmupPage?.close();
-        } catch {
-          /* ignore */
-        }
-        warmupPage = null;
-        void err;
-      }
-    }
+    const warmupPage = await createWarmupPage(context, options.warmupUrl);
 
     // Guard: if shutdownPool() ran while we were creating this context,
     // the browser we obtained is now closed. Close our temp context and

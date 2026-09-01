@@ -5,6 +5,7 @@
 export const WEB_COOKIE_PROVIDERS = {
   "chatgpt-web": {
     id: "chatgpt-web",
+    serviceKinds: ["llm"],
     name: "ChatGPT Web (Clean Room)",
     icon: "auto_awesome",
     color: "#10A37F",
