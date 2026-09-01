@@ -90,7 +90,7 @@ and the `amazon-q` ACP provider) have no manifest entry to tag.
 `usage-supported` answers whether the server and Dashboard usage routes accept a connection
 for the provider. It mirrors `isSupportedUsageConnection()` (`src/lib/usage/providerLimits.ts`)
 and `supportsProviderQuota()` (`src/shared/utils/providerQuotaVisibility.ts`), both gated by
-`USAGE_SUPPORTED_PROVIDERS` (`src/shared/constants/providers/usageSupported.ts`). Unlike
+`USAGE_SUPPORTED_PROVIDERS` (`open-sse/services/usage/supportedProviders.ts`). Unlike
 `usage-fetch`, it is emitted on the provider id alone — the runtime guard does
 `USAGE_SUPPORTED_PROVIDERS.includes(providerId)` with no alias resolution, so the manifest
 keeps the same rule. The two tags have different perimeters: 4 providers carry only

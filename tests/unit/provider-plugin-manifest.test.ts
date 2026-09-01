@@ -7,7 +7,7 @@ import {
 } from "../../open-sse/config/providerPluginManifest.ts";
 import type { RegistryEntry } from "../../open-sse/config/providers/shared.ts";
 import { USAGE_FETCHER_PROVIDERS } from "../../open-sse/services/usage/fetcherProviders.ts";
-import { USAGE_SUPPORTED_PROVIDERS } from "../../src/shared/constants/providers/usageSupported.ts";
+import { USAGE_SUPPORTED_PROVIDERS } from "../../open-sse/services/usage/supportedProviders.ts";
 
 const registryFixture: Record<string, RegistryEntry> = {
   openai: {

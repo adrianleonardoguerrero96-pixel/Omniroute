@@ -1,6 +1,6 @@
 import type { RegistryEntry, RegistryModel } from "./providers/shared.ts";
 import { USAGE_FETCHER_PROVIDERS } from "../services/usage/fetcherProviders.ts";
-import { USAGE_SUPPORTED_PROVIDERS } from "../../src/shared/constants/providers/usageSupported.ts";
+import { USAGE_SUPPORTED_PROVIDERS } from "../services/usage/supportedProviders.ts";
 
 export type ProviderPluginCapability =
   | "apikey"
