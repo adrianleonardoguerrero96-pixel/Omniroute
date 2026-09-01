@@ -87,17 +87,21 @@ export async function POST(request) {
     // Always get machineId from server
     const machineId = await getConsistentMachineId();
     const normalizedScopes = normalizeSelfServiceScopesForCreate(scopes);
-    const apiKey = await createApiKey(name, machineId, normalizedScopes, { allowedConnections });
+    // The model/Combo ACL is persisted in the same INSERT as the key row: a key must never
+    // exist, even transiently, with a wider access policy than the one requested (#12275).
+    const apiKey = await createApiKey(name, machineId, normalizedScopes, {
+      allowedConnections,
+      ...(modelAccessMode !== undefined && { modelAccessMode }),
+      ...(allowedModels !== undefined && { allowedModels }),
+      ...(allowedCombos !== undefined && { allowedCombos }),
+    });
     if (
       noLog === true ||
       allowUsageCommand === true ||
       usageLimitEnabled === true ||
       dailyUsageLimitUsd !== undefined ||
       weeklyUsageLimitUsd !== undefined ||
-      chaosModeEnabled === true ||
-      modelAccessMode !== undefined ||
-      allowedModels !== undefined ||
-      allowedCombos !== undefined
+      chaosModeEnabled === true
     ) {
       await updateApiKeyPermissions(apiKey.id, {
         ...(noLog === true && { noLog: true }),
@@ -106,9 +110,6 @@ export async function POST(request) {
         ...(dailyUsageLimitUsd !== undefined && { dailyUsageLimitUsd }),
         ...(weeklyUsageLimitUsd !== undefined && { weeklyUsageLimitUsd }),
         ...(chaosModeEnabled === true && { chaosModeEnabled: true }),
-        ...(modelAccessMode !== undefined && { modelAccessMode }),
-        ...(allowedModels !== undefined && { allowedModels }),
-        ...(allowedCombos !== undefined && { allowedCombos }),
       });
     }
 

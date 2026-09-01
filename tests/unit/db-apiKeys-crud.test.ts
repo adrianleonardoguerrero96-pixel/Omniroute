@@ -63,6 +63,46 @@ test("createApiKey with scopes stores them", async () => {
   assert.deepEqual(key.scopes, ["read", "write"]);
 });
 
+test("createApiKey persists the requested model and Combo ACL in the key row itself", async () => {
+  await resetStorage();
+  const created = await apiKeys.createApiKey("acl-key", "machine-acl", [], {
+    modelAccessMode: "restricted",
+    allowedModels: [],
+    allowedCombos: [],
+  });
+  const stored = await apiKeys.getApiKeyById(created.id);
+
+  assert.equal(created.modelAccessMode, "restricted");
+  assert.deepEqual(created.allowedModels, []);
+  assert.deepEqual(created.allowedCombos, []);
+  assert.equal(stored?.modelAccessMode, "restricted");
+  assert.deepEqual(stored?.allowedModels, []);
+  assert.deepEqual(stored?.allowedCombos, []);
+  assert.equal(await apiKeys.isModelAllowedForKey(created.key, "openai/gpt-4.1"), false);
+});
+
+test("createApiKey without ACL options keeps the permissive defaults", async () => {
+  await resetStorage();
+  const created = await apiKeys.createApiKey("default-key", "machine-default");
+  const stored = await apiKeys.getApiKeyById(created.id);
+
+  assert.equal(stored?.modelAccessMode, "all");
+  assert.deepEqual(stored?.allowedModels, []);
+  assert.deepEqual(stored?.allowedCombos, ["combo/*"]);
+});
+
+test("createApiKey normalizes an allow-all mode to an empty model allowlist", async () => {
+  await resetStorage();
+  const created = await apiKeys.createApiKey("normalized-key", "machine-norm", [], {
+    modelAccessMode: "all",
+    allowedModels: ["openai/gpt-4.1"],
+  });
+  const stored = await apiKeys.getApiKeyById(created.id);
+
+  assert.equal(stored?.modelAccessMode, "all");
+  assert.deepEqual(stored?.allowedModels, []);
+});
+
 test("createApiKey rejects empty machineId", async () => {
   await resetStorage();
   await assert.rejects(() => apiKeys.createApiKey("Bad Key", ""), {

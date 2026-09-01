@@ -159,6 +159,29 @@ test("POST /api/keys persists a restricted model and Combo ACL", async () => {
   assert.equal(await apiKeysDb.isModelAllowedForKey(body.key, "openai/gpt-4.1"), false);
 });
 
+test("POST /api/keys with an empty Combo allowlist denies every Combo from creation", async () => {
+  await enableManagementAuth();
+  await createManagementKey();
+
+  const response = await listRoute.POST(
+    await makeManagementSessionRequest("http://localhost/api/keys", {
+      method: "POST",
+      body: {
+        name: "No Combos",
+        allowedCombos: [],
+      },
+    })
+  );
+  const body = (await response.json()) as { id: string; key: string };
+  const stored = await apiKeysDb.getApiKeyById(body.id);
+  const metadata = await apiKeysDb.getApiKeyMetadata(body.key);
+
+  assert.equal(response.status, 201);
+  assert.deepEqual(stored?.allowedCombos, []);
+  assert.deepEqual(metadata?.allowedCombos, []);
+  assert.equal(stored?.modelAccessMode, "all");
+});
+
 test("POST /api/keys preserves an explicit model allowlist", async () => {
   await enableManagementAuth();
   await createManagementKey();
