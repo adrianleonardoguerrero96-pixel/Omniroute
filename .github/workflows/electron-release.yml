@@ -4,6 +4,10 @@ on:
   push:
     tags:
       - "v*"
+  # A dispatch builds the ref it is dispatched ON (`gh workflow run … --ref v3.8.50` rebuilds
+  # that tag; `--ref main` builds the repaired line). The ref is deliberately NOT an input:
+  # CodeQL flags an input-controlled checkout next to the npm cache on the default branch as
+  # cache poisoning (actions/cache-poisoning/poisonable-step), and `github.ref` is trusted.
   workflow_dispatch:
     inputs:
       version:
@@ -417,7 +421,14 @@ jobs:
           tag_name: ${{ needs.validate.outputs.version }}
           draft: false
           prerelease: false
-          generate_release_notes: true
+          # NEVER. Phase 3 of the release flow creates the GitHub Release with the curated
+          # notes seconds after pushing the tag, so by the time this step runs (1-2 h of
+          # builds later) the body already exists — and `true` APPENDS GitHub's
+          # auto-generated "What's Changed" block to it (v3.8.48 shipped that way; the
+          # v3.8.50 re-attach dispatch added +1,416 chars to a 121 KB body, run
+          # 33238093090). A curated body sits ~3 KB under the 125,000-char cap, so the
+          # append can also turn this step RED and leave the release with no assets.
+          generate_release_notes: false
           fail_on_unmatched_files: false
           files: |
             release-assets/*.dmg

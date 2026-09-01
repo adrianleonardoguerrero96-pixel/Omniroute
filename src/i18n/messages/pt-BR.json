@@ -806,6 +806,13 @@
     "batchConceptBenefit50pct": "50% de desconto em tokens de entrada e saída",
     "batchConceptAsync24h": "Assíncrono com janela de 24h",
     "batchConceptUseCases": "Indicado para classificação em massa, avaliações e embeddings",
+    "batchHeaderSubtitle": "Execute muitas requisições como um único job",
+    "batchStep1": "1 · Enviar JSONL",
+    "batchStep1Desc": "Adicionar requisições",
+    "batchStep2": "2 · Criar lote",
+    "batchStep2Desc": "Executar job",
+    "batchStep3": "3 · Obter resultados",
+    "batchStep3Desc": "Baixar saída",
     "filesConceptTitle": "Arquivos de batch",
     "filesConceptSubtitle": "Arquivos JSONL usados pelos batches: requisições de entrada, resultados e erros.",
     "filesConceptInput": "Entrada — seu JSONL com uma requisição por linha",
@@ -971,13 +978,6 @@
     "batchTimelineCancelled": "Cancelado",
     "batchTokenUsage": "Uso de Token",
     "batchMetadata": "Metadados",
-    "batchHeaderSubtitle": "Execute muitas requisições como um único job",
-    "batchStep1": "1 · Enviar JSONL",
-    "batchStep1Desc": "Adicionar requisições",
-    "batchStep2": "2 · Criar lote",
-    "batchStep2Desc": "Executar job",
-    "batchStep3": "3 · Obter resultados",
-    "batchStep3Desc": "Baixar saída",
     "batchFileContents": "Conteúdo do Arquivo",
     "batchFileUsedByCount": "Usado por {count, plural, one {# lote} other {# lotes}}",
     "batchFilePreview": "Prévia",
@@ -986,8 +986,10 @@
   },
   "disabled": "Desabilitado",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Roteie solicitações com orçamento esgotado para o provedor/modelo de fallback gratuito de emergência.",
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Desative a geração de variantes de nível de pensamento (por exemplo, -low, -medium, -high) no catálogo /v1/models.",
   "featureFlagArenaEloSyncEnabledDescription": "Ativar a sincronização periódica do ELO do leaderboard da Arena AI para classificações de inteligência do modelo.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Divulgar ids espelho claude/&lt;provider&gt;/&lt;model&gt; em /v1/models para que a descoberta de modelos do gateway Claude Code liste modelos não-Claude. Atenção: duplica as entradas do catálogo para todos os clientes quando ativado globalmente.",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "Ative faixas de admissão virtuais adaptativas por tenant para o despacho de provedores (#9654): o pico de um tenant não gera mais 503 para outro. A variável de ambiente OMNIROUTE_CHAT_VIRTUAL_LANES tem precedência sobre esta configuração do painel; as alterações entram em vigor ao reiniciar o servidor.",
   "sidebar": {
     "home": "Início",
@@ -1024,6 +1026,8 @@
     "logs": "Registros",
     "webhooks": "Webhooks",
     "webhooksSubtitle": "Seja notificado sobre eventos",
+    "logExport": "Exportação de logs",
+    "logExportSubtitle": "Envie os logs de chamadas para fora",
     "combosSubtitle": "Provedores de grupo para failover",
     "batchSubtitle": "Processar várias solicitações",
     "contextCavemanSubtitle": "Compactação imediata",
@@ -1289,6 +1293,8 @@
     "discoverySubtitle": "Buscar acesso gratuito em provedores",
     "conductor": "Conductor",
     "conductorSubtitle": "Frota de agentes CLI",
+    "orchestration": "Orquestração",
+    "orchestrationSubtitle": "Visão ao vivo de tudo em execução",
     "resilienceConnections": "Resiliência de Conexão",
     "resilienceConnectionsSubtitle": "Cooldown, disjuntor, estado de bloqueio",
     "settingsModalityBridge": "Ponte de Modalidade",
@@ -1767,7 +1773,8 @@
     "tools": "Ferramentas",
     "agentBridge": "Agent Bridge",
     "trafficInspector": "Inspector de Tráfego",
-    "usage": "Uso"
+    "usage": "Uso",
+    "orchestration": "Orquestração"
   },
   "home": {
     "quickStart": "Início Rápido",
@@ -2400,7 +2407,15 @@
     "bypassProviderQuota": "Ignorar cortes de cota do provedor",
     "bypassProviderQuotaDescription": "Permite que esta chave ignore a política de corte do provedor/conta upstream durante o roteamento. As cotas em USD da chave de API ainda se aplicam.",
     "quotaPill": "QUOTA",
-    "quotaModeOnly": "só-qtSd"
+    "quotaModeOnly": "só-qtSd",
+    "exclusiveLease": "Arrendamento exclusivo",
+    "exclusiveLeaseNoticeTitle": "Arrendamento exclusivo",
+    "exclusiveLeaseNoticeDesc": "Esta chave de API tem permissões de arrendamento exclusivo para roteamento dedicado de conexões.",
+    "allConnections": "Todas as conexões",
+    "onlySelectedConnections": "Apenas as conexões selecionadas",
+    "selectAtLeastOneConnection": "Selecione pelo menos uma conexão ou escolha Todas as conexões.",
+    "allConnectionsDesc": "Esta chave pode usar qualquer conexão ativa.",
+    "restrictedToConnections": "Restrita a {count, plural, one {# conexão} other {# conexões}}."
   },
   "auditLog": {
     "title": "Log de Auditoria",
@@ -2925,7 +2940,8 @@
       "letta": "Agente CLI Letta com memória persistente e uso de ferramentas",
       "prime-agent": "Prime Agent — harness de codificação RLM autoevolutivo com suporte a API compatível com OpenAI",
       "warp": "Terminal de IA Warp com suporte a provedor personalizado",
-      "agent-deck": "Orquestrador multi-agente Agent Deck"
+      "agent-deck": "Orquestrador multi-agente Agent Deck",
+      "5dive": "5dive — frota auto-hospedada de agentes de codificação; um perfil de autenticação aponta todos para o OmniRoute"
     },
     "guides": {
       "cursor": {
@@ -5872,6 +5888,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Tempo mínimo (ms) entre solicitações. Substitui o atraso padrão do limitador de taxa.",
     "rateLimitOverridesMinTimeLabel": "Min Intervalo (ms)",
+    "rateLimitOverridesRpdHint": "Máximo de requisições por dia para esta conexão. Substitui o padrão do provedor.",
+    "rateLimitOverridesRpdLabel": "RPD (Requisições/dia)",
     "rateLimitOverridesRpmHint": "Máximo de requisições por minuto para esta conexão. Substitui o padrão do provedor.",
     "rateLimitOverridesRpmLabel": "RPM (Requisições/min)",
     "rateLimitOverridesTpdHint": "Máximo de tokens por dia para esta conexão. Substitui o padrão do provedor.",
@@ -6255,7 +6273,7 @@
       "galadriel": "Conecte o Galadriel com uma chave de API.",
       "predibase": "$25 em créditos de teste gratuitos (validade de 30 dias)",
       "chenzk": "Gateway compatível com OpenAI com um catálogo de modelos ao vivo em chenzk.top.",
-      "magnific": "Gere imagens com a API Mystic do Freepik.",
+      "magnific": "Gere imagens com a API Mystic do Magnific.",
       "freetheai": "Gateway gratuito compatível com OpenAI com suporte a modelos via passthrough.",
       "g4f-gemini": "Gateway remoto do g4f.space para o Gemini. O acesso anônimo exige créditos de prova de trabalho do g4f.dev/chat ou uma chave de API de membro do g4f.dev/members.html; os limites variam.",
       "g4f-groq": "Gateway remoto do g4f.space para o Groq. O acesso anônimo exige créditos de prova de trabalho do g4f.dev/chat ou uma chave de API de membro do g4f.dev/members.html; os limites variam.",
@@ -7043,6 +7061,14 @@
     "providerAccountRoutingDesc": "Substitui a estratégia global de contas para este provedor (paridade com 9router).",
     "providerRoutingStrategy": "Estratégia de conta",
     "providerRoutingInheritGlobal": "Herdar padrão global",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings.",
     "modelAliases": "Aliases de Modelo",
     "modelAliasesTitle": "Aliases de Modelo",
     "modelAliasesDesc": "Remap model names using exact matches or wildcard patterns.",
@@ -8019,6 +8045,7 @@
     "resilienceRequestQueueDesc": "Esta camada controla apenas o enfileiramento e o ritmo. Ele não armazena resfriamentos ou disjuntores abertos.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Ativa a proteção de fila por padrão para conexões de chave de API ativas.",
     "resilienceMaxQueueWait": "Tempo máximo de espera na fila",
+    "resilienceMaxExecutionWait": "Tempo limite de execução (dispositivo de segurança de rate-limit)",
     "resilienceConnectionCooldownScope": "Conexão individual",
     "resilienceConnectionCooldownTrigger": "Quando uma conexão retorna uma falha transitória de upstream",
     "resilienceConnectionCooldownEffect": "Ignora temporariamente essa conexão e aumenta a espera para falhas repetidas",
@@ -8058,6 +8085,14 @@
     "resilienceProviderCooldownEnabledDesc": "Quando ativado, provedores com falha são rastreados globalmente e pulados por um período de espera.",
     "resilienceProviderCooldownMin": "Tempo de recarga mínimo",
     "resilienceProviderCooldownMax": "Tempo máximo de recarga",
+    "resilienceCredentialHealthTitle": "Verificação de saúde da credencial",
+    "resilienceCredentialHealthScope": "Todas as conexões ativas de API-key e OAuth",
+    "resilienceCredentialHealthTrigger": "Periodicamente, em cadência fixa",
+    "resilienceCredentialHealthEffect": "Testa a credencial de cada conexão e marca ativa/erro; conexões com falha entram em backoff exponencial",
+    "resilienceCredentialHealthDesc": "Varredura em segundo plano que valida a credencial de cada conexão ativa chamando seu provedor. Defina 0 para desativar a varredura por completo. Os valores de Verificação de Saúde por conexão (no diálogo de edição de cada conexão) sempre sobrepõem este padrão global.",
+    "resilienceCredentialHealthInterval": "Intervalo global de verificação",
+    "resilienceCredentialHealthEveryMinutes": "A cada {minutes} min",
+    "resilienceCredentialHealthHint": "0 desativa a varredura em segundo plano (máx. 1440 min = 24 h). Conexões com seu próprio valor de Verificação de Saúde ignoram este padrão global; um 0 por conexão a exclui mesmo com a varredura global ativa.",
     "forcedFingerprintTitle": "Sempre ativado para {provider} — necessário para a segurança da conta OAuth; não pode ser desativado.",
     "forcedFingerprintBadge": "Obrigatório",
     "sessionAffinityTitle": "Afinidade de sessão",
@@ -8201,6 +8236,7 @@
     "modalityBridgeVideoTitle": "Ponte de vídeo",
     "modalityBridgeVideoDesc": "Faça uma amostragem dos quadros do vídeo, descreva-os com um modelo de visão e continue com o modelo de texto escolhido.",
     "modalityBridgeVideoRuntimeReady": "Ambiente de execução pronto",
+    "modalityBridgeVideoRuntimeChecking": "Verificando o runtime…",
     "modalityBridgeVideoRuntimeUnavailable": "Ambiente de execução indisponível",
     "modalityBridgeVideoRuntimeInstall": "Instale o FFmpeg e o ffprobe no PATH do servidor para habilitar a extração de vídeo.",
     "modalityBridgeVideoEnabled": "Ativar Ponte de vídeo",
@@ -9187,6 +9223,13 @@
     "grokAutoTopUpMax": "máximo",
     "grokAutoTopUpMonth": "mês",
     "grokAdditionalCredits": "Créditos adicionais",
+    "kiloAccountBalance": "__MISSING__:Account Balance",
+    "kiloPassBonus": "__MISSING__:Available bonus",
+    "kiloPassMeterLabel": "__MISSING__:Kilo Pass usage meter",
+    "kiloPassPaid": "__MISSING__:Paid",
+    "kiloPassRemaining": "__MISSING__:Remaining",
+    "kiloPassRenews": "__MISSING__:Renews {count} days",
+    "kiloPassUsageLabel": "__MISSING__:This month's usage",
     "kimiExtraUsageCredits": "Créditos de uso extra",
     "kimiExtraUsage": "Uso extra",
     "kimiExtraUsageEnabled": "Ativado",
@@ -11217,7 +11260,8 @@
       "tps": "TPS",
       "duration": "Duration",
       "time": "Time",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",
@@ -11257,6 +11301,11 @@
       "copy": "Copiar",
       "autoscrollOn": "Rolagem Automática: ativada",
       "autoscrollOff": "Deslocamento Automático: desligado",
+      "collapseAllLevels": "Recolher tudo",
+      "collapseOneLevel": "Recolher um nível",
+      "currentExpandLevel": "Nível de expansão atual",
+      "expandOneLevel": "Expandir um nível",
+      "expandAllLevels": "Expandir tudo",
       "payload": {
         "clientRawRequest": "Solicitação Bruta do Cliente",
         "clientRequest": "Solicitação do Cliente",
@@ -12276,7 +12325,7 @@
       },
       "omni-mcp": {
         "name": "MCP",
-        "description": "Conecte-se ao servidor MCP do OmniRoute (37 ferramentas, 3 transportes: SSE/stdio/HTTP). Abrange ferramentas de roteamento, cache, compressão, memória, skills, provedores e auditoria em 16 escopos de permissão."
+        "description": "Conecte-se ao servidor MCP do OmniRoute (110 ferramentas, 3 transportes: SSE/stdio/HTTP). Abrange ferramentas de roteamento, cache, compressão, memória, skills, provedores e auditoria em 33 escopos de permissão."
       },
       "omni-agents-a2a": {
         "name": "Agentes e Protocolo A2A",
@@ -12490,6 +12539,8 @@
     "typeApikey": "Chave da API",
     "sortTypeFirst": "Mais fácil primeiro",
     "sortTypeFirstHelp": "Agrupar por esforço de inscrição (Sem Inscrição → Login OAuth → Chave da API), mantendo a ordem de qualidade dentro de cada grupo",
+    "sortByReliability": "Mais confiável primeiro",
+    "sortByReliabilityHelp": "Ordena os provedores pela proporção de chamadas bem-sucedidas na janela selecionada. Provedores com poucas chamadas para afirmar uma taxa mantêm a ordem por pontuação, abaixo dos que foram medidos.",
     "typeLegend": "Sem Cadastro = zero configuração · Login OAuth = faça login com sua própria conta · Chave API = traga sua própria chave ou o nível gratuito daquele provedor",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
@@ -12918,6 +12969,18 @@
       }
     }
   },
+  "combo": {
+    "sort": {
+      "label": "Ordenar por",
+      "method": {
+        "manual": "Manual",
+        "provider": "Provedor",
+        "score": "Pontuação (modelos gratuitos)",
+        "name": "Nome"
+      },
+      "scoreHint": "A ordenação por pontuação vale só para provedores gratuitos; os demais ficam onde estão."
+    }
+  },
   "comboControl": {
     "title": "Central de Controle de Combo",
     "unavailable": "Central de Controle de Combo indisponível",
@@ -13317,6 +13380,9 @@
     "colContext": "Contexto",
     "colCapabilities": "Capacidades",
     "colTos": "Risco ToS",
+    "colLimits": "__MISSING__:Rate limits",
+    "trainsOnPrompts": "__MISSING__:Trains on prompts",
+    "trainsOnPromptsHelp": "__MISSING__:This provider's terms state it may train on the prompts you send. Models without this badge either state they do not, or do not document it — an absent statement is not a guarantee.",
     "newBadge": "novo",
     "setupGuide": "Guia de configuração",
     "disabledByFeed": "Desativado pelo feed Radar",
@@ -13865,6 +13931,41 @@
     "ttsFailed": "Síntese de voz falhou (confira modelo/provider de TTS)",
     "micDenied": "Microfone indisponível ou permissão negada"
   },
+  "orchestration": {
+    "title": "Orquestração",
+    "description": "Tudo que o OmniRoute está executando agora — agentes, frota e roteamento",
+    "tabAgents": "Agentes",
+    "tabRouting": "Roteamento",
+    "tabOverview": "Visão geral",
+    "showCompleted": "Mostrar concluídos",
+    "sourceCloudAgent": "Cloud Agent",
+    "sourceA2A": "A2A",
+    "sourceConductor": "Conductor",
+    "sourceStale": "Sem atualização desde {since}",
+    "sourceOffline": "Offline",
+    "stateQueued": "Na fila",
+    "stateRunning": "Em execução",
+    "stateWaitingApproval": "Aguardando aprovação",
+    "stateSucceeded": "Concluída com sucesso",
+    "stateFailed": "Falhou",
+    "stateCancelled": "Cancelada",
+    "overflowMore": "+{count} a mais",
+    "emptyTitle": "Nada rodando ainda",
+    "emptyCloudAgentCta": "Configurar Cloud Agents",
+    "emptyA2ACta": "Abrir A2A",
+    "emptyConductorCta": "Abrir Conductor",
+    "drawerObjective": "Objetivo",
+    "drawerTimeline": "Linha do tempo",
+    "drawerMetrics": "Métricas",
+    "drawerResult": "Resultado",
+    "drawerActions": "Ações",
+    "actionApprove": "Aprovar plano",
+    "actionCancel": "Cancelar",
+    "actionSeeInGraph": "Ver no grafo",
+    "actionDone": "Ação aplicada",
+    "actionFailed": "Ação falhou: {error}",
+    "mirroredInA2A": "Espelhado no A2A"
+  },
   "cliproxyProviderExposure": {
     "title": "Exposição do Provedor",
     "description": "Expose modelos CLIProxyAPI como um alvo de roteamento sob o prefixo <prefix>cliproxyapi/</prefix>.",
@@ -13939,17 +14040,5 @@
     "cta": "Obter uma chave de API",
     "partnerLinkNote": "Link de parceiro",
     "dismissAriaLabel": "Dispensar"
-  },
-  "combo": {
-    "sort": {
-      "label": "Ordenar por",
-      "method": {
-        "manual": "Manual",
-        "provider": "Provedor",
-        "score": "Pontuação (modelos gratuitos)",
-        "name": "Nome"
-      },
-      "scoreHint": "A ordenação por pontuação vale só para provedores gratuitos; os demais ficam onde estão."
-    }
   }
 }
