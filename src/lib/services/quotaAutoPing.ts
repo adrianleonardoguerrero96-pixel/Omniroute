@@ -58,7 +58,12 @@ export interface QuotaAutoPingConnection {
 
 export interface QuotaAutoPingDeps {
   getSettings: () => Promise<JsonRecord>;
-  getProviderConnections: (filter: JsonRecord) => Promise<QuotaAutoPingConnection[]>;
+  getProviderConnections: (
+    filter: JsonRecord,
+    limit?: number,
+    offset?: number,
+    columns?: string[]
+  ) => Promise<QuotaAutoPingConnection[]>;
   updateProviderConnection: (id: string, data: JsonRecord) => Promise<unknown>;
   refreshAndUpdateCredentials: (
     connection: QuotaAutoPingConnection
