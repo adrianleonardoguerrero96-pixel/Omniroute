@@ -325,3 +325,145 @@ test("scoring factor validator flags every stale count the repo carried", () => 
     assert.equal(v(`the ${stale} scoring engine`).ok, false, `expected ${stale} to be flagged`);
   }
 });
+
+// --- v3.8.51 hardening: rewritten-claim evasion + version prose ------------------
+// Regression guards for the 2026-08-31 audit: "56 recurring/keyless free-forever"
+// and "105-tool MCP server" dodged the original patterns, "149 versioned SQL
+// migration files" dodged the migrations pattern, and the README footer shipped
+// "v3.8.50" on a 3.8.51 tree with no gate reading it.
+import { makeVersionClaimValidator } from "../../scripts/check/check-docs-counts-sync.mjs";
+
+const makeVersionValidator = makeVersionClaimValidator as (
+  expected: string | null
+) => (content: string) => { ok: boolean; detail: string };
+
+test("free-forever gate catches the rewritten recurring/keyless form", () => {
+  const v = makeValidator(53, {
+    what: "free-forever providers",
+    pattern: /(\d+)(?:\s+recurring(?:\/|\s+or\s+)keyless)?\s+free[- ]forever/gi,
+  });
+  assert.equal(v("53 free forever").ok, true);
+  assert.equal(v("53 recurring/keyless free-forever providers").ok, true);
+  assert.equal(v("56 recurring or keyless free-forever providers").ok, false);
+  assert.equal(v("55 free-forever").ok, false);
+});
+
+test("migrations gate catches the 'versioned SQL migration files' form", () => {
+  const v = makeValidator(167, {
+    what: "migrations",
+    pattern: /(\d+)\+? (?:versioned )?(?:SQL )?migrations?\b/gi,
+  });
+  assert.equal(v("167 versioned SQL migration files").ok, true);
+  assert.equal(v("167 SQL migrations").ok, true);
+  assert.equal(v("149 versioned SQL migration files").ok, false);
+});
+
+test("MCP-tools gate catches the hyphenated N-tool form and skips phase numbers", () => {
+  const v = makeValidator(110, {
+    what: "MCP tools",
+    pattern: /(\d+)[- ]tools?\b/gi,
+    skipBefore: /(tools?|definitions?)\s*\(\s*$|phase\s+$/i,
+    skipAfter: /^\s*\(\d+ CLI/,
+  });
+  assert.equal(v("a 110-tool MCP server").ok, true);
+  assert.equal(v("a 105-tool MCP server").ok, false);
+  assert.equal(v("Phase 2 tool handlers (8 advanced tools)").ok, true);
+});
+
+test("recurring-pools gate skips the positive-budget subset", () => {
+  const v = makeValidator(38, {
+    what: "recurring pools",
+    pattern: /(\d+) (?:documented )?(?:recurring|free-tier) pool(?:s|(?:\s+keys))?\b/gi,
+    skipAfter: /^\s+with a published positive/i,
+  });
+  assert.equal(v("38 recurring pool keys").ok, true);
+  assert.equal(v("20 recurring pools with a published positive monthly budget").ok, true);
+  assert.equal(v("39 recurring pools").ok, false);
+});
+
+test("version gate compares README-footer and llm.txt prose against package.json", () => {
+  const v = makeVersionValidator("3.8.51");
+  assert.equal(v("OmniRoute v3.8.51 · Node ≥22.22.2").ok, true);
+  assert.equal(v("**Current version:** 3.8.51").ok, true);
+  assert.equal(v("OmniRoute v3.8.50 · Node ≥22.22.2").ok, false);
+  assert.equal(v("**Current version:** 3.8.50").ok, false);
+  assert.equal(v("no version here").ok, true);
+  assert.equal(makeVersionValidator(null)("anything").ok, false);
+});
+
+// --- Mode packs ------------------------------------------------------------
+// Two packs (`reliability-first`, `chaos-mode`) shipped without ever reaching
+// the reference table, and two documents still claimed four. A count alone would
+// not have caught the table: it names four packs and says so. So the gate reads
+// the pack NAMES from the module itself and asks the reference document to
+// mention each one.
+import { makeModePackNamesValidator } from "../../scripts/check/check-docs-counts-sync.mjs";
+
+const packNames = makeModePackNamesValidator as (
+  names: string[]
+) => (content: string) => { ok: boolean; detail: string };
+
+test("a document that names every pack passes", () => {
+  const validate = packNames(["ship-fast", "cost-saver"]);
+  assert.equal(validate("We ship ship-fast and cost-saver profiles.").ok, true);
+});
+
+test("a document that forgets a pack fails, and says which one", () => {
+  const validate = packNames(["ship-fast", "chaos-mode"]);
+  const result = validate("We ship the ship-fast profile.");
+  assert.equal(result.ok, false);
+  assert.match(result.detail, /chaos-mode/);
+});
+
+test("a longer name does not satisfy the gate for a shorter one", () => {
+  // `includes` would let "ship-fast-v2" stand in for "ship-fast", so a doc could
+  // pass while naming a pack that does not ship.
+  assert.equal(packNames(["ship-fast"])("only ship-fast-v2 is documented here").ok, false);
+  assert.equal(packNames(["chaos"])("we document chaos-mode only").ok, false);
+});
+
+test("the name gate stays quiet when the source yields nothing", () => {
+  assert.equal(packNames([])("anything at all").ok, true);
+});
+
+// The pack names come from the same tsx subprocess that already reads every other
+// code-derived count, not from a regex over the source text: a reader that parses
+// TypeScript by hand is a gate that can be silently wrong, which is worse than no
+// gate at all.
+test("the module is the source of the names, so the gate cannot misparse it", async () => {
+  const { MODE_PACKS } = await import("../../open-sse/services/autoCombo/modePacks.ts");
+  const names = Object.keys(MODE_PACKS);
+  assert.ok(names.length > 0);
+  const page = names.join(", ");
+  assert.equal(packNames(names)(page).ok, true);
+  assert.equal(packNames(names)(names.slice(1).join(", ")).ok, false);
+});
+
+const MODE_PACK_CLAIM = {
+  what: "mode packs",
+  pattern: /(\d+)\s+(?:curated\s+|pre-defined\s+)?\*{0,2}(?:mode\s+packs?|weight\s+profiles?)\b/gi,
+};
+
+test("a stale mode pack count is rejected, in each spelling the docs use", () => {
+  const v = makeValidator(6, MODE_PACK_CLAIM);
+  assert.equal(v("- **4 mode packs**: coding, fast, cheap, smart").ok, false);
+  assert.equal(v("| modePacks.ts | 4 weight profiles (ship-fast, ...) |").ok, false);
+  assert.equal(v("4 pre-defined weight profiles").ok, false);
+});
+
+test("markdown emphasis does not hide a mode pack count", () => {
+  const v = makeValidator(6, MODE_PACK_CLAIM);
+  assert.equal(v("Backed by 6 curated **mode packs** (ship-fast, ...)").ok, true);
+  assert.equal(v("6 pre-defined weight profiles in `modePacks.ts`").ok, true);
+});
+
+test("a required claim cannot be silenced by rewording it away", () => {
+  // This is the failure mode the gate exists to prevent: reword the sentence past
+  // the pattern and "no claim in this file" used to read as a pass.
+  const optional = makeValidator(6, MODE_PACK_CLAIM);
+  const required = makeValidator(6, { ...MODE_PACK_CLAIM, requireClaim: true });
+  const reworded = "half a dozen curated profiles ship with the engine";
+  assert.equal(optional(reworded).ok, true, "a file that need not state it still passes");
+  assert.equal(required(reworded).ok, false, "the reference document must state it");
+  assert.match(required(reworded).detail, /required to state one/);
+});
