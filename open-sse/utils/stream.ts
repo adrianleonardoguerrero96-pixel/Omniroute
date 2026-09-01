@@ -771,6 +771,7 @@ export function createSSEStream(options: StreamOptions = {}) {
   const passthroughResponsesOutputItems: unknown[] = [];
   const passthroughResponsesPendingFunctionCalls = new Map<string, JsonRecord>();
   let passthroughResponsesId: string | null = null;
+  let passthroughLastChatId: string | null = null;
   let passthroughResponsesCurrentFunctionCallKey: string | null = null;
   const passthroughResponsesReasoningSummarySeen = new Set<string>();
   // #6199 — commentary-phase items announced via `response.output_item.added` are
@@ -1955,6 +1956,16 @@ export function createSSEStream(options: StreamOptions = {}) {
 
                   const isFinishChunk = parsed.choices?.[0]?.finish_reason;
 
+                  // Remember the upstream's chat-completion id so synthetic chunks
+                  // emitted at flush (e.g. the estimated usage-only chunk) carry the
+                  // stream's real string id instead of null on the chat path
+                  // (passthroughResponsesId is only ever set on the Responses path).
+                  if (typeof parsed.id === "string" && parsed.id) {
+                    passthroughLastChatId = parsed.id;
+                  } else if (typeof parsed.id === "number") {
+                    passthroughLastChatId = String(parsed.id);
+                  }
+
                   if (isFinishChunk) {
                     passthroughSawFinishReason = true;
                   }
@@ -2514,7 +2525,7 @@ export function createSSEStream(options: StreamOptions = {}) {
                 hasValidUsage(usage)
               ) {
                 const usageOnlyChunk = {
-                  id: passthroughResponsesId,
+                  id: passthroughLastChatId ?? passthroughResponsesId ?? `chatcmpl-${Date.now()}`,
                   object: "chat.completion.chunk",
                   created: Math.floor(Date.now() / 1000),
                   model,
