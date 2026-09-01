@@ -13967,11 +13967,14 @@
     "drawerMetrics": "Metrics",
     "drawerResult": "Result",
     "drawerActions": "Actions",
+    "drawerClose": "Close",
+    "copyTrace": "Copy trace JSON",
     "actionApprove": "Approve plan",
     "actionCancel": "Cancel",
     "actionSeeInGraph": "See in graph",
     "actionDone": "Action applied",
     "actionFailed": "Action failed: {error}",
+    "detailFailed": "Failed to load details: {error}",
     "mirroredInA2A": "Mirrored in A2A"
   },
   "cliproxyProviderExposure": {
