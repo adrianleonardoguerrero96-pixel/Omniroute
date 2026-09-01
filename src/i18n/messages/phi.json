@@ -986,6 +986,7 @@
   "disabled": "Naka-disable",
   "featureFlagOmnirouteEmergencyFallbackDescription": "I-route ang mga request na naubusan ng budget sa emergency free fallback provider/model.",
   "featureFlagArenaEloSyncEnabledDescription": "I-enable ang pana-panahong Arena AI leaderboard ELO sync para sa mga ranking ng intelligence ng modelo.",
+  "featureFlagUniversalContextHandoffEnabledDescription": "__MISSING__:Generate and inject conversation summaries when combo routing switches models. Disable to treat model switches independently and prevent background handoff requests for all existing and future combos.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "I-anunsyo ang claude/&lt;provider&gt;/&lt;model&gt; mirror ids sa /v1/models upang ang Claude Code gateway model discovery ay maglista ng mga non-Claude models. Babala: nagdodoble ng catalog entries para sa lahat ng kliyente kapag pinagana nang globally.",
   "featureFlagChatVirtualLanesEnabledDescription": "Paganahin ang adaptive virtual admission lanes para sa bawat tenant sa pagpapadala ng provider (#9654): ang pag-akyat ng trapiko ng isang tenant ay hindi na nagbibigay ng 503 sa iba. Ang environment variable na OMNIROUTE_CHAT_VIRTUAL_LANES ay mas nangingibabaw sa setting na ito sa dashboard; magkakabisa ang mga pagbabago sa pag-restart ng server.",
   "sidebar": {

@@ -986,6 +986,7 @@
   "disabled": "अक्षम",
   "featureFlagOmnirouteEmergencyFallbackDescription": "बजट समाप्त हो चुके अनुरोधों को आपातकालीन निःशुल्क फ़ॉलबैक प्रदाता/मॉडल पर रूट करें।",
   "featureFlagArenaEloSyncEnabledDescription": "मॉडल इंटेलिजेंस रैंकिंग के लिए आवधिक Arena AI लीडरबोर्ड ELO सिंक सक्षम करें।",
+  "featureFlagUniversalContextHandoffEnabledDescription": "__MISSING__:Generate and inject conversation summaries when combo routing switches models. Disable to treat model switches independently and prevent background handoff requests for all existing and future combos.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "/v1/models पर claude/&lt;provider&gt;/&lt;model&gt; मिरर आईडी का विज्ञापन करें ताकि Claude Code गेटवे मॉडल खोज सूची में गैर-Claude मॉडल शामिल हो सकें। चेतावनी: जब वैश्विक रूप से सक्षम किया जाता है तो सभी ग्राहकों के लिए कैटलॉग प्रविष्टियों को डबल करता है।",
   "featureFlagChatVirtualLanesEnabledDescription": "प्रदाता डिस्पैच के लिए प्रति-टेनेंट अनुकूली वर्चुअल एडमिशन लेन सक्षम करें (#9654): एक टेनेंट का बर्स्ट अब दूसरे टेनेंट को 503 नहीं देता। OMNIROUTE_CHAT_VIRTUAL_LANES पर्यावरण चर इस डैशबोर्ड सेटिंग पर प्राथमिकता रखता है; परिवर्तन सर्वर पुनः आरंभ पर प्रभावी होते हैं।",
   "sidebar": {

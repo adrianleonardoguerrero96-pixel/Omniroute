@@ -986,6 +986,7 @@
   "disabled": "Poistettu käytöstä",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Reititä budjettinsa ylittäneet pyynnöt varalla olevalle ilmaiselle varatarjoajalle/-mallille.",
   "featureFlagArenaEloSyncEnabledDescription": "Ota käyttöön jaksottainen Arena AI -tulostaulukon ELO-synkronointi mallien älykkyysluokituksia varten.",
+  "featureFlagUniversalContextHandoffEnabledDescription": "__MISSING__:Generate and inject conversation summaries when combo routing switches models. Disable to treat model switches independently and prevent background handoff requests for all existing and future combos.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Mainosta claude/&lt;provider&gt;/&lt;model&gt; peilid tunnuksia /v1/models, jotta Claude Code -portin mallin löytölistalla näkyvät ei-Claude-mallit. Varoitus: kaksinkertaistaa luettelo-merkinnät kaikille asiakkaille, kun se on otettu käyttöön globaalisti.",
   "featureFlagChatVirtualLanesEnabledDescription": "Ota käyttöön mukautuvat virtuaaliset sisäänottokaistat vuokraajaa (tenant) kohti palveluntarjoajien välitystä varten (#9654): yhden vuokraajan kuormapiikki ei enää aiheuta 503-virhettä toiselle. Ympäristömuuttuja OMNIROUTE_CHAT_VIRTUAL_LANES ohittaa tämän hallintapaneelin asetuksen; muutokset tulevat voimaan palvelimen uudelleenkäynnistyksessä.",
   "sidebar": {

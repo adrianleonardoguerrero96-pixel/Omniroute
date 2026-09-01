@@ -986,6 +986,7 @@
   "disabled": "Отключено",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Перенаправлять запросы при исчерпании бюджета на резервный бесплатный провайдер/модель.",
   "featureFlagArenaEloSyncEnabledDescription": "Включить периодическую синхронизацию ELO из таблицы лидеров Arena AI для рейтинга интеллектуальности моделей.",
+  "featureFlagUniversalContextHandoffEnabledDescription": "__MISSING__:Generate and inject conversation summaries when combo routing switches models. Disable to treat model switches independently and prevent background handoff requests for all existing and future combos.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Публиковать claude/&lt;провайдер&gt;/&lt;модель&gt; зеркальные ID на /v1/models, чтобы Claude Code мог видеть не-Claude модели. Внимание: удваивает записи каталога для всех клиентов при глобальном включении.",
   "featureFlagChatVirtualLanesEnabledDescription": "Включите адаптивные виртуальные полосы допуска для каждого тенанта при маршрутизации к провайдерам (#9654): всплеск нагрузки одного тенанта больше не вызывает 503 у другого. Переменная окружения OMNIROUTE_CHAT_VIRTUAL_LANES имеет приоритет над этой настройкой в панели; изменения вступают в силу после перезапуска сервера.",
   "sidebar": {

@@ -986,6 +986,7 @@
   "disabled": "ปิดใช้งาน",
   "featureFlagOmnirouteEmergencyFallbackDescription": "กำหนดเส้นทางคำขอที่งบประมาณหมดไปยังผู้ให้บริการ/โมเดลสำรองฟรีในกรณีฉุกเฉิน",
   "featureFlagArenaEloSyncEnabledDescription": "เปิดใช้งานการซิงค์ ELO ของลีดเดอร์บอร์ด Arena AI เป็นระยะสำหรับการจัดอันดับความฉลาดของโมเดล",
+  "featureFlagUniversalContextHandoffEnabledDescription": "__MISSING__:Generate and inject conversation summaries when combo routing switches models. Disable to treat model switches independently and prevent background handoff requests for all existing and future combos.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "โฆษณา claude/&lt;provider&gt;/&lt;model&gt; mirror ids บน /v1/models เพื่อให้รายการการค้นหาโมเดลของ Claude Code แสดงโมเดลที่ไม่ใช่ Claude เตือน: จะทำให้มีรายการในแคตตาล็อกซ้ำสำหรับลูกค้าทุกคนเมื่อเปิดใช้งานทั่วโลก.",
   "featureFlagChatVirtualLanesEnabledDescription": "เปิดใช้เลนรับเข้าเสมือนแบบปรับตัวต่อเทนแนนต์สำหรับการส่งไปยังผู้ให้บริการ (#9654): การพุ่งสูงของเทนแนนต์หนึ่งจะไม่ทำให้อีกเทนแนนต์ได้รับ 503 อีกต่อไป ตัวแปรสภาพแวดล้อม OMNIROUTE_CHAT_VIRTUAL_LANES มีผลเหนือการตั้งค่าแดชบอร์ดนี้ การเปลี่ยนแปลงมีผลเมื่อรีสตาร์ทเซิร์ฟเวอร์",
   "sidebar": {

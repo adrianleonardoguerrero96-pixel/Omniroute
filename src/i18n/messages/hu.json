@@ -986,6 +986,7 @@
   "disabled": "Letiltva",
   "featureFlagOmnirouteEmergencyFallbackDescription": "A keretet kimerítő kérések átirányítása a vészhelyzeti ingyenes tartalék szolgáltatóhoz/modellhez.",
   "featureFlagArenaEloSyncEnabledDescription": "Rendszeres Arena AI ranglista ELO szinkronizáció engedélyezése a modellintelligencia rangsorokhoz.",
+  "featureFlagUniversalContextHandoffEnabledDescription": "__MISSING__:Generate and inject conversation summaries when combo routing switches models. Disable to treat model switches independently and prevent background handoff requests for all existing and future combos.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Hirdesse a claude/&lt;provider&gt;/&lt;model&gt; tükör azonosítókat a /v1/models-on, hogy a Claude Code átjáró modell felfedezése nem Claude modelleket is listázzon. Figyelmeztetés: globális engedélyezés esetén megduplázza a katalógus bejegyzéseket minden kliens számára.",
   "featureFlagChatVirtualLanesEnabledDescription": "Tegye lehetővé a bérlőnkénti adaptív virtuális beléptetősávokat a szolgáltatók felé történő továbbításhoz (#9654): az egyik bérlő kiugró terhelése már nem okoz 503-as hibát egy másiknál. Az OMNIROUTE_CHAT_VIRTUAL_LANES környezeti változó felülírja ezt a vezérlőpult-beállítást; a változtatások a szerver újraindításakor lépnek életbe.",
   "sidebar": {

@@ -986,6 +986,7 @@
   "disabled": "معطل",
   "featureFlagOmnirouteEmergencyFallbackDescription": "توجيه الطلبات التي استنفدت الميزانية إلى موفر/نموذج الاحتياط المجاني للطوارئ.",
   "featureFlagArenaEloSyncEnabledDescription": "تمكين المزامنة الدورية لتصنيف ELO للوحة صدارة Arena AI لتصنيفات ذكاء النماذج.",
+  "featureFlagUniversalContextHandoffEnabledDescription": "__MISSING__:Generate and inject conversation summaries when combo routing switches models. Disable to treat model switches independently and prevent background handoff requests for all existing and future combos.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "اعلن عن معرفات مرآة claude/&lt;provider&gt;/&lt;model&gt; على /v1/models حتى تظهر قائمة اكتشاف نماذج بوابة Claude Code نماذج غير Claude. تحذير: يؤدي إلى تكرار إدخالات الكتالوج لجميع العملاء عند تفعيله عالميًا.",
   "featureFlagChatVirtualLanesEnabledDescription": "فعّل مسارات القبول الافتراضية التكيفية لكل مستأجر (tenant) لتوزيع المزودين (#9654): لم يعد انفجار حركة أحد المستأجرين يسبب خطأ 503 لمستأجر آخر. متغير البيئة OMNIROUTE_CHAT_VIRTUAL_LANES له الأولوية على هذا الإعداد في لوحة التحكم؛ تصبح التغييرات سارية بعد إعادة تشغيل الخادم.",
   "sidebar": {

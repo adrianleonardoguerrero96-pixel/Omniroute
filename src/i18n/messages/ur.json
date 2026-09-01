@@ -986,6 +986,7 @@
   "disabled": "Disabled",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Route budget-exhausted requests to the emergency free fallback provider/model.",
   "featureFlagArenaEloSyncEnabledDescription": "Enable periodic Arena AI leaderboard ELO sync for model intelligence rankings.",
+  "featureFlagUniversalContextHandoffEnabledDescription": "__MISSING__:Generate and inject conversation summaries when combo routing switches models. Disable to treat model switches independently and prevent background handoff requests for all existing and future combos.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "/v1/models پر claude/&lt;provider&gt;/&lt;model&gt; آئینہ شناختوں کا اشتہار دیں تاکہ Claude Code گیٹ وے ماڈل کی دریافت غیر-Claude ماڈلز کی فہرست بنائے۔ انتباہ: جب عالمی طور پر فعال ہو تو تمام کلائنٹس کے لیے کیٹلاگ کی اندراجات دوگنا کرتا ہے۔",
   "featureFlagChatVirtualLanesEnabledDescription": "پرووائیڈر بھیجنے کے لیے فی ٹیننٹ انکولی ورچوئل ایڈمیشن لین فعال کریں (#9654): ایک ٹیننٹ کا اچانک بوجھ اب دوسرے ٹیننٹ کو 503 نہیں دیتا۔ OMNIROUTE_CHAT_VIRTUAL_LANES ماحولیاتی متغیر اس ڈیش بورڈ سیٹنگ پر فوقیت رکھتا ہے؛ تبدیلیاں سرور دوبارہ شروع ہونے پر اثر انداز ہوتی ہیں۔",
   "sidebar": {

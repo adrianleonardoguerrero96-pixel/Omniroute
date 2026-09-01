@@ -986,6 +986,7 @@
   "disabled": "Deaktiv",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Büdcəsi tükənmiş sorğuları təcili pulsuz ehtiyat təminatçıya/modelə yönləndirin.",
   "featureFlagArenaEloSyncEnabledDescription": "Model intellekti reytinqləri üçün dövri Arena AI liderlər cədvəli ELO sinxronizasiyasını aktivləşdirin.",
+  "featureFlagUniversalContextHandoffEnabledDescription": "__MISSING__:Generate and inject conversation summaries when combo routing switches models. Disable to treat model switches independently and prevent background handoff requests for all existing and future combos.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "/v1/models üzərində claude/&lt;provider&gt;/&lt;model&gt; güzgü id-lərini reklam edin ki, Claude Code keçid modeli kəşfiyyatında qeyri-Claude modelləri siyahıya alsın. Diqqət: qlobal olaraq aktivləşdirildikdə bütün müştərilər üçün kataloq girişlərini ikiqat artırır.",
   "featureFlagChatVirtualLanesEnabledDescription": "Təchizatçı göndərişi üçün hər bir icarəçi (tenant) üzrə adaptiv virtual qəbul zolaqlarını aktivləşdirin (#9654): bir icarəçinin ani yükü artıq digərinə 503 qaytarmır. OMNIROUTE_CHAT_VIRTUAL_LANES mühit dəyişəni bu idarəetmə paneli ayarından üstündür; dəyişikliklər server yenidən işə salındıqda qüvvəyə minir.",
   "sidebar": {

@@ -986,6 +986,7 @@
   "disabled": "Deaktivert",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Rut forespørsler med oppbrukt budsjett til gratis reserveleverandør/-modell for nødstilfeller.",
   "featureFlagArenaEloSyncEnabledDescription": "Aktiver periodisk synkronisering av Arena AI-ledertavlens ELO for rangering av modellintelligens.",
+  "featureFlagUniversalContextHandoffEnabledDescription": "__MISSING__:Generate and inject conversation summaries when combo routing switches models. Disable to treat model switches independently and prevent background handoff requests for all existing and future combos.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Reklamer claude/&lt;provider&gt;/&lt;model&gt; speil-id-er på /v1/models slik at Claude Code gateway-modelloppdagelse viser ikke-Claude-modeller. Advarsel: dobler katalogoppføringer for alle klienter når det er aktivert globalt.",
   "featureFlagChatVirtualLanesEnabledDescription": "Aktiver adaptive virtuelle tilgangsfelt per tenant for leverandørdistribusjon (#9654): et utbrudd fra én tenant gir ikke lenger en annen 503. Miljøvariabelen OMNIROUTE_CHAT_VIRTUAL_LANES overstyrer denne innstillingen i dashbordet; endringer trer i kraft ved omstart av serveren.",
   "sidebar": {

@@ -986,6 +986,7 @@
   "disabled": "Devre dışı",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Bütçesi tükenmiş istekleri acil durum ücretsiz yedek sağlayıcıya/modele yönlendirin.",
   "featureFlagArenaEloSyncEnabledDescription": "Model zekası sıralamaları için periyodik Arena AI liderlik tablosu ELO senkronizasyonunu etkinleştirin.",
+  "featureFlagUniversalContextHandoffEnabledDescription": "__MISSING__:Generate and inject conversation summaries when combo routing switches models. Disable to treat model switches independently and prevent background handoff requests for all existing and future combos.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "/v1/models üzerinde claude/&lt;provider&gt;/&lt;model&gt; ayna kimliklerini tanıtın, böylece Claude Code geçidi model keşfi, Claude olmayan modelleri listeler. Uyarı: Küresel olarak etkinleştirildiğinde tüm istemciler için katalog girişlerini iki katına çıkarır.",
   "featureFlagChatVirtualLanesEnabledDescription": "Sağlayıcı gönderimi için kiracı başına uyarlanabilir sanal kabul şeritlerini etkinleştirin (#9654): bir kiracının ani yükü artık diğerinde 503 hatasına neden olmaz. OMNIROUTE_CHAT_VIRTUAL_LANES ortam değişkeni bu panel ayarına göre önceliklidir; değişiklikler sunucu yeniden başlatıldığında geçerli olur.",
   "sidebar": {

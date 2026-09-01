@@ -986,6 +986,7 @@
   "disabled": "Imezimwa",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Elekeza maombi yaliyomaliza bajeti kwenye mtoa huduma/muundo wa dharura wa akiba usiolipiwa.",
   "featureFlagArenaEloSyncEnabledDescription": "Washa usawazishaji wa mara kwa mara wa ELO wa ubao wa wanaoongoza wa Arena AI kwa viwango vya akili vya muundo.",
+  "featureFlagUniversalContextHandoffEnabledDescription": "__MISSING__:Generate and inject conversation summaries when combo routing switches models. Disable to treat model switches independently and prevent background handoff requests for all existing and future combos.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Tangaza claude/&lt;provider&gt;/&lt;model&gt; vitambulisho vya kioo kwenye /v1/models ili orodha ya kugundua modeli za Claude Code iwe na modeli zisizo za Claude. Onyo: inafanya kuingia mara mbili kwenye katalogi kwa wateja wote inapowekwa kuwa ya ulimwengu mzima.",
   "featureFlagChatVirtualLanesEnabledDescription": "Washa njia za uandikishaji pepe zinazobadilika kwa kila mpangaji (tenant) kwa utumaji wa watoa huduma (#9654): mlipuko wa mpangaji mmoja hautoi tena 503 kwa mwingine. Kigezo cha mazingira cha OMNIROUTE_CHAT_VIRTUAL_LANES kinashinda mpangilio huu wa dashibodi; mabadiliko yanatumika wakati seva inapoanzishwa upya.",
   "sidebar": {

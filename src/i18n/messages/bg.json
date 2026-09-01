@@ -986,6 +986,7 @@
   "disabled": "Деактивирано",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Маршрутизиране на заявки с изчерпан бюджет към аварийния безплатен резервен доставчик/модел.",
   "featureFlagArenaEloSyncEnabledDescription": "Активиране на периодична синхронизация на ELO от класацията на Arena AI за класиране на интелигентността на моделите.",
+  "featureFlagUniversalContextHandoffEnabledDescription": "__MISSING__:Generate and inject conversation summaries when combo routing switches models. Disable to treat model switches independently and prevent background handoff requests for all existing and future combos.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Рекламирайте claude/&lt;provider&gt;/&lt;model&gt; mirror идентификатори на /v1/models, така че списъкът с модели на Claude Code gateway да включва неклаудови модели. Внимание: удвоява записите в каталога за всички клиенти, когато е активирано глобално.",
   "featureFlagChatVirtualLanesEnabledDescription": "Активирайте адаптивни виртуални ленти за допускане за всеки наемател (tenant) при изпращане към доставчици (#9654): скокът в натоварването на един наемател вече не връща 503 на друг. Променливата на средата OMNIROUTE_CHAT_VIRTUAL_LANES има предимство пред тази настройка в таблото; промените влизат в сила след рестартиране на сървъра.",
   "sidebar": {

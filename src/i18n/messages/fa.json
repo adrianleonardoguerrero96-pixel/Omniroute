@@ -986,6 +986,7 @@
   "disabled": "Disabled",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Route budget-exhausted requests to the emergency free fallback provider/model.",
   "featureFlagArenaEloSyncEnabledDescription": "Enable periodic Arena AI leaderboard ELO sync for model intelligence rankings.",
+  "featureFlagUniversalContextHandoffEnabledDescription": "__MISSING__:Generate and inject conversation summaries when combo routing switches models. Disable to treat model switches independently and prevent background handoff requests for all existing and future combos.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "آگهی شناسه‌های آینه claude/&lt;provider&gt;/&lt;model&gt; را در /v1/models به‌گونه‌ای تنظیم کنید که لیست کشف مدل‌های دروازه کد Claude شامل مدل‌های غیر Claude باشد. هشدار: در صورت فعال‌سازی جهانی، ورودی‌های کاتالوگ را برای تمام مشتریان دو برابر می‌کند.",
   "featureFlagChatVirtualLanesEnabledDescription": "خط‌های پذیرش مجازی تطبیقی به‌ازای هر مستاجر (tenant) را برای ارسال به ارائه‌دهندگان فعال کنید (#9654): افزایش ناگهانی بار یک مستاجر دیگر خطای 503 را برای مستاجر دیگر ایجاد نمی‌کند. متغیر محیطی OMNIROUTE_CHAT_VIRTUAL_LANES بر این تنظیم داشبورد اولویت دارد؛ تغییرات پس از راه‌اندازی مجدد سرور اعمال می‌شوند.",
   "sidebar": {

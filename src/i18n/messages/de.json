@@ -986,6 +986,7 @@
   "disabled": "Deaktiviert",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Anfragen mit erschöpftem Budget an den kostenlosen Notfall-Fallback-Anbieter/das Notfall-Fallback-Modell weiterleiten.",
   "featureFlagArenaEloSyncEnabledDescription": "Periodischen ELO-Abgleich der Arena AI-Bestenliste für Modell-Intelligenz-Rankings aktivieren.",
+  "featureFlagUniversalContextHandoffEnabledDescription": "__MISSING__:Generate and inject conversation summaries when combo routing switches models. Disable to treat model switches independently and prevent background handoff requests for all existing and future combos.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Bewerben Sie claude/&lt;provider&gt;/&lt;model&gt; Spiegel-IDs auf /v1/models, damit die Claude Code-Gateway-Modellentdeckung Nicht-Claude-Modelle auflistet. Warnung: Verdoppelt Katalogeinträge für alle Clients, wenn global aktiviert.",
   "featureFlagChatVirtualLanesEnabledDescription": "Aktivieren Sie adaptive virtuelle Zulassungsspuren pro Tenant für die Provider-Zustellung (#9654): Ein Burst eines Tenants führt nicht mehr zu 503 bei einem anderen. Die Umgebungsvariable OMNIROUTE_CHAT_VIRTUAL_LANES hat Vorrang vor dieser Dashboard-Einstellung; Änderungen werden erst nach einem Serverneustart wirksam.",
   "sidebar": {

@@ -986,6 +986,7 @@
   "disabled": "Disabled",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Route budget-exhausted requests to the emergency free fallback provider/model.",
   "featureFlagArenaEloSyncEnabledDescription": "Enable periodic Arena AI leaderboard ELO sync for model intelligence rankings.",
+  "featureFlagUniversalContextHandoffEnabledDescription": "__MISSING__:Generate and inject conversation summaries when combo routing switches models. Disable to treat model switches independently and prevent background handoff requests for all existing and future combos.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Iklankan claude/&lt;provider&gt;/&lt;model&gt; mirror ids pada /v1/models supaya senarai penemuan model gerbang Claude Code termasuk model bukan Claude. Amaran: menggandakan entri katalog untuk semua klien apabila diaktifkan secara global.",
   "featureFlagChatVirtualLanesEnabledDescription": "Aktifkan lorong kemasukan maya adaptif setiap-tenant untuk penghantaran pembekal (#9654): lonjakan satu tenant tidak lagi memberikan 503 kepada tenant lain. Pemboleh ubah persekitaran OMNIROUTE_CHAT_VIRTUAL_LANES mengatasi tetapan papan pemuka ini; perubahan berkuat kuasa apabila pelayan dimulakan semula.",
   "sidebar": {
