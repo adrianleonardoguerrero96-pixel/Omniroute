@@ -6449,7 +6449,12 @@
     "savedModelEndpointSettings": "Đã lưu cài đặt endpoint mô hình",
     "searchByModelAria": "Tìm kiếm theo mô hình",
     "selectSupportedEndpoint": "Chọn ít nhất một endpoint được hỗ trợ",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Xóa thời gian chờ",
+    "clearConnectionCooldownInProgress": "Đang xóa…",
+    "clearConnectionCooldownTitle": "Xóa thời gian chờ ngay — dùng khi hạn mức đã được làm mới ở thượng nguồn",
+    "connectionCooldownCleared": "Đã xóa thời gian chờ — kết nối đã tham gia lại định tuyến",
+    "failedClearConnectionCooldown": "Không thể xóa thời gian chờ"
   },
   "settings": {
     "title": "Cài đặt",
@@ -12539,6 +12544,8 @@
     "typeApikey": "Khóa API",
     "sortTypeFirst": "Dễ thiết lập trước",
     "sortTypeFirstHelp": "Nhóm theo mức độ thiết lập (Không cần đăng ký → Đăng nhập OAuth → Khóa API), đồng thời giữ thứ tự chất lượng trong từng nhóm",
+    "sortByReliability": "Đáng tin cậy nhất trước",
+    "sortByReliabilityHelp": "Sắp xếp nhà cung cấp theo tỷ lệ lệnh gọi thành công trong khoảng thời gian đã chọn. Nhà cung cấp có quá ít lệnh gọi để đưa ra tỷ lệ sẽ giữ thứ tự theo điểm, xếp dưới các nhà cung cấp đã được đo.",
     "typeLegend": "Không cần đăng ký = không cần thiết lập · Đăng nhập OAuth = đăng nhập bằng tài khoản của bạn · Khóa API = dùng khóa riêng hoặc gói miễn phí của nhà cung cấp",
     "colReliability": "Độ tin cậy",
     "colReliabilityHelp": "Tỷ lệ lệnh gọi mà nhà cung cấp này thực sự trả lời trong 24 giờ qua. Dấu gạch ngang nghĩa là lưu lượng quá ít để đưa ra tỷ lệ.",
@@ -13375,6 +13382,9 @@
     "colProvider": "Nhà cung cấp",
     "colModel": "Mô hình",
     "colQuota": "Hạn ngạch",
+    "colLimits": "Giới hạn",
+    "trainsOnPrompts": "Huấn luyện bằng prompt",
+    "trainsOnPromptsHelp": "Nhà cung cấp này công bố có thể dùng prompt của bạn để huấn luyện mô hình",
     "colContext": "Ngữ cảnh",
     "colCapabilities": "Khả năng",
     "colTos": "Rủi ro ToS",

@@ -6448,7 +6448,12 @@
     "savedModelEndpointSettings": "保存されたモデルエンドポイント設定",
     "searchByModelAria": "モデルで検索",
     "selectSupportedEndpoint": "サポートされているエンドポイントを少なくとも1つ選択してください",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Clear cooldown",
+    "clearConnectionCooldownInProgress": "Clearing…",
+    "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
+    "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
+    "failedClearConnectionCooldown": "Failed to clear cooldown"
   },
   "settings": {
     "title": "設定",
@@ -12531,6 +12536,8 @@
     "typeApikey": "APIキー",
     "sortTypeFirst": "簡単な順",
     "sortTypeFirstHelp": "サインアップの手間（サインアップ不要 → OAuthログイン → APIキー）でグループ化し、各グループ内では品質順を維持",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "サインアップ不要 = セットアップ不要 · OAuthログイン = 自身のアカウントでサインイン · APIキー = 自身のキーまたはプロバイダーの無料枠を使用",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
@@ -13370,6 +13377,9 @@
     "colContext": "コンテキスト",
     "colCapabilities": "機能",
     "colTos": "ToSリスク",
+    "colLimits": "__MISSING__:Rate limits",
+    "trainsOnPrompts": "__MISSING__:Trains on prompts",
+    "trainsOnPromptsHelp": "__MISSING__:This provider's terms state it may train on the prompts you send. Models without this badge either state they do not, or do not document it — an absent statement is not a guarantee.",
     "newBadge": "新しい",
     "setupGuide": "セットアップガイド",
     "disabledByFeed": "レーダーフィードによって無効化されています",

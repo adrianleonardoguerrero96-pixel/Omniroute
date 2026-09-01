@@ -6448,7 +6448,12 @@
     "savedModelEndpointSettings": "已儲存的模型端點設定",
     "searchByModelAria": "按型號搜尋",
     "selectSupportedEndpoint": "請選擇至少一個受支持的端點",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Clear cooldown",
+    "clearConnectionCooldownInProgress": "Clearing…",
+    "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
+    "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
+    "failedClearConnectionCooldown": "Failed to clear cooldown"
   },
   "settings": {
     "title": "設定",
@@ -12531,6 +12536,8 @@
     "typeApikey": "API 金鑰",
     "sortTypeFirst": "最簡單優先",
     "sortTypeFirstHelp": "按註冊難度分組（無需註冊 → OAuth 登入 → API 金鑰），在各組內保持品質順序",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "無需註冊 = 零設定 · OAuth 登入 = 使用自己的帳戶登入 · API 金鑰 = 自帶金鑰或使用該提供者的免費方案",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
@@ -13370,6 +13377,9 @@
     "colContext": "上下文",
     "colCapabilities": "能力",
     "colTos": "服務條款風險",
+    "colLimits": "__MISSING__:Rate limits",
+    "trainsOnPrompts": "__MISSING__:Trains on prompts",
+    "trainsOnPromptsHelp": "__MISSING__:This provider's terms state it may train on the prompts you send. Models without this badge either state they do not, or do not document it — an absent statement is not a guarantee.",
     "newBadge": "新的",
     "setupGuide": "設置指南",
     "disabledByFeed": "被雷達數據源禁用",
