@@ -132,4 +132,112 @@ describe("OrchestrationDrawer", () => {
     expect(c.textContent).toBe("");
     cleanup();
   });
+
+  it("unwraps a2a detail from {task} (the real route shape, not {data}) so objective/timeline render", async () => {
+    const a2aTask = {
+      id: "1",
+      skill: "smart-routing",
+      state: "working",
+      input: { skill: "smart-routing", messages: [{ role: "user", content: "route this please" }] },
+      artifacts: [],
+      events: [{ timestamp: "2026-08-30T10:00:00Z", state: "working", message: "processing now" }],
+      metadata: {},
+      createdAt: "x",
+      updatedAt: "y",
+      expiresAt: "z",
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ task: a2aTask }) }))
+    );
+    const node = { id: "a2a:1", kind: "work", source: "a2a", state: "running", label: "x" };
+    const { c, cleanup } = render(
+      <OrchestrationDrawer node={node as never} onClose={() => {}} onActionDone={() => {}} />
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(c.textContent).toContain("route this please");
+    expect(c.textContent).toContain("processing now");
+    cleanup();
+  });
+
+  it("only renders prUrl as a link when it is http(s); a javascript: URI renders as plain text", async () => {
+    const detail = {
+      data: {
+        id: "t1",
+        providerId: "devin",
+        status: "succeeded",
+        prompt: "x",
+        source: { repoName: "r", repoUrl: "https://x" },
+        options: {},
+        activities: [],
+        result: { prUrl: "javascript:alert(1)" },
+        createdAt: "x",
+        updatedAt: "y",
+      },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve(detail) }))
+    );
+    const node = {
+      id: "cloud-agent:t1",
+      kind: "work",
+      source: "cloud-agent",
+      state: "succeeded",
+      label: "x",
+    };
+    const { c, cleanup } = render(
+      <OrchestrationDrawer node={node as never} onClose={() => {}} onActionDone={() => {}} />
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    const badLink = Array.from(c.querySelectorAll("a")).find(
+      (a) => a.getAttribute("href") === "javascript:alert(1)"
+    );
+    expect(badLink).toBeUndefined();
+    expect(c.textContent).toContain("javascript:alert(1)");
+    cleanup();
+  });
+
+  it("renders an https prUrl as a real link", async () => {
+    const detail = {
+      data: {
+        id: "t2",
+        providerId: "devin",
+        status: "succeeded",
+        prompt: "x",
+        source: { repoName: "r", repoUrl: "https://x" },
+        options: {},
+        activities: [],
+        result: { prUrl: "https://github.com/x/y/pull/1" },
+        createdAt: "x",
+        updatedAt: "y",
+      },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve(detail) }))
+    );
+    const node = {
+      id: "cloud-agent:t2",
+      kind: "work",
+      source: "cloud-agent",
+      state: "succeeded",
+      label: "x",
+    };
+    const { c, cleanup } = render(
+      <OrchestrationDrawer node={node as never} onClose={() => {}} onActionDone={() => {}} />
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    const link = Array.from(c.querySelectorAll("a")).find(
+      (a) => a.getAttribute("href") === "https://github.com/x/y/pull/1"
+    );
+    expect(link).toBeTruthy();
+    cleanup();
+  });
 });

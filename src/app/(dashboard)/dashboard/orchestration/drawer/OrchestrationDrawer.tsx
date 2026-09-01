@@ -17,6 +17,16 @@ const STATE_KEY: Record<OrchState, string> = {
 };
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
+/**
+ * `result.prUrl` is upstream-provider-controlled (Cloud Agent task result). Only
+ * render it as a clickable `<a href>` when it's a plain http(s) URL — anything
+ * else (e.g. `javascript:`) renders as inert text instead, so a malicious/buggy
+ * provider response can never become a click-to-execute link (review r1 finding).
+ */
+function isHttpUrl(url: string | undefined): url is string {
+  return !!url && /^https?:\/\//i.test(url);
+}
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-4">
@@ -119,7 +129,7 @@ export function OrchestrationDrawer({
 
         <Section title={t("drawerObjective")}>
           <p className="text-xs break-words">
-            {ca?.prompt ?? a2a?.input.messages[0]?.content ?? node.sublabel ?? node.label}
+            {ca?.prompt ?? a2a?.input?.messages[0]?.content ?? node.sublabel ?? node.label}
           </p>
         </Section>
         <Section title={t("drawerTimeline")}>
@@ -135,16 +145,19 @@ export function OrchestrationDrawer({
         )}
         {(ca?.result?.prUrl || (a2a?.artifacts?.length ?? 0) > 0) && (
           <Section title={t("drawerResult")}>
-            {ca?.result?.prUrl && (
-              <a
-                className="text-xs underline"
-                href={ca.result.prUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {ca.result.prUrl}
-              </a>
-            )}
+            {ca?.result?.prUrl &&
+              (isHttpUrl(ca.result.prUrl) ? (
+                <a
+                  className="text-xs underline"
+                  href={ca.result.prUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {ca.result.prUrl}
+                </a>
+              ) : (
+                <span className="text-xs break-words">{ca.result.prUrl}</span>
+              ))}
             {a2a?.artifacts?.map((art, i) => (
               <pre
                 key={i}

@@ -45,25 +45,53 @@ function routeFor(node: OrchNode): SourceRoute {
   return { detailUrl: null, cancelReq: null, approveReq: null }; // runners/overflow: raw only
 }
 
+/**
+ * Unwraps a task-detail GET response to the actual task payload. Each source's
+ * route has its own envelope — verified against the live handlers, not assumed:
+ *   - cloud-agent (`GET /api/v1/agents/tasks/[id]`): `{ data: CloudAgentTask }`.
+ *   - a2a (`GET /api/a2a/tasks/[id]`): `{ task: A2ATask }` — NOT `{ data }`. A
+ *     generic `.data` fallback silently keeps the whole `{ task }` wrapper as
+ *     `detail`, which every downstream `detail as A2ATask` read then crashes on
+ *     (review r1 finding — `input`/`events`/`artifacts` all end up `undefined`).
+ *   - conductor (`GET /api/conductor/tasks/[id]`): the task object itself, no
+ *     envelope — `body.data` is `undefined` there so the generic fallback to
+ *     `body` was already correct.
+ */
+function unwrapDetailBody(nodeId: string, body: unknown): unknown {
+  const b = body as { data?: unknown; task?: unknown };
+  if (nodeId.startsWith("a2a:")) return b.task ?? body;
+  return b.data ?? body;
+}
+
 export function useDrawerDetail(node: OrchNode | null) {
+  // `syncedId` tracks which node identity `detail`/`error`/`isLoading` currently
+  // reflect. When it drifts from `node?.id` (a new node was selected, or the
+  // drawer closed) we reset those three DURING this render — React's documented
+  // "adjust state when a prop changes" idiom — instead of inside the effect
+  // below. That keeps the effect a pure "subscribe to node.id, fetch, setState
+  // from the async .then/.catch callbacks" shape with no synchronous setState
+  // call in its body, so it lints clean under `react-hooks/set-state-in-effect`
+  // with zero suppressions (same technique as the dashboard/cli-code and
+  // dashboard/settings react-hooks compiler-rule batches on this release, #12146).
+  const [syncedId, setSyncedId] = useState<string | undefined>(undefined);
   const [detail, setDetail] = useState<unknown | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const route = node ? routeFor(node) : null;
 
-  useEffect(() => {
-    // Reset to the new node's own raw snapshot (and clear any stale error) before
-    // fetching fresh detail — a re-sync keyed by node identity (already in the deps
-    // array below), not a cascading render. Precedent: ConnectionDetail.tsx.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+  if (node?.id !== syncedId) {
+    setSyncedId(node?.id);
     setDetail(node?.raw ?? null);
     setError(null);
+    setIsLoading(!!(node && route?.detailUrl));
+  }
+
+  useEffect(() => {
     if (!node || !route?.detailUrl) return;
     const controller = new AbortController();
-    setIsLoading(true);
     fetch(route.detailUrl, { signal: controller.signal, cache: "no-store" })
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
-      .then((body) => setDetail((body as { data?: unknown }).data ?? body))
+      .then((body) => setDetail(unwrapDetailBody(node.id, body)))
       .catch((err) => {
         if (!controller.signal.aborted) setError(sanitizeErrorMessage(err));
       })
