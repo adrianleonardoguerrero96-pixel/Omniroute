@@ -90,6 +90,7 @@ import {
   checkPipelineGates,
   checkResourcePressureBeforeProviderWork,
   executeChatWithBreaker,
+  findShadowedCompatibleNode,
   handleNoCredentials,
   safeResolveProxy,
   safeLogEvents,
@@ -1701,6 +1702,11 @@ async function handleSingleModelChat(
                 (candidate): candidate is string => typeof candidate === "string"
               )
             : undefined;
+        // #11943: only when no connection was ever tried — a built-in provider
+        // whose id/alias is also a configured compatible-node prefix means the
+        // operator's node was shadowed by the reserved-prefix guard, not broken.
+        const shadowedNode =
+          excludedConnectionIds.size === 0 ? await findShadowedCompatibleNode(provider) : null;
         const noCredsRes = handleNoCredentials(
           credentials,
           excludedConnectionIds.size > 0 ? Array.from(excludedConnectionIds)[0] : null,
@@ -1709,7 +1715,8 @@ async function handleSingleModelChat(
           lastError,
           lastStatus,
           candidateAliases,
-          isCombo
+          isCombo,
+          shadowedNode
         );
         const lastFailedConnectionId =
           excludedConnectionIds.size > 0

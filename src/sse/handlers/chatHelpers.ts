@@ -23,6 +23,8 @@ import {
 } from "@omniroute/open-sse/utils/error.ts";
 import { inheritTrustedLocalRateLimitResponse } from "@omniroute/open-sse/services/rateLimitManager/errors.ts";
 import { HTTP_STATUS } from "@omniroute/open-sse/config/constants.ts";
+import { getRegistryEntry } from "@omniroute/open-sse/config/providerRegistry.ts";
+import { getCachedProviderNodes } from "@/lib/db/readCache";
 import {
   runWithProxyContext,
   runWithAppliedProxyCapture,
@@ -629,6 +631,58 @@ export async function executeChatWithBreaker({
   }
 }
 
+/** A compatible provider node whose prefix is reserved by a built-in provider (#11943). */
+export interface ShadowedProviderNode {
+  id: string;
+  name: string | null;
+  prefix: string;
+}
+
+/**
+ * #11943: find a compatible provider node whose configured prefix collides with
+ * the built-in `provider` (registry id or alias). The runtime model resolver
+ * deliberately gives built-in ids/aliases precedence over user-defined node
+ * prefixes (src/sse/services/model.ts, reserved-prefix guard), so such a node is
+ * unreachable through its prefix — every `<prefix>/model` request lands on the
+ * built-in provider instead. The write-path validation rejects reserved prefixes
+ * at node creation time, but a node created BEFORE the built-in existed (the
+ * issue: an `of/` node predating the `openference` provider, alias `of`) is
+ * never re-validated. Only consulted on the credential-failure path, so the hot
+ * path is untouched; any lookup failure degrades to "no diagnostic".
+ */
+export async function findShadowedCompatibleNode(
+  provider: unknown
+): Promise<ShadowedProviderNode | null> {
+  if (typeof provider !== "string" || provider.trim().length === 0) return null;
+  const entry = getRegistryEntry(provider) as { id?: unknown; alias?: unknown } | null;
+  if (!entry) return null;
+  const reservedByProvider = new Set<string>();
+  for (const value of [entry.id, entry.alias]) {
+    if (typeof value === "string" && value.length > 0) reservedByProvider.add(value);
+  }
+  if (reservedByProvider.size === 0) return null;
+
+  try {
+    const nodes = await getCachedProviderNodes();
+    for (const node of Array.isArray(nodes) ? nodes : []) {
+      if (!node || typeof node !== "object") continue;
+      const type = node.type;
+      if (type !== "openai-compatible" && type !== "anthropic-compatible") continue;
+      const prefix = typeof node.prefix === "string" ? node.prefix.trim() : "";
+      const id = typeof node.id === "string" ? node.id.trim() : "";
+      if (!id || !prefix || !reservedByProvider.has(prefix)) continue;
+      return {
+        id,
+        name: typeof node.name === "string" && node.name.trim() ? node.name.trim() : null,
+        prefix,
+      };
+    }
+  } catch {
+    // Diagnostic only — never let a node lookup failure change the error path.
+  }
+  return null;
+}
+
 export function handleNoCredentials(
   credentials: any,
   excludeConnectionId: string | null,
@@ -637,7 +691,8 @@ export function handleNoCredentials(
   lastError: string | null,
   lastStatus: number | null,
   candidateAliases?: readonly string[],
-  isCombo: boolean = false
+  isCombo: boolean = false,
+  shadowedNode: ShadowedProviderNode | null = null
 ) {
   if (credentials?.allRateLimited) {
     const errorMsg = lastError || credentials.lastError || "Unavailable";
@@ -715,13 +770,30 @@ export function handleNoCredentials(
     // Without this, "No active credentials for provider: byNara" leaves the
     // user staring at a wall — most bugs in this area are actually "wrong
     // provider was picked", not "the provider is broken".
-    const hint =
+    const aliasHint =
       Array.isArray(candidateAliases) && candidateAliases.length > 0
         ? ` Try one of: ${candidateAliases
             .slice(0, 3)
             .map((a) => `${a}/${model}`)
             .join(", ")}.`
         : "";
+
+    // #11943: "No active credentials for provider: openference" is technically
+    // true but misleading when the operator's own compatible node carries the
+    // prefix that resolved to that built-in — the node's connections are healthy,
+    // they were simply never consulted. Say so, and name the node.
+    let shadowHint = "";
+    if (shadowedNode) {
+      const nodeLabel = shadowedNode.name
+        ? `"${shadowedNode.name}" (${shadowedNode.id})`
+        : shadowedNode.id;
+      log.warn(
+        "AUTH",
+        `Custom provider node ${nodeLabel} is shadowed: its prefix "${shadowedNode.prefix}" is reserved by built-in provider "${provider}", so "${shadowedNode.prefix}/${model}" routed to the built-in instead of the node`
+      );
+      shadowHint = ` The prefix "${shadowedNode.prefix}" is reserved by the built-in provider "${provider}", so requests using it (e.g. "${shadowedNode.prefix}/${model}") route to that built-in and never reach your custom provider node ${nodeLabel}. Rename that node's prefix to an unreserved value and update your model ids.`;
+    }
+    const hint = `${aliasHint}${shadowHint}`;
 
     // Issue #2: for single-model (non-combo) requests, a 404 leaks a misleading
     // "No active credentials" status to a direct API client (e.g. OpenCode) that
