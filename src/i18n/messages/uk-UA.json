@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "settings.json для виявлення моделі шлюзу",
     "ccOnboardingCopy": "Копіювати",
     "ccOnboardingCopied": "Скопійовано",
-    "ccOnboardingKeyPlaceholder": "<ваш ключ API OmniRoute>",
+    "ccOnboardingKeyPlaceholder": "'<ваш ключ API OmniRoute>'",
     "ccOnboardingWindowNote": "Claude Code припускає вікно контексту 200K для будь-якого ідентифікатора моделі, який він не розпізнає. Для моделі з іншим реальним вікном додайте CLAUDE_CODE_AUTO_COMPACT_WINDOW безпосередньо під ним, щоб автоматичне стиснення не спрацьовувало занадто рано.",
     "failedSave": "Не вдалося зберегти",
     "profileSyncTitle": "Автосинхронізація профілів CLI",

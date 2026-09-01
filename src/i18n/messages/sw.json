@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "settings.json kwa ugunduzi wa mfano wa lango",
     "ccOnboardingCopy": "Nakili",
     "ccOnboardingCopied": "Imepigwa nakala",
-    "ccOnboardingKeyPlaceholder": "<funguo yako ya OmniRoute API>",
+    "ccOnboardingKeyPlaceholder": "'<funguo yako ya OmniRoute API>'",
     "ccOnboardingWindowNote": "Claude Code inadhania dirisha la muktadha la 200K kwa kitambulisho chochote cha mfano ambacho hakitambui. Kwa mfano wenye dirisha halisi tofauti, ongeza CLAUDE_CODE_AUTO_COMPACT_WINDOW chini yake ili auto-compaction isifanye kazi mapema sana.",
     "failedSave": "Imeshindwa kuhifadhi",
     "profileSyncTitle": "Ulandanishaji wa kiotomatiki wa wasifu wa CLI",

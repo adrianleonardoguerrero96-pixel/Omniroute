@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "gateway मॉडेल शोधासाठी settings.json",
     "ccOnboardingCopy": "कॉपी",
     "ccOnboardingCopied": "कॉपी केलेले",
-    "ccOnboardingKeyPlaceholder": "<तुमचा OmniRoute API की>",
+    "ccOnboardingKeyPlaceholder": "'<तुमचा OmniRoute API की>'",
     "ccOnboardingWindowNote": "Claude Code कोणत्याही ओळखत नसलेल्या मॉडेल आयडीसाठी 200K संदर्भ विंडो गृहीत धरतो. भिन्न वास्तविक विंडो असलेल्या मॉडेलसाठी, CLAUDE_CODE_AUTO_COMPACT_WINDOW त्याच्या खालीच जोडा जेणेकरून ऑटो-कम्पॅक्शन लवकर सुरू होणार नाही.",
     "failedSave": "सेव्ह करण्यात अयशस्वी",
     "profileSyncTitle": "CLI प्रोफाइल ऑटो-सिंक",

@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "gateway மாதிரி கண்டுபிடிப்புக்கு settings.json",
     "ccOnboardingCopy": "பதிப்பேற்று",
     "ccOnboardingCopied": "பிரதி எடுக்கப்பட்டது",
-    "ccOnboardingKeyPlaceholder": "<உங்கள் OmniRoute API விசை>",
+    "ccOnboardingKeyPlaceholder": "'<உங்கள் OmniRoute API விசை>'",
     "ccOnboardingWindowNote": "Claude Code எந்த மாதிரி அடையாளத்தை அடையாளம் காணவில்லை என்றால் 200K சூழல் ஜன்னலைக் கருதுகிறது. வேறு உண்மையான ஜன்னலுடன் உள்ள மாதிரிக்கு, CLAUDE_CODE_AUTO_COMPACT_WINDOW ஐ அதன் கீழே சேர்க்கவும், எனவே தானியங்கி சுருக்கம் மிகவும் விரைவாக செயல்படாது.",
     "failedSave": "சேமிப்பதில் தோல்வி",
     "profileSyncTitle": "CLI சுயவிவர தானியங்கு ஒத்திசைவு",

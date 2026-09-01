@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "gateway 모델 발견을 위한 settings.json",
     "ccOnboardingCopy": "복사",
     "ccOnboardingCopied": "복사됨",
-    "ccOnboardingKeyPlaceholder": "<귀하의 OmniRoute API 키>",
+    "ccOnboardingKeyPlaceholder": "'<귀하의 OmniRoute API 키>'",
     "ccOnboardingWindowNote": "Claude Code는 인식하지 못하는 모델 ID에 대해 200K 컨텍스트 창을 가정합니다. 다른 실제 창을 가진 모델의 경우, 자동 압축이 너무 일찍 발생하지 않도록 그 아래에 CLAUDE_CODE_AUTO_COMPACT_WINDOW를 추가하세요.",
     "failedSave": "저장하지 못했습니다",
     "profileSyncTitle": "CLI 프로필 자동 동기화",

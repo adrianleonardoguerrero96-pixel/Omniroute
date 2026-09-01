@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "गेटवे मॉडल खोज के लिए settings.json",
     "ccOnboardingCopy": "कॉपी",
     "ccOnboardingCopied": "कॉपी किया गया",
-    "ccOnboardingKeyPlaceholder": "<आपकी OmniRoute API कुंजी>",
+    "ccOnboardingKeyPlaceholder": "'<आपकी OmniRoute API कुंजी>'",
     "ccOnboardingWindowNote": "Claude Code किसी भी मॉडल आईडी के लिए 200K संदर्भ विंडो मानता है जिसे वह पहचानता नहीं है। यदि किसी मॉडल की वास्तविक विंडो अलग है, तो इसे उसके ठीक नीचे CLAUDE_CODE_AUTO_COMPACT_WINDOW जोड़ें ताकि ऑटो-कम्पैक्शन बहुत जल्दी न चले।",
     "failedSave": "सहेजने में विफल",
     "profileSyncTitle": "CLI प्रोफ़ाइल ऑटो-सिंक",

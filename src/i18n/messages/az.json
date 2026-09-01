@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "gateway modeli kəşfi üçün settings.json",
     "ccOnboardingCopy": "Kopyala",
     "ccOnboardingCopied": "Kopyalandı",
-    "ccOnboardingKeyPlaceholder": "<your OmniRoute API açarınız>",
+    "ccOnboardingKeyPlaceholder": "'<your OmniRoute API açarınız>'",
     "ccOnboardingWindowNote": "Claude Code tanımadığı hər hansı model id üçün 200K kontekst pəncərəsi qəbul edir. Fərqli real pəncərəyə malik bir model üçün, avtomatik sıxılmanın çox tez başlamaması üçün onun altına CLAUDE_CODE_AUTO_COMPACT_WINDOW əlavə edin.",
     "failedSave": "Yadda saxlamaq mümkün olmadı",
     "profileSyncTitle": "CLI profilinin avtomatik sinxronizasiyası",

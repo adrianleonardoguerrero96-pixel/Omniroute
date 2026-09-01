@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "gatewayモデル発見のためのsettings.json",
     "ccOnboardingCopy": "コピー",
     "ccOnboardingCopied": "コピーしました",
-    "ccOnboardingKeyPlaceholder": "<あなたのOmniRoute APIキー>",
+    "ccOnboardingKeyPlaceholder": "'<あなたのOmniRoute APIキー>'",
     "ccOnboardingWindowNote": "Claude Codeは、認識できないモデルIDに対して200Kのコンテキストウィンドウを仮定します。異なる実際のウィンドウを持つモデルの場合は、CLAUDE_CODE_AUTO_COMPACT_WINDOWをその直下に追加して、自動圧縮が早すぎることがないようにします。",
     "failedSave": "保存に失敗しました",
     "profileSyncTitle": "CLIプロファイルの自動同期",

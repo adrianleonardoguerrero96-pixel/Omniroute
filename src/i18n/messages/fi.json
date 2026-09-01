@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "settings.json portin mallin löytämiseksi",
     "ccOnboardingCopy": "Kopioi",
     "ccOnboardingCopied": "Kopioitu",
-    "ccOnboardingKeyPlaceholder": "<your OmniRoute API key>",
+    "ccOnboardingKeyPlaceholder": "'<your OmniRoute API key>'",
     "ccOnboardingWindowNote": "Claude Code olettaa 200K kontekstin ikkunan kaikille mallin tunnuksille, joita se ei tunnista. Mallille, jolla on eri todellinen ikkuna, lisää CLAUDE_CODE_AUTO_COMPACT_WINDOW sen alle, jotta automaattinen tiivistys ei käynnisty liian aikaisin.",
     "failedSave": "Tallennus epäonnistui",
     "profileSyncTitle": "CLI-profiilien automaattinen synkronointi",

@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "settings.json dla odkrywania modelu bramy",
     "ccOnboardingCopy": "Kopiuj",
     "ccOnboardingCopied": "Skopiowano",
-    "ccOnboardingKeyPlaceholder": "<twój klucz API OmniRoute>",
+    "ccOnboardingKeyPlaceholder": "'<twój klucz API OmniRoute>'",
     "ccOnboardingWindowNote": "Claude Code zakłada okno kontekstowe 200K dla każdego identyfikatora modelu, którego nie rozpoznaje. Dla modelu z innym rzeczywistym oknem, dodaj CLAUDE_CODE_AUTO_COMPACT_WINDOW tuż pod nim, aby automatyczna kompresja nie uruchomiła się zbyt wcześnie.",
     "failedSave": "Nie udało się zapisać",
     "profileSyncTitle": "Automatyczna synchronizacja profili CLI",

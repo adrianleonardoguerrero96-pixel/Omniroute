@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "网关模型发现的 settings.json",
     "ccOnboardingCopy": "复制",
     "ccOnboardingCopied": "已复制",
-    "ccOnboardingKeyPlaceholder": "<你的 OmniRoute API 密钥>",
+    "ccOnboardingKeyPlaceholder": "'<你的 OmniRoute API 密钥>'",
     "ccOnboardingWindowNote": "Claude Code 对所有不认识的模型 ID 都假设 200K 上下文窗口。如果模型的实际窗口不同，请在下方添加 CLAUDE_CODE_AUTO_COMPACT_WINDOW，这样自动压缩就不会过早触发。",
     "failedSave": "保存失败",
     "profileSyncTitle": "CLI 配置文件自动同步",

@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "settings.json til gateway model opdagelse",
     "ccOnboardingCopy": "Kopier",
     "ccOnboardingCopied": "Kopieret",
-    "ccOnboardingKeyPlaceholder": "<din OmniRoute API-nøgle>",
+    "ccOnboardingKeyPlaceholder": "'<din OmniRoute API-nøgle>'",
     "ccOnboardingWindowNote": "Claude Code antager et 200K kontekstvindue for enhver model-id, den ikke genkender. For en model med et andet reelt vindue, tilføj CLAUDE_CODE_AUTO_COMPACT_WINDOW lige under den, så auto-komprimering ikke aktiveres for tidligt.",
     "failedSave": "Kunne ikke gemme",
     "profileSyncTitle": "Automatisk synkronisering af CLI-profil",

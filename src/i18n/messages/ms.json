@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "settings.json untuk penemuan model gateway",
     "ccOnboardingCopy": "Salin",
     "ccOnboardingCopied": "Disalin",
-    "ccOnboardingKeyPlaceholder": "<kunci API OmniRoute anda>",
+    "ccOnboardingKeyPlaceholder": "'<kunci API OmniRoute anda>'",
     "ccOnboardingWindowNote": "Claude Code menganggap tetingkap konteks 200K untuk mana-mana ID model yang tidak dikenali. Untuk model dengan tetingkap sebenar yang berbeza, tambah CLAUDE_CODE_AUTO_COMPACT_WINDOW tepat di bawahnya supaya pemampatan automatik tidak berlaku terlalu awal.",
     "failedSave": "Gagal menyimpan",
     "profileSyncTitle": "Penyinkronan automatik profil CLI",

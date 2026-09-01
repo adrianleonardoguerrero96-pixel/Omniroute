@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "settings.json برای کشف مدل دروازه",
     "ccOnboardingCopy": "کپی",
     "ccOnboardingCopied": "کپی شد",
-    "ccOnboardingKeyPlaceholder": "<کلید API OmniRoute شما>",
+    "ccOnboardingKeyPlaceholder": "'<کلید API OmniRoute شما>'",
     "ccOnboardingWindowNote": "Claude Code فرض می‌کند که یک پنجره متنی 200K برای هر شناسه مدلی که شناسایی نمی‌کند وجود دارد. برای مدلی با پنجره واقعی متفاوت، CLAUDE_CODE_AUTO_COMPACT_WINDOW را درست زیر آن اضافه کنید تا فشرده‌سازی خودکار خیلی زود فعال نشود.",
     "failedSave": "ذخیره‌سازی ناموفق بود",
     "profileSyncTitle": "همگام‌سازی خودکار پروفایل CLI",

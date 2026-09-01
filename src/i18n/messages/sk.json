@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "settings.json pre objavovanie modelu brány",
     "ccOnboardingCopy": "Kopírovať",
     "ccOnboardingCopied": "Skopírované",
-    "ccOnboardingKeyPlaceholder": "<váš kľúč API OmniRoute>",
+    "ccOnboardingKeyPlaceholder": "'<váš kľúč API OmniRoute>'",
     "ccOnboardingWindowNote": "Claude Code predpokladá kontextové okno 200K pre akékoľvek ID modelu, ktoré nerozpoznáva. Pre model s iným skutočným oknom pridajte CLAUDE_CODE_AUTO_COMPACT_WINDOW tesne pod ním, aby sa automatická kompresia nespustila príliš skoro.",
     "failedSave": "Nepodarilo sa uložiť",
     "profileSyncTitle": "Automatická synchronizácia profilov CLI",

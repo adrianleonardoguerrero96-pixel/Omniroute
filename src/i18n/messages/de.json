@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "settings.json für die Entdeckung des Gateway-Modells",
     "ccOnboardingCopy": "Kopieren",
     "ccOnboardingCopied": "Kopiert",
-    "ccOnboardingKeyPlaceholder": "<dein OmniRoute API-Schlüssel>",
+    "ccOnboardingKeyPlaceholder": "'<dein OmniRoute API-Schlüssel>'",
     "ccOnboardingWindowNote": "Claude Code geht von einem 200K-Kontextfenster für jede Modell-ID aus, die es nicht erkennt. Für ein Modell mit einem anderen tatsächlichen Fenster fügen Sie CLAUDE_CODE_AUTO_COMPACT_WINDOW direkt darunter hinzu, damit die automatische Komprimierung nicht zu früh ausgelöst wird.",
     "failedSave": "Speichern fehlgeschlagen",
     "profileSyncTitle": "Automatische Synchronisierung von CLI-Profilen",

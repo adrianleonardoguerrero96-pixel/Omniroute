@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "gateway మోడల్ డిస్కవరీ కోసం settings.json",
     "ccOnboardingCopy": "కాపీ",
     "ccOnboardingCopied": "కాపీ చేయబడింది",
-    "ccOnboardingKeyPlaceholder": "<మీ OmniRoute API కీ>",
+    "ccOnboardingKeyPlaceholder": "'<మీ OmniRoute API కీ>'",
     "ccOnboardingWindowNote": "Claude Code గుర్తించని ఏ మోడల్ ఐడికి 200K సందర్భం కిటికీని అనుకుంటుంది. వేరే వాస్తవ కిటికీ ఉన్న మోడల్ కోసం, ఆటో-కంపాక్షన్ చాలా త్వరగా జరగకుండా ఉండటానికి దాని కింద CLAUDE_CODE_AUTO_COMPACT_WINDOWని జోడించండి.",
     "failedSave": "సేవ్ చేయడం విఫలమైంది",
     "profileSyncTitle": "CLI ప్రొఫైల్ ఆటో-సింక్",

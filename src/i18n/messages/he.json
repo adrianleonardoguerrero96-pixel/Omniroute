@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "settings.json עבור גילוי מודל שער",
     "ccOnboardingCopy": "העתק",
     "ccOnboardingCopied": "הועתק",
-    "ccOnboardingKeyPlaceholder": "<מפתח ה-API של OmniRoute שלך>",
+    "ccOnboardingKeyPlaceholder": "'<מפתח ה-API של OmniRoute שלך>'",
     "ccOnboardingWindowNote": "Claude Code מניח חלון הקשר של 200K עבור כל מזהה מודל שהוא לא מזהה. עבור מודל עם חלון אמיתי שונה, הוסף CLAUDE_CODE_AUTO_COMPACT_WINDOW מיד מתחתיו כך שהדחיסה האוטומטית לא תתבצע מוקדם מדי.",
     "failedSave": "השמירה נכשלה",
     "profileSyncTitle": "סנכרון אוטומטי של פרופילי CLI",

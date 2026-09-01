@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "gateway ماڈل کی دریافت کے لیے settings.json",
     "ccOnboardingCopy": "کاپی",
     "ccOnboardingCopied": "نقل کیا گیا",
-    "ccOnboardingKeyPlaceholder": "<آپ کا OmniRoute API کلید>",
+    "ccOnboardingKeyPlaceholder": "'<آپ کا OmniRoute API کلید>'",
     "ccOnboardingWindowNote": "Claude Code کسی بھی ماڈل ID کے لیے 200K سیاق و سباق کی ونڈو فرض کرتا ہے جسے یہ نہیں پہچانتا۔ اگر کسی ماڈل کی حقیقی ونڈو مختلف ہو تو اس کے نیچے CLAUDE_CODE_AUTO_COMPACT_WINDOW شامل کریں تاکہ خودکار کمپیکشن بہت جلد نہ ہو۔",
     "failedSave": "محفوظ کرنے میں ناکامی",
     "profileSyncTitle": "CLI پروفائل کی خودکار مطابقت پذیری",

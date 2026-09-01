@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "settings.json para sa pagtuklas ng modelo ng gateway",
     "ccOnboardingCopy": "Kopyahin",
     "ccOnboardingCopied": "Nakopya",
-    "ccOnboardingKeyPlaceholder": "<your OmniRoute API key>",
+    "ccOnboardingKeyPlaceholder": "'<your OmniRoute API key>'",
     "ccOnboardingWindowNote": "Ipinapalagay ng Claude Code ang 200K na konteksto para sa anumang model id na hindi nito nakikilala. Para sa isang modelo na may ibang tunay na bintana, idagdag ang CLAUDE_CODE_AUTO_COMPACT_WINDOW sa ilalim nito upang hindi masyadong maaga ang pag-activate ng auto-compaction.",
     "failedSave": "Nabigong i-save",
     "profileSyncTitle": "Auto-sync ng profile ng CLI",

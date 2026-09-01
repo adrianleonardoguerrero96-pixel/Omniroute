@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "settings.json a gateway modell felfedezéshez",
     "ccOnboardingCopy": "Másolás",
     "ccOnboardingCopied": "Másolt",
-    "ccOnboardingKeyPlaceholder": "<az OmniRoute API kulcsod>",
+    "ccOnboardingKeyPlaceholder": "'<az OmniRoute API kulcsod>'",
     "ccOnboardingWindowNote": "A Claude Code 200K kontextusablakot feltételez bármely olyan modellazonosító esetén, amelyet nem ismer fel. Ha a modellnek eltérő valós ablaka van, add hozzá a CLAUDE_CODE_AUTO_COMPACT_WINDOW-t közvetlenül alá, hogy az automatikus tömörítés ne lépjen működésbe túl korán.",
     "failedSave": "Nem sikerült menteni",
     "profileSyncTitle": "CLI-profil automatikus szinkronizálása",

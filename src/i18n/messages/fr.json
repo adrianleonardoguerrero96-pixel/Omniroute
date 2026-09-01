@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "settings.json pour la découverte des modèles de la passerelle",
     "ccOnboardingCopy": "Copier",
     "ccOnboardingCopied": "Copié",
-    "ccOnboardingKeyPlaceholder": "<votre clé API OmniRoute>",
+    "ccOnboardingKeyPlaceholder": "'<votre clé API OmniRoute>'",
     "ccOnboardingWindowNote": "Claude Code suppose une fenêtre de contexte de 200K pour tout identifiant de modèle qu'il ne reconnaît pas. Pour un modèle dont la fenêtre réelle est différente, ajoutez CLAUDE_CODE_AUTO_COMPACT_WINDOW juste en dessous afin que le compactage automatique ne se déclenche pas trop tôt.",
     "failedSave": "Échec de l'enregistrement",
     "profileSyncTitle": "Synchronisation automatique des profils CLI",

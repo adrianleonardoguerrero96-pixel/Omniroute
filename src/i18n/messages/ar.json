@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "settings.json لاكتشاف نموذج البوابة",
     "ccOnboardingCopy": "نسخ",
     "ccOnboardingCopied": "تم النسخ",
-    "ccOnboardingKeyPlaceholder": "<مفتاح واجهة برمجة تطبيقات OmniRoute الخاص بك>",
+    "ccOnboardingKeyPlaceholder": "'<مفتاح واجهة برمجة تطبيقات OmniRoute الخاص بك>'",
     "ccOnboardingWindowNote": "يفترض Claude Code وجود نافذة سياق تبلغ 200K لأي معرف نموذج لا يتعرف عليه. بالنسبة لنموذج له نافذة حقيقية مختلفة، أضف CLAUDE_CODE_AUTO_COMPACT_WINDOW أسفلها مباشرة حتى لا يتم تشغيل الضغط التلقائي في وقت مبكر جدًا.",
     "failedSave": "فشل الحفظ",
     "profileSyncTitle": "المزامنة التلقائية لملفات تعريف CLI",

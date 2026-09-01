@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "gateway মডেল আবিষ্কারের জন্য settings.json",
     "ccOnboardingCopy": "কপি করুন",
     "ccOnboardingCopied": "কপি করা হয়েছে",
-    "ccOnboardingKeyPlaceholder": "<আপনার OmniRoute API কী>",
+    "ccOnboardingKeyPlaceholder": "'<আপনার OmniRoute API কী>'",
     "ccOnboardingWindowNote": "Claude Code একটি 200K প্রসঙ্গ উইন্ডো ধারণ করে যেকোন মডেল আইডির জন্য যা এটি চিনতে পারে না। একটি ভিন্ন বাস্তব উইন্ডো সহ মডেলের জন্য, এর ঠিক নিচে CLAUDE_CODE_AUTO_COMPACT_WINDOW যোগ করুন যাতে স্বয়ংক্রিয় সংকোচন খুব তাড়াতাড়ি শুরু না হয়।",
     "failedSave": "সংরক্ষণ করতে ব্যর্থ হয়েছে",
     "profileSyncTitle": "CLI প্রোফাইল অটো-সিঙ্ক",

@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "ગેટવે મોડલ શોધ માટે settings.json",
     "ccOnboardingCopy": "કોપી",
     "ccOnboardingCopied": "કોપી કરેલ",
-    "ccOnboardingKeyPlaceholder": "<તમારો OmniRoute API કી>",
+    "ccOnboardingKeyPlaceholder": "'<તમારો OmniRoute API કી>'",
     "ccOnboardingWindowNote": "Claude Code એ કોઈપણ મોડેલ આઈડી માટે 200K સંદર્ભ વિન્ડો માન્ય રાખે છે જે તે ઓળખતું નથી. જુદા રિયલ વિન્ડો ધરાવતા મોડેલ માટે, નીચે CLAUDE_CODE_AUTO_COMPACT_WINDOW ઉમેરો જેથી ઓટો-કમ્પેક્શન ખૂબ જ વહેલા ન ફાયર થાય.",
     "failedSave": "સાચવવામાં નિષ્ફળ",
     "profileSyncTitle": "CLI પ્રોફાઇલ ઓટો-સિંક",

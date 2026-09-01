@@ -2711,7 +2711,7 @@
     "ccOnboardingTitle": "settings.json cho việc khám phá mô hình qua gateway",
     "ccOnboardingCopy": "Sao chép",
     "ccOnboardingCopied": "Đã sao chép",
-    "ccOnboardingKeyPlaceholder": "<khóa API OmniRoute của bạn>",
+    "ccOnboardingKeyPlaceholder": "'<khóa API OmniRoute của bạn>'",
     "ccOnboardingWindowNote": "Claude Code mặc định coi mọi id mô hình mà nó không nhận ra là có cửa sổ ngữ cảnh 200K. Với mô hình có cửa sổ thực tế khác, hãy thêm CLAUDE_CODE_AUTO_COMPACT_WINDOW ngay bên dưới để việc nén ngữ cảnh tự động không kích hoạt quá sớm.",
     "failedSave": "Không thể lưu",
     "profileSyncTitle": "Tự động đồng bộ hồ sơ CLI",
