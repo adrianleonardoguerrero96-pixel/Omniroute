@@ -12532,6 +12532,8 @@
     "typeApikey": "API की",
     "sortTypeFirst": "सबसे आसान पहले",
     "sortTypeFirstHelp": "साइनअप प्रयास के आधार पर समूहीकृत करें (कोई साइनअप नहीं → OAuth लॉगिन → API की), प्रत्येक समूह के भीतर गुणवत्ता क्रम बनाए रखते हुए",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "कोई साइनअप नहीं = शून्य सेटअप · OAuth लॉगिन = अपने स्वयं के खाते से साइन इन करें · API की = अपनी खुद की की लाएं या उस प्रदाता के फ्री टियर का उपयोग करें",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",

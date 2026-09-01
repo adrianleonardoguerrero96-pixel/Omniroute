@@ -12540,6 +12540,8 @@
     "typeApikey": "Khóa API",
     "sortTypeFirst": "Dễ thiết lập trước",
     "sortTypeFirstHelp": "Nhóm theo mức độ thiết lập (Không cần đăng ký → Đăng nhập OAuth → Khóa API), đồng thời giữ thứ tự chất lượng trong từng nhóm",
+    "sortByReliability": "Đáng tin cậy nhất trước",
+    "sortByReliabilityHelp": "Sắp xếp nhà cung cấp theo tỷ lệ lệnh gọi thành công trong khoảng thời gian đã chọn. Nhà cung cấp có quá ít lệnh gọi để đưa ra tỷ lệ sẽ giữ thứ tự theo điểm, xếp dưới các nhà cung cấp đã được đo.",
     "typeLegend": "Không cần đăng ký = không cần thiết lập · Đăng nhập OAuth = đăng nhập bằng tài khoản của bạn · Khóa API = dùng khóa riêng hoặc gói miễn phí của nhà cung cấp",
     "colReliability": "Độ tin cậy",
     "colReliabilityHelp": "Tỷ lệ lệnh gọi mà nhà cung cấp này thực sự trả lời trong 24 giờ qua. Dấu gạch ngang nghĩa là lưu lượng quá ít để đưa ra tỷ lệ.",

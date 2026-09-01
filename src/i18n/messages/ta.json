@@ -12532,6 +12532,8 @@
     "typeApikey": "API கீ",
     "sortTypeFirst": "எளிதானது முதலில்",
     "sortTypeFirstHelp": "பதிவு செய்யும் முயற்சியின் அடிப்படையில் குழுவாக்குங்கள் (பதிவு செய்ய தேவையில்லை → OAuth உள்நுழைவு → API கீ), ஒவ்வொரு குழுவிலும் தர வரிசையைத் தக்க வைத்துக் கொள்ளுங்கள்",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "பதிவு செய்ய தேவையில்லை = பூஜ்ஜிய அமைப்பு · OAuth உள்நுழைவு = உங்கள் சொந்த கணக்குடன் உள்நுழையவும் · API கீ = உங்கள் சொந்த கீயைக் கொண்டு வாருங்கள் அல்லது அந்த வழங்குநரின் இலவச அடுக்கு",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",

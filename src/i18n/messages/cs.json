@@ -12532,6 +12532,8 @@
     "typeApikey": "Klíč API",
     "sortTypeFirst": "Nejjednodušší jako první",
     "sortTypeFirstHelp": "Seskupit podle náročnosti registrace (Bez registrace → Přihlášení přes OAuth → Klíč API) při zachování pořadí kvality v rámci každé skupiny",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "Bez registrace = nulové nastavení · Přihlášení přes OAuth = přihlášení vlastním účtem · Klíč API = vlastní klíč nebo bezplatný tarif poskytovatele",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",

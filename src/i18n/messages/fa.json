@@ -12532,6 +12532,8 @@
     "typeApikey": "کلید API",
     "sortTypeFirst": "ابتدا آسان‌ترین‌ها",
     "sortTypeFirstHelp": "گروه‌بندی بر اساس میزان تلاش برای ثبت‌نام (بدون نیاز به ثبت‌نام ← ورود با OAuth ← کلید API)، با حفظ ترتیب کیفیت در هر گروه",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "بدون نیاز به ثبت‌نام = بدون نیاز به راه‌اندازی · ورود با OAuth = ورود با حساب کاربری خودتان · کلید API = استفاده از کلید خودتان یا طرح رایگان آن ارائه‌دهنده",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",

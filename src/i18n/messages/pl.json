@@ -12532,6 +12532,8 @@
     "typeApikey": "Klucz API",
     "sortTypeFirst": "Najłatwiejsze najpierw",
     "sortTypeFirstHelp": "Grupuj według nakładu pracy przy rejestracji (Bez rejestracji → Logowanie OAuth → Klucz API), zachowując kolejność jakości w każdej grupie",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "Bez rejestracji = zero konfiguracji · Logowanie OAuth = zaloguj się za pomocą własnego konta · Klucz API = użyj własnego klucza lub darmowego planu tego provider",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",

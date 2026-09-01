@@ -12532,6 +12532,8 @@
     "typeApikey": "APIキー",
     "sortTypeFirst": "簡単な順",
     "sortTypeFirstHelp": "サインアップの手間（サインアップ不要 → OAuthログイン → APIキー）でグループ化し、各グループ内では品質順を維持",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "サインアップ不要 = セットアップ不要 · OAuthログイン = 自身のアカウントでサインイン · APIキー = 自身のキーまたはプロバイダーの無料枠を使用",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",

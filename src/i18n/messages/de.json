@@ -12539,6 +12539,8 @@
     "typeApikey": "API-Schlüssel",
     "sortTypeFirst": "Einfachste zuerst",
     "sortTypeFirstHelp": "Nach Registrierungsaufwand gruppieren (Keine Registrierung → OAuth-Login → API-Schlüssel), Qualitätsreihenfolge innerhalb jeder Gruppe beibehalten",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "Keine Registrierung = kein Einrichtungsaufwand · OAuth-Login = mit eigenem Konto anmelden · API-Schlüssel = eigenen Schlüssel oder kostenloses Kontingent des Anbieters nutzen",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",

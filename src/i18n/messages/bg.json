@@ -12532,6 +12532,8 @@
     "typeApikey": "API ключ",
     "sortTypeFirst": "Най-лесните първо",
     "sortTypeFirstHelp": "Групиране по усилие за регистрация (Без регистрация → Вход с OAuth → API ключ), запазвайки подредбата по качество във всяка група",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "Без регистрация = нулева настройка · Вход с OAuth = влизане със собствен акаунт · API ключ = използване на собствен ключ или безплатния план на доставчика",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",

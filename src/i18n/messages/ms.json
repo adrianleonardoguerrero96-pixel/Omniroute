@@ -12532,6 +12532,8 @@
     "typeApikey": "Kunci API",
     "sortTypeFirst": "Paling mudah dahulu",
     "sortTypeFirstHelp": "Kumpulkan mengikut usaha pendaftaran (Tanpa Pendaftaran → Log Masuk OAuth → Kunci API), mengekalkan susunan kualiti dalam setiap kumpulan",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "Tanpa Pendaftaran = sifar persediaan · Log Masuk OAuth = log masuk dengan akaun anda sendiri · Kunci API = bawa kunci anda sendiri atau peringkat percuma penyedia tersebut",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",

@@ -12532,6 +12532,8 @@
     "typeApikey": "API 金鑰",
     "sortTypeFirst": "最簡單優先",
     "sortTypeFirstHelp": "按註冊難度分組（無需註冊 → OAuth 登入 → API 金鑰），在各組內保持品質順序",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "無需註冊 = 零設定 · OAuth 登入 = 使用自己的帳戶登入 · API 金鑰 = 自帶金鑰或使用該提供者的免費方案",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",

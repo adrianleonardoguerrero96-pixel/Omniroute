@@ -12532,6 +12532,8 @@
     "typeApikey": "API-nøkkel",
     "sortTypeFirst": "Enkleste først",
     "sortTypeFirstHelp": "Grupper etter registreringsinnsats (Ingen registrering → OAuth-innlogging → API-nøkkel), og behold kvalitetsrekkefølgen innenfor hver gruppe",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "Ingen registrering = null oppsett · OAuth-innlogging = logg inn med din egen konto · API-nøkkel = ta med din egen nøkkel eller leverandørens gratisnivå",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",

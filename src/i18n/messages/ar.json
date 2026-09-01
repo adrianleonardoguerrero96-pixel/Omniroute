@@ -12532,6 +12532,8 @@
     "typeApikey": "مفتاح واجهة برمجة التطبيقات",
     "sortTypeFirst": "الأسهل أولاً",
     "sortTypeFirstHelp": "التجميع حسب سهولة البدء (من دون تسجيل ← تسجيل دخول OAuth ← مفتاح API)، مع الحفاظ على ترتيب الجودة داخل كل مجموعة",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "من دون تسجيل = لا إعداد مطلوب · تسجيل دخول OAuth = سجّل الدخول بحسابك · مفتاح API = استخدم مفتاحك أو الخطة المجانية للمزود",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",

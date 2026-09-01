@@ -12532,6 +12532,8 @@
     "typeApikey": "คีย์ API",
     "sortTypeFirst": "ง่ายที่สุดก่อน",
     "sortTypeFirstHelp": "จัดกลุ่มตามความยากง่ายในการลงทะเบียน (ไม่ต้องลงทะเบียน → เข้าสู่ระบบด้วย OAuth → คีย์ API) โดยยังคงเรียงลำดับตามคุณภาพภายในแต่ละกลุ่ม",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "ไม่ต้องลงทะเบียน = ไม่ต้องตั้งค่า · เข้าสู่ระบบด้วย OAuth = ลงชื่อเข้าใช้ด้วยบัญชีของคุณเอง · คีย์ API = ใช้คีย์ของคุณเองหรือระดับใช้งานฟรีของผู้ให้บริการนั้น",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
