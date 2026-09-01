@@ -88,6 +88,7 @@
       "tests/unit/auth-noauth-fallback-loop-3061.test.ts",
       "tests/unit/auth-ollama-cloud-per-model-403-3027.test.ts",
       "tests/unit/auth-opencode-zen-noauth-fallback.test.ts",
+      "tests/unit/auth-passthrough-per-model-402-12242.test.ts",
       "tests/unit/auth-terminal-status.test.ts",
       "tests/unit/authz/discovery-routes-local-only.test.ts",
       "tests/unit/authz/oauth-autoimport-local-only.test.ts",

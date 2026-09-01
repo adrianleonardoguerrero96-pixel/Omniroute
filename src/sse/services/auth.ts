@@ -332,6 +332,23 @@ function isRecoverableCookieAuth401(
     resolveProviderId(provider) in WEB_COOKIE_PROVIDERS
   );
 }
+// #12242 (402 variant of #3027): a bare 402 on a passthrough/gateway
+// provider that multiplexes many models behind one credential
+// (kilo-gateway, ollama-cloud, etc.) is a PER-MODEL billing signal, not
+// proof the credential itself is dead — free models on the same connection
+// remain perfectly usable. Only terminalize the whole connection for a 402
+// when the provider is NOT a per-model-quota provider; the caller lets it
+// fall through to the per-model lockout branch instead.
+// `result.creditsExhausted` is a provider's own explicit classification
+// (independent of HTTP status) and stays unconditionally terminal — it is
+// not scoped by this check.
+function isConnectionWideCreditsExhausted(
+  status: number,
+  result: { permanent?: boolean; creditsExhausted?: boolean },
+  isPerModelQuotaProvider: boolean
+): boolean {
+  return result.creditsExhausted || (status === 402 && !isPerModelQuotaProvider);
+}
 function resolveTerminalConnectionStatus(
   status: number,
   result: { permanent?: boolean; creditsExhausted?: boolean },
@@ -339,16 +356,7 @@ function resolveTerminalConnectionStatus(
   provider: string | null = null,
   isPerModelQuotaProvider = false
 ): string | null {
-  // #12242 (402 variant of #3027): a bare 402 on a passthrough/gateway
-  // provider that multiplexes many models behind one credential
-  // (kilo-gateway, ollama-cloud, etc.) is a PER-MODEL billing signal, not
-  // proof the credential itself is dead — free models on the same connection
-  // remain perfectly usable. Only terminalize the whole connection for a 402
-  // when the provider is NOT a per-model-quota provider; let it fall through
-  // to the per-model lockout branch below instead. `result.creditsExhausted`
-  // is a provider's own explicit classification (independent of HTTP status)
-  // and stays unconditionally terminal — it is not scoped by this check.
-  if (result.creditsExhausted || (status === 402 && !isPerModelQuotaProvider)) {
+  if (isConnectionWideCreditsExhausted(status, result, isPerModelQuotaProvider)) {
     return "credits_exhausted";
   }
   if (
