@@ -13414,7 +13414,10 @@
     "localStateSaveFailed": "Failed to save local Radar settings",
     "guidedCombos": "Guided combos",
     "offers": "Offers",
-    "intel": "Intel"
+    "intel": "Intel",
+    "colLimits": "Rate limits",
+    "trainsOnPrompts": "Trains on prompts",
+    "trainsOnPromptsHelp": "This provider's terms state it may train on the prompts you send. Models without this badge either state they do not, or do not document it — an absent statement is not a guarantee."
   },
   "radarCombosPage": {
     "title": "Radar guided combos",
