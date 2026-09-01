@@ -6449,7 +6449,12 @@
     "savedModelEndpointSettings": "Đã lưu cài đặt endpoint mô hình",
     "searchByModelAria": "Tìm kiếm theo mô hình",
     "selectSupportedEndpoint": "Chọn ít nhất một endpoint được hỗ trợ",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Xóa thời gian chờ",
+    "clearConnectionCooldownInProgress": "Đang xóa…",
+    "clearConnectionCooldownTitle": "Xóa thời gian chờ ngay — dùng khi hạn mức đã được làm mới ở thượng nguồn",
+    "connectionCooldownCleared": "Đã xóa thời gian chờ — kết nối đã tham gia lại định tuyến",
+    "failedClearConnectionCooldown": "Không thể xóa thời gian chờ"
   },
   "settings": {
     "title": "Cài đặt",
