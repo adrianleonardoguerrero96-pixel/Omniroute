@@ -56,6 +56,43 @@ function isCoolingNow(connection: ConnectionRowConnection, now: number): boolean
   return Number.isFinite(until) && until > now;
 }
 
+interface ClearCooldownButtonProps {
+  /** Row's connection id — without one there is nothing to PUT, so no button. */
+  readonly connectionId: string | undefined;
+  /** True while this row's clear request is in flight (disables the button). */
+  readonly clearing: boolean;
+  readonly onClearCooldown?: (connectionId: string) => void;
+}
+
+/**
+ * Per-row manual "Clear cooldown" action, split out of the panel body so the
+ * row map stays readable (and the panel inside the max-lines-per-function
+ * ratchet). Renders nothing when there is no handler or no connection id.
+ */
+function ClearCooldownButton(props: ClearCooldownButtonProps) {
+  const { connectionId, clearing, onClearCooldown } = props;
+  const t = useTranslations("providers");
+  if (!onClearCooldown || !connectionId) return null;
+  return (
+    <button
+      type="button"
+      data-testid={`clear-cooldown-${connectionId}`}
+      disabled={clearing}
+      onClick={() => onClearCooldown(connectionId)}
+      title={providerText(
+        t,
+        "clearConnectionCooldownTitle",
+        "Clear the cooldown now — use when the quota has already refreshed upstream"
+      )}
+      className="rounded border border-amber-500/50 px-2 py-0.5 text-xs text-amber-700 transition-colors hover:bg-amber-500/10 disabled:cursor-not-allowed disabled:opacity-50 dark:text-amber-300"
+    >
+      {clearing
+        ? providerText(t, "clearConnectionCooldownInProgress", "Clearing…")
+        : providerText(t, "clearConnectionCooldown", "Clear cooldown")}
+    </button>
+  );
+}
+
 export default function CoolingConnectionsPanel(props: CoolingConnectionsPanelProps) {
   const { connections, onClearCooldown, clearingCooldownId } = props;
   const t = useTranslations("providers");
@@ -116,24 +153,11 @@ export default function CoolingConnectionsPanel(props: CoolingConnectionsPanelPr
                 >
                   {formatResetCountdown(until)}
                 </span>
-                {onClearCooldown && c.id ? (
-                  <button
-                    type="button"
-                    data-testid={`clear-cooldown-${c.id ?? label}`}
-                    disabled={clearing}
-                    onClick={() => c.id && onClearCooldown(c.id)}
-                    title={providerText(
-                      t,
-                      "clearCooldownTitle",
-                      "Clear the cooldown now — use when the quota has already refreshed upstream"
-                    )}
-                    className="rounded border border-amber-500/50 px-2 py-0.5 text-xs text-amber-700 transition-colors hover:bg-amber-500/10 disabled:cursor-not-allowed disabled:opacity-50 dark:text-amber-300"
-                  >
-                    {clearing
-                      ? providerText(t, "clearCooldownInProgress", "Clearing…")
-                      : providerText(t, "clearCooldown", "Clear cooldown")}
-                  </button>
-                ) : null}
+                <ClearCooldownButton
+                  connectionId={c.id}
+                  clearing={clearing}
+                  onClearCooldown={onClearCooldown}
+                />
               </span>
             </li>
           );

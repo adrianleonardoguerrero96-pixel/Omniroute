@@ -656,7 +656,7 @@ export function useProviderConnections(
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        notify.error(data.error || t("failedClearCooldown"));
+        notify.error(data.error || t("failedClearConnectionCooldown"));
         return;
       }
       // Optimistically drop the cooldown locally so the row leaves the cooling
@@ -666,11 +666,11 @@ export function useProviderConnections(
           c.id === connectionId ? { ...c, rateLimitedUntil: null, backoffLevel: 0 } : c
         )
       );
-      notify.success(t("cooldownCleared"));
+      notify.success(t("connectionCooldownCleared"));
       await fetchConnections();
     } catch (error) {
       console.error("Error clearing cooldown:", error);
-      notify.error(t("failedClearCooldown"));
+      notify.error(t("failedClearConnectionCooldown"));
     } finally {
       setClearingCooldownId(null);
     }
