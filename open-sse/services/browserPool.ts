@@ -25,6 +25,7 @@
  */
 
 import { Buffer } from "node:buffer";
+import { connectObscuraBrowser } from "./obscura.ts";
 
 type Browser = import("playwright").Browser;
 type BrowserContext = import("playwright").BrowserContext;
@@ -81,10 +82,18 @@ function createBrowserPoolMetrics(): BrowserPoolMetrics {
   };
 }
 
+interface PendingContextEntry {
+  promise: Promise<PooledContext>;
+  createdAt: number;
+}
+
+type PoolEngine = "obscura" | "cloakbrowser" | "chromium";
+
 interface PoolState {
   browser: Browser | null;
+  engine: PoolEngine | null;
   contexts: Map<string, PooledContext>;
-  pendingContexts: Map<string, Promise<PooledContext>>;
+  pendingContexts: Map<string, PendingContextEntry>;
   launching: Promise<Browser> | null;
   lastActivity: number;
   idleTimer: NodeJS.Timeout | null;
@@ -102,8 +111,9 @@ const DEFAULT_USER_AGENT =
 
 const state: PoolState = {
   browser: null,
+  engine: null,
   contexts: new Map(),
-  pendingContexts: new Map(),
+  pendingContexts: new Map<string, { promise: Promise<PooledContext>; createdAt: number }>(),
   launching: null,
   lastActivity: 0,
   idleTimer: null,
@@ -162,6 +172,14 @@ function evictStaleContexts(): void {
       state.contexts.delete(key);
       state.metrics.contextsEvicted++;
       pooled.context.close().catch(() => {});
+    }
+  }
+  // Also clean up stale pendingContexts (entries that never resolved)
+  const PENDING_TTL_MS = 5 * 60 * 1000; // 5 minutes for pending
+  for (const [key, pending] of state.pendingContexts) {
+    if (now - pending.createdAt > PENDING_TTL_MS) {
+      state.pendingContexts.delete(key);
+      state.metrics.contextsEvicted++;
     }
   }
   if (state.contexts.size === 0 && !state.launching) {
@@ -227,10 +245,22 @@ export async function resolveBrowserContextProxy(
   return resolvePlaywrightProxy(options.proxyProviderKey ?? contextKey, deps);
 }
 
+// #12274: prefer Obscura (lightweight, browser-grade CDP) over a full
+// Chromium; fall back to cloakbrowser/plain Chromium when it's absent.
+// Obscura's lifecycle (one shared `obscura serve` per process) lives in
+// ./obscura.ts so executors like cloudflare-playground reuse the same server.
 async function launchBrowser(): Promise<Browser> {
   if (state.browser) return state.browser;
   if (state.launching) return state.launching;
   state.launching = (async () => {
+    const obscura = await connectObscuraBrowser();
+    if (obscura) {
+      state.browser = obscura.browser;
+      state.engine = "obscura";
+      state.metrics.browserLaunches++;
+      return obscura.browser;
+    }
+
     const cloakLaunch = await resolveCloakLaunch();
     let browser: Browser;
     if (cloakLaunch) {
@@ -238,6 +268,7 @@ async function launchBrowser(): Promise<Browser> {
         headless: true,
         args: ["--no-sandbox", "--disable-dev-shm-usage"],
       });
+      state.engine = "cloakbrowser";
     } else {
       // Fallback: plain Playwright. Works for Claude web (cookie-only
       // auth) but DDG's VQD challenge will detect this Chromium build.
@@ -250,6 +281,7 @@ async function launchBrowser(): Promise<Browser> {
           "--disable-blink-features=AutomationControlled",
         ],
       });
+      state.engine = "chromium";
     }
     state.browser = browser;
     state.launching = null;
@@ -371,14 +403,14 @@ export async function acquireBrowserContext(
 
   // Dedup concurrent creations for the same key
   const pending = state.pendingContexts.get(key);
-  if (pending) return pending;
+  if (pending) return pending.promise;
 
   const createPromise = (async (): Promise<PooledContext> => {
     const [browser, proxy] = await Promise.all([
       launchBrowser(),
       resolveBrowserContextProxy(key, options),
     ]);
-    const isStealth = state.cloakLaunch !== null;
+    const isStealth = state.engine === "obscura" || state.cloakLaunch !== null;
     const context = await browser.newContext({
       userAgent: options.userAgent || DEFAULT_USER_AGENT,
       locale: options.locale || "en-US",
@@ -438,7 +470,7 @@ export async function acquireBrowserContext(
     return pooled;
   })();
 
-  state.pendingContexts.set(key, createPromise);
+  state.pendingContexts.set(key, { promise: createPromise, createdAt: Date.now() });
   createPromise
     .then(() => settlePendingContext(key, false))
     .catch(() => settlePendingContext(key, true));
@@ -493,6 +525,10 @@ export async function shutdownPool(reason: string): Promise<void> {
     }
     state.browser = null;
   }
+  // #12274: the shared Obscura server is owned by ./obscura.ts and reused by
+  // executors (cloudflare-playground), so closing the pool's CDP connection is
+  // enough — never kill it here.
+  state.engine = null;
   state.lastActivity = Date.now();
   // Avoid unused-parameter lint: log reason via debug if anyone hooks
   // process.on('exit') and prints state.
@@ -503,6 +539,7 @@ export function getBrowserPoolStatus(): {
   enabled: boolean;
   contexts: number;
   browserRunning: boolean;
+  engine: PoolEngine | null;
   stealthAvailable: boolean;
   lastActivityAgoMs: number;
 } {
@@ -510,7 +547,8 @@ export function getBrowserPoolStatus(): {
     enabled: isPoolEnabled(),
     contexts: state.contexts.size,
     browserRunning: state.browser !== null,
-    stealthAvailable: state.cloakLaunch !== null,
+    engine: state.engine,
+    stealthAvailable: state.engine === "obscura" || state.cloakLaunch !== null,
     lastActivityAgoMs: state.lastActivity === 0 ? -1 : Date.now() - state.lastActivity,
   };
 }
