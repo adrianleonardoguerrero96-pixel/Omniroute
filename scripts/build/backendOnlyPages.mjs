@@ -2,7 +2,7 @@
 /**
  * Backend-only build helper.
  *
- * When `OMNIROUTE_BUILD_BACKEND_ONLY=1` (or `OMNIROUTE_BUILD_PROFILE=backend`) is set,
+ * When `OMNIROUTE_BUILD_BACKEND_ONLY=1` (or `OMNIROUTE_BUILD_PROFILE=backend|contributor`) is set,
  * `build-next-isolated.mjs` calls `stubDashboardPages()` BEFORE `next build` and
  * `restoreDashboardPages()` in a `finally` afterward.
  *
@@ -37,7 +37,14 @@ export const BACKEND_ONLY_STUB_MARKER =
   "/* omniroute:backend-only-stub (auto-restored after build) */";
 
 const HEADER = `${BACKEND_ONLY_STUB_MARKER}\n`;
-const INSTRUMENTATION_STUB = `${HEADER}export async function register() {}`;
+// Each instrumentation entrypoint exports its own symbol — `src/instrumentation.ts`
+// exposes Next's `register()`, while `src/instrumentation-node.ts` exposes the
+// `registerNodejs()` it dynamically imports. Stub each with the name it really owns so
+// the stub never misrepresents the file's contract.
+const INSTRUMENTATION_STUBS = {
+  "instrumentation.ts": `${HEADER}export async function register() {}`,
+  "instrumentation-node.ts": `${HEADER}export async function registerNodejs() {}`,
+};
 
 // Leaf page → force-dynamic (never prerendered) server component returning null.
 const PAGE_STUB = `${HEADER}export const dynamic = "force-dynamic";\nexport default function BackendOnlyPageStub() {\n  return null;\n}\n`;
@@ -84,7 +91,11 @@ function stripLeadingUseServer(src) {
 
 /** True when the current build should skip the dashboard frontend. */
 export function isBackendOnlyBuild(env = process.env) {
-  return env.OMNIROUTE_BUILD_BACKEND_ONLY === "1" || env.OMNIROUTE_BUILD_PROFILE === "backend";
+  return (
+    env.OMNIROUTE_BUILD_BACKEND_ONLY === "1" ||
+    env.OMNIROUTE_BUILD_PROFILE === "backend" ||
+    env.OMNIROUTE_BUILD_PROFILE === "contributor"
+  );
 }
 
 /** True when the build is intended only for contributor feedback, not packaging. */
@@ -94,12 +105,9 @@ export function isContributorBuild(env = process.env) {
 
 /** Replace the build-only instrumentation entrypoint to avoid pulling the startup graph. */
 export function stubContributorInstrumentation(rootDir = process.cwd(), log = console) {
-  const files = [
-    path.join(rootDir, "src", "instrumentation.ts"),
-    path.join(rootDir, "src", "instrumentation-node.ts"),
-  ];
   const stubbed = [];
-  for (const file of files) {
+  for (const [basename, stub] of Object.entries(INSTRUMENTATION_STUBS)) {
+    const file = path.join(rootDir, "src", basename);
     let original;
     try {
       original = fs.readFileSync(file, "utf8");
@@ -108,7 +116,7 @@ export function stubContributorInstrumentation(rootDir = process.cwd(), log = co
     }
     if (original.includes(BACKEND_ONLY_STUB_MARKER)) continue;
     try {
-      fs.writeFileSync(file, INSTRUMENTATION_STUB, "utf8");
+      fs.writeFileSync(file, stub, "utf8");
       stubbed.push({ file, original });
     } catch (err) {
       log.warn?.(`[backend-only] Could not stub ${file}: ${err?.message || err}`);
