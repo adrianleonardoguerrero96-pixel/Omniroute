@@ -93,10 +93,9 @@ and `supportsProviderQuota()` (`src/shared/utils/providerQuotaVisibility.ts`), b
 `USAGE_SUPPORTED_PROVIDERS` (`src/shared/constants/providers/usageSupported.ts`). Unlike
 `usage-fetch`, it is emitted on the provider id alone — the runtime guard does
 `USAGE_SUPPORTED_PROVIDERS.includes(providerId)` with no alias resolution, so the manifest
-keeps the same rule. The two tags have different perimeters: 42 providers carry both, 4
-carry only `usage-fetch` (`opencode`, `opencode-zen`, `openrouter`, `xai`) and 3 carry
-only `usage-supported` (`adobe-firefly`, `firefly`, `xiaomi-mimo-token-plan`) — 7
-differences in total — so one does not imply the other.
+keeps the same rule. The two tags have different perimeters: 4 providers carry only
+`usage-fetch` (`opencode`, `opencode-zen`, `openrouter`, `xai`) and 1 carries only
+`usage-supported` (`xiaomi-mimo-token-plan`), so one does not imply the other.
 
 ## Sidecar Use
 
