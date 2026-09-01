@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
 import {
+  collectChatGptWebFirstPartyAssetCandidates,
   executeChatGptWebFirstPartyTurn,
   extractChatGptWebFirstPartyAssetReferences,
   parseChatGptWebFirstPartyModuleContract,
@@ -63,6 +64,24 @@ describe("ChatGPT Web first-party module contract discovery", () => {
     } satisfies ChatGptWebFirstPartyModuleContract);
   });
 
+  test("accepts the optional first-party send policy on requirement finalization", () => {
+    const source = [
+      "async function aa(e,t){let[r,i]=await Promise.all([cc.getEnforcementToken(t,{forceSync:!0}),dd.getEnforcementToken(t)]);return[r,i]}",
+      "function ff(e=!1,t=`none`,n=rr.SendIfAvailable){return gg(`finalized`,e,t,n)}",
+      "async function hh(){return ee.safePost(`/sentinel/chat-requirements/prepare`,{})}",
+      "function ii(e,t,n,r,i,a){let o={};return e?.token?o[`OpenAI-Sentinel-Chat-Requirements-Token`]=e.token:o}",
+      "export{ff as A,cc as B,dd as C,ee as D,ii as E};",
+    ].join(";");
+
+    assert.deepEqual(parseChatGptWebFirstPartyModuleContract(source), {
+      finalizeRequirements: "A",
+      proofManager: "B",
+      turnstileManager: "C",
+      requestClient: "D",
+      buildSentinelHeaders: "E",
+    } satisfies ChatGptWebFirstPartyModuleContract);
+  });
+
   test("fails closed when an upstream asset no longer exposes the observed contract", () => {
     assert.throws(
       () => parseChatGptWebFirstPartyModuleContract("export{unrelated as A};"),
@@ -83,6 +102,19 @@ describe("ChatGPT Web first-party module contract discovery", () => {
       "https://chatgpt.com/cdn/assets/4813494d-current.js",
       "https://chatgpt.com/cdn/assets/lazy_chunk-2.js",
     ]);
+  });
+
+  test("discovers first-party modules exposed only through modulepreload links", () => {
+    assert.deepEqual(
+      collectChatGptWebFirstPartyAssetCandidates(
+        [],
+        [
+          "https://chatgpt.com/cdn/assets/4813494d-current.js",
+          "https://chatgpt.com/cdn/assets/root-current.css",
+        ]
+      ),
+      ["https://chatgpt.com/cdn/assets/4813494d-current.js"]
+    );
   });
 });
 

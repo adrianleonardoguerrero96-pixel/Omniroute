@@ -78,7 +78,7 @@ export function parseChatGptWebFirstPartyModuleContract(
   source: string
 ): ChatGptWebFirstPartyModuleContract {
   const finalizeLocal = source.match(
-    /function ([A-Za-z_$][\w$]*)\(e=!1,t=`none`\)\{return [A-Za-z_$][\w$]*\(`finalized`,e,t\)\}/
+    /function ([A-Za-z_$][\w$]*)\(e=!1,t=`none`(?:,n=[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)?)?\)\{return [A-Za-z_$][\w$]*\(`finalized`,e,t(?:,n)?\)\}/
   )?.[1];
   const enforcement = source.match(
     /Promise\.all\(\[([A-Za-z_$][\w$]*)\.getEnforcementToken\(t,\{forceSync:!0\}\),([A-Za-z_$][\w$]*)\.getEnforcementToken\(t\)\]\)/
@@ -120,6 +120,15 @@ function requireChatGptAssetUrl(value: string): string {
     throw new Error("ChatGPT Web exposed an invalid first-party asset URL");
   }
   return url.toString();
+}
+
+export function collectChatGptWebFirstPartyAssetCandidates(
+  resourceUrls: readonly string[],
+  modulePreloadUrls: readonly string[]
+): string[] {
+  return Array.from(new Set([...resourceUrls, ...modulePreloadUrls])).filter(
+    (url) => url.includes("/cdn/assets/") && url.endsWith(".js")
+  );
 }
 
 /** Find first-party chunks referenced by an already-loaded ChatGPT module. */
@@ -177,15 +186,16 @@ async function discoverFirstPartyModule(page: Page): Promise<{
   const deadline = Date.now() + MODULE_DISCOVERY_TIMEOUT_MS;
 
   while (Date.now() <= deadline && visited.size < MAX_DISCOVERY_ASSETS) {
-    const candidates = await page.evaluate(() =>
-      Array.from(
-        new Set(
-          performance
-            .getEntriesByType("resource")
-            .map((entry) => entry.name)
-            .filter((name) => name.includes("/cdn/assets/") && name.endsWith(".js"))
-        )
-      )
+    const candidateSources = await page.evaluate(() => ({
+      modulePreloadUrls: Array.from(
+        document.querySelectorAll<HTMLLinkElement>('link[rel="modulepreload"][href]'),
+        (link) => link.href
+      ),
+      resourceUrls: performance.getEntriesByType("resource").map((entry) => entry.name),
+    }));
+    const candidates = collectChatGptWebFirstPartyAssetCandidates(
+      candidateSources.resourceUrls,
+      candidateSources.modulePreloadUrls
     );
     queue.push(...candidates);
 
