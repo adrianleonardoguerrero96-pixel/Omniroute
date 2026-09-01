@@ -1,0 +1,1 @@
+Added Claude Fable 5.1 (`claude-fable-5-1`, released 2026-09-01) to the anthropic, claude, claude-web, and vertex registries with capability specs, Bedrock aliases, 1M-context beta eligibility, family fallback, and pricing — including its lower $0.25/MTok cache-read price.
