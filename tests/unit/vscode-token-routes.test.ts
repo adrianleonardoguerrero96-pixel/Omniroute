@@ -220,7 +220,14 @@ test("vscode combos route exposes combos through Ollama api/tags", async () => {
   const combo = body.models.find((entry: any) => entry.name === "tags-combo");
   assert.ok(combo, "expected combo name in api/tags response");
   assert.equal(combo.details.family, "tags-combo");
-  assert.deepEqual(combo.supportsReasoningEffort, ["none", "low", "medium", "high", "xhigh"]);
+  assert.deepEqual(combo.supportsReasoningEffort, [
+    "none",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max",
+  ]);
 });
 
 test("vscode combos route resolves combo names through Ollama api/show", async () => {
@@ -258,7 +265,7 @@ test("vscode combos route resolves combo names through Ollama api/show", async (
   // #11179: codex static catalog advertises the usable 872K window (max_context_window),
   // not the old 272K pricing tier.
   assert.equal(body.model_info.context_length, 872000);
-  assert.deepEqual(body.supportsReasoningEffort, ["none", "low", "medium", "high", "xhigh"]);
+  assert.deepEqual(body.supportsReasoningEffort, ["none", "low", "medium", "high", "xhigh", "max"]);
   assert.equal(body.model_info.capabilities.reasoning, true);
 });
 
@@ -295,7 +302,14 @@ test("vscode tokenized combos root route exposes importable combo metadata", asy
   // #11179: codex static catalog maxInputTokens is now the usable 872K window.
   assert.equal(combo.maxInputTokens, 872000);
   assert.equal(combo.toolCalling, true);
-  assert.deepEqual(combo.supportsReasoningEffort, ["none", "low", "medium", "high", "xhigh"]);
+  assert.deepEqual(combo.supportsReasoningEffort, [
+    "none",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max",
+  ]);
 });
 
 test("vscode tokenized models route exposes reasoning effort metadata for importable chat models", async () => {
@@ -324,14 +338,22 @@ test("vscode tokenized models route exposes reasoning effort metadata for import
   assert.equal(response.status, 200);
   assert.ok(model, "missing gpt-5.4__provider_gh in tokenized VS Code models route");
   assert.equal(model.family, "gpt-5.4");
-  assert.deepEqual(model.supportsReasoningEffort, ["none", "low", "medium", "high"]);
-  assert.deepEqual(model.supportedReasoningEfforts, ["none", "low", "medium", "high", "xhigh"]);
+  assert.deepEqual(model.supportsReasoningEffort, ["none", "low", "medium", "high", "max"]);
+  assert.deepEqual(model.supportedReasoningEfforts, [
+    "none",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max",
+  ]);
   assert.deepEqual(model.configurationSchema?.properties?.reasoningEffort?.enum, [
     "none",
     "low",
     "medium",
     "high",
     "xhigh",
+    "max",
   ]);
   assert.equal(model.configurationSchema?.properties?.reasoningEffort?.default, "none");
   assert.equal(

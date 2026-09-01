@@ -7,7 +7,7 @@
 // or the reasoning-effort vocabulary changes.
 //
 // The canonical effort vocabulary mirrors `@/shared/reasoning/effortStandardization.ts`
-// (`CANONICAL_EFFORT_VALUES` + the `extra`/`max` → `xhigh` alias). Ported from upstream
+// (`CANONICAL_EFFORT_VALUES` + the `extra` → `xhigh` alias; `max` is canonical). Ported from upstream
 // decolua/9router#2584 ("add Antigravity reasoning effort overrides").
 // =========================================================================
 
