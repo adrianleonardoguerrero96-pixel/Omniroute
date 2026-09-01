@@ -91,6 +91,7 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "src/app/api/models/route.ts": 1,
     "src/app/api/monitoring/health/route.ts": 1,
     "src/app/api/oauth/[provider]/[action]/route.ts": 4,
+    "src/app/api/oauth/codex/import/route.ts": 1,
     "src/app/api/oauth/kiro/api-key/route.ts": 1,
     "src/app/api/oauth/kiro/auto-import/route.ts": 2,
     "src/app/api/oauth/kiro/import/route.ts": 1,
@@ -147,6 +148,14 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "src/lib/oauth/utils/codexAuthImport.ts": 1,
     "src/lib/providerModels/managedModelImport.ts": 1,
     "src/lib/providers/codexConnectionDefaults.ts": 1,
+    // Volcano Ark plan connect flow (commit d732cf615): both are connection *persistence*
+    // sites, not dispatch. volcenginePlanBinding looks the plan connection up by name to
+    // decide update-vs-create during connect (same shape as oauth/connectionPersistence);
+    // volcPlanAutoSyncBackfill is a one-shot boot backfill that patches a providerSpecificData
+    // flag and issues no upstream call. Neither selects a connection to serve a request, so
+    // both stay class C (see CLASSIFICATION below).
+    "src/lib/providers/volcPlanAutoSyncBackfill.ts": 1,
+    "src/lib/providers/volcenginePlanBinding.ts": 1,
     "src/lib/proxyEgress.ts": 1,
     "src/lib/quota/connectionRecovery.ts": 2,
     "src/lib/sync/bundle.ts": 1,
@@ -194,6 +203,7 @@ const CLASSIFICATION: Record<InventoryKind, Record<string, BypassClass>> = {
       [
         "open-sse/handlers/autoComboCandidates.ts",
         "open-sse/handlers/chatCore.ts",
+        "open-sse/services/combo.ts",
         "open-sse/services/alibabaFreeTier.ts",
         "open-sse/services/alibabaFreeTierQuotaFetcher.ts",
         "open-sse/services/combo.ts",
@@ -301,11 +311,14 @@ test("managed request surfaces are fenced centrally or rejected before independe
     "src/lib/api/modelTestRunner.ts",
     "src/lib/services/quotaAutoPing.ts",
     "src/lib/usage/codexResetCredits.ts",
-    "src/lib/usage/providerLimits.ts",
     "src/lib/vncSession/service.ts",
     "src/lib/warmupScheduler.ts",
     "src/shared/services/modelSyncScheduler.ts",
   ].map((file) => fs.readFileSync(path.join(REPO_ROOT, file), "utf8"));
+  const unfencedUsageRefreshSource = fs.readFileSync(
+    path.join(REPO_ROOT, "src/lib/usage/providerLimits.ts"),
+    "utf8"
+  );
 
   assert.match(chat, /parseManagedLeaseRequestContext\(request\.headers\)/);
   assert.match(chat, /isManagedComboUnsupported/);
@@ -320,6 +333,10 @@ test("managed request surfaces are fenced centrally or rejected before independe
   for (const source of auxiliaryIsolationSources) {
     assert.match(source, /isConnectionUnavailableToAuxiliaryActivity/);
   }
+  // Usage/quota refresh is read-only admin telemetry (#11758) and must not inherit
+  // the exclusive-lease auxiliary fence that blocks model tests, translation, VNC,
+  // reset-credits, and warmup.
+  assert.doesNotMatch(unfencedUsageRefreshSource, /isConnectionUnavailableToAuxiliaryActivity/);
 });
 
 test("SQLite claim-race retry removes only the lost candidate from the same policy-valid set", () => {

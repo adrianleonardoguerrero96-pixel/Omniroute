@@ -200,6 +200,7 @@ export const comboRuntimeConfigSchema = z
     fallbackCompressionMode: compressionModeSchema.optional(),
     fallbackCompressionThreshold: z.coerce.number().int().min(0).max(2_000_000).optional(),
     predictiveTtftMs: z.coerce.number().int().min(0).max(300000).optional(),
+    relayMode: z.enum(["schema-locked", "standard"]).optional(),
     // Auto-Combo / LKGP Extensions
     candidatePool: z.array(z.string().min(1)).optional(),
     weights: scoringWeightsSchema.optional(),
@@ -259,6 +260,12 @@ export const comboRuntimeConfigSchema = z
         contextFilterMode: z.enum(["strict", "lenient"]).optional(),
       })
       .strict()
+      .optional(),
+    // Optional client-side sort hint for combo models.
+    // Honored in the dashboard builder; reserved for future server-side use. Inert on execution.
+    modelSort: z
+      .object({ method: z.enum(["manual", "provider", "score", "name"]) })
+      .passthrough()
       .optional(),
   })
   .passthrough()
