@@ -343,6 +343,61 @@ export class CircuitBreaker {
     }
   }
 
+  /**
+   * #12254 — like execute(), but never calls _onSuccess() just because fn()
+   * resolved without throwing. execute() assumes a non-throwing resolution IS a
+   * success; callers whose fn can resolve to a value that still represents an
+   * upstream failure (e.g. handleChatCore's `{success:false, status:5xx}` — it
+   * does not throw for ordinary upstream errors) must account success/failure
+   * themselves from that resolved value. Using execute() there made every such
+   * resolution call _onSuccess(), which decrements failureCount
+   * (`Math.max(0, failureCount - 1)`) and silently cancels the caller's own
+   * explicit _onFailure() for the same attempt — capping failureCount at ~1
+   * forever regardless of how many genuine failures occurred, so the breaker
+   * could never open. Failure accounting on an actual throw is unchanged from
+   * execute(): same OPEN/HALF_OPEN gating, same isFailure/classifyError.
+   */
+  async executeTrackingFailureOnly<T>(fn: () => Promise<T>): Promise<T> {
+    this._refreshOpenState();
+
+    if (this.state === STATE.OPEN) {
+      throw new CircuitBreakerOpenError(
+        `Circuit breaker "${this.name}" is OPEN. Try again later.`,
+        this.name,
+        this._timeUntilReset()
+      );
+    }
+
+    if (this.state === STATE.HALF_OPEN && this.halfOpenAllowed <= 0) {
+      throw new CircuitBreakerOpenError(
+        `Circuit breaker "${this.name}" is HALF_OPEN, no more probe requests allowed.`,
+        this.name,
+        this._timeUntilReset()
+      );
+    }
+
+    if (this.state === STATE.HALF_OPEN) {
+      this.halfOpenAllowed--;
+    }
+
+    try {
+      return await fn();
+    } catch (error) {
+      if (this.isFailure(error)) {
+        let kind: FailureKind | undefined;
+        if (this.classifyError) {
+          try {
+            kind = this.classifyError(error);
+          } catch {
+            kind = undefined;
+          }
+        }
+        this._onFailure(kind);
+      }
+      throw error;
+    }
+  }
+
   canExecute() {
     this._refreshOpenState();
     if (this.state === STATE.CLOSED || this.state === STATE.DEGRADED) return true;

@@ -590,13 +590,17 @@ export async function executeChatWithBreaker({
     }
 
     if (tlsFingerprintActive) {
-      const tracked = await breaker.execute(async () =>
+      // #12254: track failures only — chatFn resolves (never throws) even on an
+      // upstream 5xx, so execute()'s implicit _onSuccess() on every non-throwing
+      // resolution would corrupt the breaker. Success accounting is the caller's
+      // job, done explicitly from the resolved `result.success` value.
+      const tracked = await breaker.executeTrackingFailureOnly(async () =>
         runWithTlsTracking(tlsTrackingIdentity, chatFn)
       );
       return { result: tracked.result, tlsFingerprintUsed: tracked.tlsFingerprintUsed };
     }
 
-    const result = await breaker.execute(chatFn);
+    const result = await breaker.executeTrackingFailureOnly(chatFn);
     return { result, tlsFingerprintUsed: false };
   } catch (cbErr: any) {
     if (cbErr instanceof CircuitBreakerOpenError) {
