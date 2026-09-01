@@ -1,7 +1,7 @@
 ---
 title: "Free Tiers & Free-Token Budget"
 version: 3.8.50
-lastUpdated: 2026-08-26
+lastUpdated: 2026-08-31
 ---
 
 # Free Tiers & Free-Token Budget
@@ -48,6 +48,23 @@ A 50-agent web-research pass (official docs + last-7-days news, adversarially ve
 > The detailed per-provider table further down is the **2026-06-05 snapshot**; the deltas above supersede it. The live, canonical source is the per-model catalog `open-sse/config/freeModelCatalog.ts`.
 
 ---
+
+## Two regimes — counting vs deciding
+
+OmniRoute answers "is it free?" through two regimes that intentionally read
+different sources:
+
+| Regime | Source of truth | Surfaces |
+|---|---|---|
+| **Counting / displaying** | Resolved catalog — the shipped baseline overlaid by the Radar feed (`getRadarCatalog`) | Free-tier totals, budget card, dashboards |
+| **Deciding** | Shipped catalog only (`FREE_MODEL_BUDGETS` in `open-sse/config/freeModelCatalog.data.ts`) plus the local heuristics (`:free` suffix, zero pricing, `grantsFreeAccess`) | Every consumer of `src/shared/utils/freeModels.ts`: model import, `auto/*` routing, `GET /v1/models`, and the browser previews |
+
+Counting can improve whenever a feed is available. Deciding stays on the
+release artifact, so the answer is identical in the browser and on the server,
+reproducible offline, and testable without a database. Letting the browser
+preview read one source while the server import reads another would produce a
+preview that disagrees with what happens on click — the split is kept on
+purpose.
 
 ## Methodology & caveats
 
