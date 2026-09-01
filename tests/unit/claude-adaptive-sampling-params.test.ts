@@ -15,7 +15,13 @@ import { isAdaptiveThinkingOnly } from "../../src/shared/constants/modelSpecs.ts
 const SAMPLING = ["temperature", "top_p", "top_k"];
 
 test("claude registry strips temperature/top_p/top_k for Opus 4.7+/Fable 5", () => {
-  for (const model of ["claude-opus-5", "claude-opus-4-8", "claude-opus-4-7", "claude-fable-5"]) {
+  for (const model of [
+    "claude-opus-5",
+    "claude-opus-4-8",
+    "claude-opus-4-7",
+    "claude-fable-5",
+    "claude-fable-5-1",
+  ]) {
     const unsupported = getUnsupportedParams("claude", model);
     for (const param of SAMPLING) {
       assert.ok(
@@ -54,7 +60,13 @@ test("pre-4.7 Claude models still accept sampling params (regression guard)", ()
 });
 
 test("isAdaptiveThinkingOnly is true only for Opus 4.7+/Fable 5", () => {
-  for (const model of ["claude-opus-5", "claude-opus-4-8", "claude-opus-4-7", "claude-fable-5"]) {
+  for (const model of [
+    "claude-opus-5",
+    "claude-opus-4-8",
+    "claude-opus-4-7",
+    "claude-fable-5",
+    "claude-fable-5-1",
+  ]) {
     assert.equal(isAdaptiveThinkingOnly(model), true, `${model} is adaptive-only`);
   }
   for (const model of [

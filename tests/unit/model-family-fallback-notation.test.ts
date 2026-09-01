@@ -47,6 +47,13 @@ test("skips already-tried candidates and advances down the Fable chain", () => {
   assert.equal(next, "claude/claude-opus-4-7");
 });
 
+test("Fable 5.1 degrades to Fable 5 first before the Opus tiers — cc→claude", () => {
+  // The newest flagship falls to its own previous tier (Fable 5) ahead of Opus,
+  // resolved to the claude provider's registered id notation.
+  const next = getNextFamilyFallback("cc/claude-fable-5-1", new Set(["cc/claude-fable-5-1"]));
+  assert.equal(next, "claude/claude-fable-5");
+});
+
 test("returns null for an unknown family", () => {
   assert.equal(getNextFamilyFallback("cc/not-a-real-model", new Set()), null);
 });

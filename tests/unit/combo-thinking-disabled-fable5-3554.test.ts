@@ -1,9 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-  normalizeThinkingForModel,
-  getModelSpec,
-} from "../../src/shared/constants/modelSpecs.ts";
+import { normalizeThinkingForModel, getModelSpec } from "../../src/shared/constants/modelSpecs.ts";
 
 // Regression for #3554: a combo can substitute the upstream model AFTER the client
 // already chose its `thinking` value. Claude Code sends `thinking:{type:"disabled"}` for
@@ -27,6 +24,15 @@ test("#3554 normalizeThinkingForModel strips thinking.type:disabled for fable-5"
   assert.equal("thinking" in out, false, "thinking must be stripped for fable-5");
   assert.equal(out.max_tokens, 64000, "other fields untouched");
   assert.equal(out.model, "claude-opus-4-8", "model field untouched by this helper");
+});
+
+test("#3554 claude-fable-5-1 inherits the adaptive-only reject-disabled guard", () => {
+  assert.equal(getModelSpec("claude-fable-5-1")?.rejectsThinkingDisabled, true);
+  const out = normalizeThinkingForModel(
+    { model: "claude-opus-4-8", thinking: { type: "disabled" }, max_tokens: 64000 },
+    "claude-fable-5-1"
+  );
+  assert.equal("thinking" in out, false, "thinking must be stripped for fable-5-1");
 });
 
 test("#3554 normalizeThinkingForModel preserves disabled for opus-4-8 and sonnet-4-6", () => {

@@ -198,6 +198,7 @@ export async function getSettings() {
     claudeFastMode: {
       enabled: false,
       supportedModels: [
+        "claude-fable-5-1",
         "claude-fable-5",
         "claude-opus-5",
         "claude-opus-4-8",

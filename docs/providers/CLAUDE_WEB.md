@@ -20,11 +20,12 @@ strictly translates the upstream SSE response. The orchestration is in
 
 ### Model catalog
 
-The provider registry currently exposes exactly these seven static model IDs
+The provider registry currently exposes these static model IDs
 (`open-sse/config/providers/registry/claude/web/index.ts:11`):
 
 | Model ID                    | Display name            |
 | --------------------------- | ----------------------- |
+| `claude-fable-5-1`          | Claude Fable 5.1 (web)  |
 | `claude-fable-5`            | Claude Fable 5 (web)    |
 | `claude-opus-4-8`           | Claude Opus 4.8 (web)   |
 | `claude-sonnet-5`           | Claude Sonnet 5 (web)   |

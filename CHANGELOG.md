@@ -4,6 +4,7 @@
 
 ### ✨ New Features
 
+- **feat(providers):** add Claude Fable 5.1 (`claude-fable-5-1`) — wires the new flagship model across the full first-party pipeline: `cc`/`claude`, `claude-web`, `anthropic`, `vertex`, `vertex-partner`, `ghe-copilot`, and `github` registries (1M context, adaptive thinking, vision, tools), pricing constants (native `$15/$75`, cc OAuth `$10/$50`), model spec (adaptive-only, rejects `thinking.type:"disabled"` per #3554), 1M-context beta header, fast mode, fallback chain (`claude-fable-5-1 → claude-fable-5 → claude-opus-4-8 → claude-opus-4-7 → claude-sonnet-5`), and cost data. Fable 5.1 becomes the default resolved Fable tier (`ANTHROPIC_DEFAULT_FABLE_MODEL`); Kiro stays excluded (its upstream serves no Fable tier).
 - **feat(sse): STRICT_ZERO_COST** — opt-in, off-by-default `freeAccessPolicy: "strict"` setting
   that hard-verifies every auto-combo candidate against live quota state and per-connection
   economic safety before it can be dispatched, going beyond `hidePaidModels`'s static catalog

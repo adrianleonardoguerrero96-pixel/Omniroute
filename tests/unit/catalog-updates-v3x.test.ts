@@ -57,6 +57,27 @@ test("Fable 5 catalog exposes claude-fable-5 in cc — but NOT via Kiro (fabrica
   );
 });
 
+test("Fable 5.1 catalog exposes claude-fable-5-1 in cc + claude-web with pricing — but NOT via Kiro", () => {
+  // Fable 5.1 is the newest Claude flagship, wired across the first-party channels
+  // (cc / claude-web / anthropic) with the same 1M-context adaptive profile as Fable 5.
+  // Kiro's upstream serves no Fable tier (#6170) — it must stay excluded, like Fable 5.
+  const ccIds = new Set(getModelsByProviderId("cc").map((m) => m.id));
+  assert.ok(ccIds.has("claude-fable-5-1"), "cc must expose claude-fable-5-1");
+
+  const cwIds = new Set(getModelsByProviderId("claude-web").map((m) => m.id));
+  assert.ok(cwIds.has("claude-fable-5-1"), "claude-web must expose claude-fable-5-1");
+
+  const ccPricing = (DEFAULT_PRICING as Record<string, Record<string, unknown>>).cc;
+  assert.ok(ccPricing["claude-fable-5-1"], "cc pricing must include claude-fable-5-1");
+
+  const kiroIds = new Set(getModelsByProviderId("kiro").map((m) => m.id));
+  assert.equal(
+    kiroIds.has("claude-fable-5-1"),
+    false,
+    "kiro must NOT expose claude-fable-5-1 (fabricated)"
+  );
+});
+
 test("Opus 5 catalog is limited to verified first-party, web, and Copilot providers", () => {
   for (const providerId of ["claude", "github", "claude-web", "anthropic"]) {
     const model = getModelsByProviderId(providerId).find((entry) => entry.id === "claude-opus-5");

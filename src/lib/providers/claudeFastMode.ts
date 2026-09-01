@@ -7,6 +7,7 @@ type JsonRecord = Record<string, unknown>;
  * observed in claude-code v2.1.145 (KT() check).
  */
 export const CLAUDE_FAST_MODE_DEFAULT_MODELS = [
+  "claude-fable-5-1",
   "claude-fable-5",
   "claude-opus-5",
   "claude-opus-4-8",

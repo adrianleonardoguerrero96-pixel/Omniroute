@@ -37,6 +37,13 @@ export const githubProvider: RegistryEntry = {
   // decolua/9router#2608 (author: yidecode) — see executors/github.ts.
   models: [
     {
+      id: "claude-fable-5-1",
+      name: "Claude Fable 5.1",
+      targetFormat: "claude",
+      contextLength: 1000000,
+      maxOutputTokens: 64000,
+    },
+    {
       id: "claude-fable-5",
       name: "Claude Fable 5",
       targetFormat: "claude",

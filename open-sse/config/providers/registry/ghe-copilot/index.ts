@@ -33,6 +33,12 @@ export const gheCopilotProvider: RegistryEntry = {
   headers: getGitHubCopilotChatHeaders(),
   models: [
     {
+      id: "claude-fable-5-1",
+      name: "Claude Fable 5.1",
+      contextLength: 1000000,
+      maxOutputTokens: 64000,
+    },
+    {
       id: "claude-fable-5",
       name: "Claude Fable 5",
       contextLength: 1000000,

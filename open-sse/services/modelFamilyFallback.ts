@@ -78,6 +78,10 @@ const FAMILY_FALLBACK_TEMPLATES: Record<string, readonly string[]> = {
   "gemini-2.5-pro": ["gemini-2.5-pro-preview-06-05", "gemini-2.5-pro-exp-03-25"],
   "gemini-2.5-pro-preview-06-05": ["gemini-2.5-pro", "gemini-2.5-pro-exp-03-25"],
 
+  // Claude Mythos family (Fable 5.1) — newest flagship; degrades to Fable 5
+  // first, then the next-best Opus tiers before the cheaper Sonnet.
+  "claude-fable-5-1": ["claude-fable-5", "claude-opus-4-8", "claude-opus-4-7", "claude-sonnet-5"],
+
   // Claude Mythos family (Fable 5) — flagship falls to the next-best Opus
   // tiers before the cheaper Sonnet, matching the Opus family ordering.
   "claude-fable-5": ["claude-opus-4-8", "claude-opus-4-7", "claude-sonnet-5"],
