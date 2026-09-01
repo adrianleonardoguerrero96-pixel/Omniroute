@@ -157,6 +157,12 @@ test("resolveNextBuildEnv keeps unrelated NODE_OPTIONS flags when replacing the 
   assert.match(env.NODE_OPTIONS, /--foo=bar/);
   assert.doesNotMatch(env.NODE_OPTIONS, /2048/);
 });
+test("resolveNextBuildEnv keeps the historical 8 GB default when nothing is inherited", () => {
+  // The floor (4 GB) is for RAISING low inherited ceilings — it must never lower the
+  // no-inherited default below the historical 8 GB (module graph peaks ~3.9 GB).
+  const env = resolveNextBuildEnv({});
+  assert.match(env.NODE_OPTIONS, /--max-old-space-size=8192/);
+});
 
 test("getTransientBuildPaths leaves _tasks in place by default", () => {
   const paths = getTransientBuildPaths("/repo", {});

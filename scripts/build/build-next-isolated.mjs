@@ -218,7 +218,10 @@ export function resolveNextBuildEnv(baseEnv = process.env, platform = process.pl
     // OOMs/livelocks far above this, check for worktrees/cruft leaking into the tsconfig
     // scope (run `npm run check:build-scope`), not for "more heap". See incident 2026-06-25.
     const heapMb =
-      Number(baseEnv.OMNIROUTE_BUILD_MEMORY_MB) || Math.max(inheritedMb, MEASURED_HEAP_FLOOR_MB);
+      Number(baseEnv.OMNIROUTE_BUILD_MEMORY_MB) ||
+      // Historical default when nothing is inherited: the clean module graph peaks
+      // ~3.9 GB (brushed the old 4 GB ceiling), so an empty NODE_OPTIONS keeps 8 GB.
+      (inheritedMatch ? Math.max(inheritedMb, MEASURED_HEAP_FLOOR_MB) : 8192);
     // Replace any inherited ceiling in place (instead of appending a second flag) so
     // NODE_OPTIONS stays single-valued and self-documenting. Node honors the LAST
     // repeated flag, but a duplicated value reads like a bug and confuses CI logs.
