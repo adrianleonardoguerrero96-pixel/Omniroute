@@ -1626,16 +1626,8 @@ async function handleComboChatInner({
             }
           }
 
-          // Universal handoff: inject existing handoff if model changed since the
-          // session's last successful turn. Gated to i === 0 (the combo's primary
-          // target) -- a fallback step within THIS same client request (i > 0) is
-          // purely internal routing the client never saw fail; comparing it against
-          // getLastSessionModel() (the previous TURN's model, not this request's
-          // earlier failed step) fires a spurious "you are being handed off" system
-          // message on ordinary combo cascades, not just genuine cross-turn account
-          // reassignment. Same i>0 signal already used above for fallback compression.
+          // Universal handoff: inject existing handoff if model changed
           if (
-            i === 0 &&
             universalHandoffConfig.enabled &&
             relayOptions?.sessionId &&
             !(body as Record<string, unknown>)?.[SKIP_UNIVERSAL_HANDOFF_FLAG]
@@ -1901,12 +1893,7 @@ async function handleComboChatInner({
                 provider,
                 target.connectionId ?? undefined
               );
-              // i === 0 only: a fallback step within THIS request (i > 0) landing on
-              // a different model than the last TURN's isn't a real handoff to
-              // summarize -- see the matching i === 0 gate on the injection side
-              // above. Generating one here is a wasted extra LLM call for a
-              // transition the client's own request never actually exposed.
-              if (i === 0 && prevModel && prevModel !== modelStr) {
+              if (prevModel && prevModel !== modelStr) {
                 const handoffSourceMessages =
                   Array.isArray(body?.messages) && body.messages.length > 0
                     ? body.messages
