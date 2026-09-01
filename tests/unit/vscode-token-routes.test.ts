@@ -220,14 +220,7 @@ test("vscode combos route exposes combos through Ollama api/tags", async () => {
   const combo = body.models.find((entry: any) => entry.name === "tags-combo");
   assert.ok(combo, "expected combo name in api/tags response");
   assert.equal(combo.details.family, "tags-combo");
-  assert.deepEqual(combo.supportsReasoningEffort, [
-    "none",
-    "low",
-    "medium",
-    "high",
-    "xhigh",
-    "max",
-  ]);
+  assert.deepEqual(combo.supportsReasoningEffort, ["none", "low", "medium", "high", "xhigh"]);
 });
 
 test("vscode combos route resolves combo names through Ollama api/show", async () => {
@@ -265,7 +258,7 @@ test("vscode combos route resolves combo names through Ollama api/show", async (
   // #11179: codex static catalog advertises the usable 872K window (max_context_window),
   // not the old 272K pricing tier.
   assert.equal(body.model_info.context_length, 872000);
-  assert.deepEqual(body.supportsReasoningEffort, ["none", "low", "medium", "high", "xhigh", "max"]);
+  assert.deepEqual(body.supportsReasoningEffort, ["none", "low", "medium", "high", "xhigh"]);
   assert.equal(body.model_info.capabilities.reasoning, true);
 });
 
@@ -302,14 +295,7 @@ test("vscode tokenized combos root route exposes importable combo metadata", asy
   // #11179: codex static catalog maxInputTokens is now the usable 872K window.
   assert.equal(combo.maxInputTokens, 872000);
   assert.equal(combo.toolCalling, true);
-  assert.deepEqual(combo.supportsReasoningEffort, [
-    "none",
-    "low",
-    "medium",
-    "high",
-    "xhigh",
-    "max",
-  ]);
+  assert.deepEqual(combo.supportsReasoningEffort, ["none", "low", "medium", "high", "xhigh"]);
 });
 
 test("vscode tokenized models route exposes reasoning effort metadata for importable chat models", async () => {
