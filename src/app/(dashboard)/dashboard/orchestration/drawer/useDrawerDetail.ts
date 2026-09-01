@@ -1,8 +1,16 @@
 "use client";
 /** Fetches per-source task detail on drawer open + approve/cancel actions. */
 import { useEffect, useState } from "react";
-import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error";
 import type { OrchNode } from "../model/orchestrationTypes";
+
+// Client-safe stand-in for sanitizeErrorMessage (server-only, breaks the client bundle — #10692): only our own `HTTP <status>` errors and AbortError pass through verbatim, everything else collapses to a generic string.
+function toSafeErrorText(err: unknown): string {
+  if (err instanceof Error) {
+    if (/^HTTP \d{3}$/.test(err.message)) return err.message;
+    if (err.name === "AbortError") return "Request cancelled";
+  }
+  return "Request failed";
+}
 
 interface SourceRoute {
   detailUrl: string | null;
@@ -116,7 +124,7 @@ function useFetchDetail(
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
       .then((body) => setDetail(unwrapDetailBody(node.id, body)))
       .catch((err) => {
-        if (!controller.signal.aborted) setError(sanitizeErrorMessage(err));
+        if (!controller.signal.aborted) setError(toSafeErrorText(err));
       })
       .finally(() => setIsLoading(false));
     return () => controller.abort();
@@ -134,7 +142,7 @@ async function performAction(
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return true;
   } catch (err) {
-    setError(sanitizeErrorMessage(err));
+    setError(toSafeErrorText(err));
     return false;
   }
 }
