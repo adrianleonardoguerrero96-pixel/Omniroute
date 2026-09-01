@@ -79,7 +79,16 @@ export const DEFAULT_RESOURCE_PRESSURE_THRESHOLDS: ResourcePressureThresholds = 
   recoveryPsiAvg10: 10,
   sustainedSamplesHigh: 2,
   sustainedSamplesCritical: 2,
-  sustainedSamplesRecovery: 3,
+  // PSI's own avg10 is a kernel-computed 10s rolling average, so it already
+  // lags real recovery by design -- requiring 3 consecutive samples *on top*
+  // of that (at the ~1s default sample cadence) stacked another ~2-3s of
+  // guard-still-shedding time after the process was actually fine again.
+  // isRecovered() already requires every tracked ratio/PSI value to clear
+  // the separate, more conservative recoveryRatio/recoveryPsiAvg10
+  // thresholds (not just dip under the critical ones), so a single clean
+  // sample is real signal, not noise -- the streak requirement was adding
+  // redundant delay on top of an already-conservative bar.
+  sustainedSamplesRecovery: 1,
   heapAbsoluteThresholdMb: null,
 };
 
