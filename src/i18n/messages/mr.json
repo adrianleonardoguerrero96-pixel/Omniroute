@@ -6448,7 +6448,12 @@
     "savedModelEndpointSettings": "सुरक्षित केलेल्या मॉडेल एंडपॉइंट सेटिंग्ज",
     "searchByModelAria": "मॉडेलद्वारे शोधा",
     "selectSupportedEndpoint": "किमान एक समर्थित एंडपॉइंट निवडा",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Clear cooldown",
+    "clearConnectionCooldownInProgress": "Clearing…",
+    "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
+    "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
+    "failedClearConnectionCooldown": "Failed to clear cooldown"
   },
   "settings": {
     "title": "Settings",
@@ -12531,6 +12536,8 @@
     "typeApikey": "API की",
     "sortTypeFirst": "सर्वात सोपे आधी",
     "sortTypeFirstHelp": "साइन-अपच्या त्रासानुसार गटबद्ध करा (साइन-अप नाही → OAuth लॉगिन → API की), प्रत्येक गटामध्ये गुणवत्तेचा क्रम राखून",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "साइन-अप नाही = शून्य सेटअप · OAuth लॉगिन = तुमच्या स्वतःच्या खात्याने साइन इन करा · API की = तुमची स्वतःची की आणा किंवा त्या प्रदात्याची विनामूल्य श्रेणी वापरा",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
@@ -13370,6 +13377,9 @@
     "colContext": "संदर्भ",
     "colCapabilities": "क्षमता",
     "colTos": "ToS धोका",
+    "colLimits": "__MISSING__:Rate limits",
+    "trainsOnPrompts": "__MISSING__:Trains on prompts",
+    "trainsOnPromptsHelp": "__MISSING__:This provider's terms state it may train on the prompts you send. Models without this badge either state they do not, or do not document it — an absent statement is not a guarantee.",
     "newBadge": "नवीन",
     "setupGuide": "सेटअप मार्गदर्शक",
     "disabledByFeed": "रडार फीडद्वारे अक्षम",

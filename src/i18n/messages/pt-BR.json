@@ -6449,7 +6449,12 @@
     "savedModelEndpointSettings": "Configurações do endpoint do modelo salvo",
     "searchByModelAria": "Pesquisar por modelo",
     "selectSupportedEndpoint": "Selecione pelo menos um endpoint suportado",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Limpar cooldown",
+    "clearConnectionCooldownInProgress": "Limpando…",
+    "clearConnectionCooldownTitle": "Limpar o cooldown agora — use quando a cota já foi renovada no upstream",
+    "connectionCooldownCleared": "Cooldown limpo — a conexão voltou ao roteamento",
+    "failedClearConnectionCooldown": "Falha ao limpar cooldown"
   },
   "settings": {
     "title": "Configurações",
@@ -12539,6 +12544,8 @@
     "typeApikey": "Chave da API",
     "sortTypeFirst": "Mais fácil primeiro",
     "sortTypeFirstHelp": "Agrupar por esforço de inscrição (Sem Inscrição → Login OAuth → Chave da API), mantendo a ordem de qualidade dentro de cada grupo",
+    "sortByReliability": "Mais confiável primeiro",
+    "sortByReliabilityHelp": "Ordena os provedores pela proporção de chamadas bem-sucedidas na janela selecionada. Provedores com poucas chamadas para afirmar uma taxa mantêm a ordem por pontuação, abaixo dos que foram medidos.",
     "typeLegend": "Sem Cadastro = zero configuração · Login OAuth = faça login com sua própria conta · Chave API = traga sua própria chave ou o nível gratuito daquele provedor",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
@@ -13378,6 +13385,9 @@
     "colContext": "Contexto",
     "colCapabilities": "Capacidades",
     "colTos": "Risco ToS",
+    "colLimits": "__MISSING__:Rate limits",
+    "trainsOnPrompts": "__MISSING__:Trains on prompts",
+    "trainsOnPromptsHelp": "__MISSING__:This provider's terms state it may train on the prompts you send. Models without this badge either state they do not, or do not document it — an absent statement is not a guarantee.",
     "newBadge": "novo",
     "setupGuide": "Guia de configuração",
     "disabledByFeed": "Desativado pelo feed Radar",
