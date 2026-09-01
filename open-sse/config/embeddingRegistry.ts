@@ -10,6 +10,7 @@
 
 export type EmbeddingModality = "text" | "image" | "audio" | "video" | "document";
 export type StructuredEmbeddingProtocol = "jina-v1" | "gemini-embed-content";
+export type SingleTextEmbeddingProtocol = "clova-v2";
 
 export interface EmbeddingModel {
   id: string;
@@ -34,6 +35,13 @@ export interface EmbeddingProvider {
   models: EmbeddingModel[];
   /** Provider-native serializer required for canonical structured input. */
   structuredInputProtocol?: StructuredEmbeddingProtocol;
+  /**
+   * Set when the endpoint embeds exactly ONE text per request (`{"text": …}` →
+   * one vector) instead of accepting OpenAI's `input` array. A batched
+   * `/v1/embeddings` call is then fanned out into N sequential upstream calls and
+   * merged back into a single OpenAI list response.
+   */
+  singleTextProtocol?: SingleTextEmbeddingProtocol;
 }
 
 export interface EmbeddingProviderNodeRow {
@@ -295,6 +303,18 @@ export const EMBEDDING_PROVIDERS: Record<string, EmbeddingProvider> = {
       { id: "voyage-finance-2", name: "Voyage Finance 2", dimensions: 1024 },
       { id: "voyage-law-2", name: "Voyage Law 2", dimensions: 1024 },
     ],
+  },
+
+  // Naver CLOVA Studio — embedding v2. The endpoint takes a single `{"text": …}`
+  // body and returns `{status, result:{embedding:[…1024 floats], inputTokens}}`,
+  // with no batch array and no `usage` object, hence `singleTextProtocol`.
+  "clova-studio": {
+    id: "clova-studio",
+    baseUrl: "https://clovastudio.stream.ntruss.com/v1/api-tools/embedding/v2",
+    authType: "apikey",
+    authHeader: "bearer",
+    singleTextProtocol: "clova-v2",
+    models: [{ id: "clova-embedding-v2", name: "CLOVA Embedding v2", dimensions: 1024 }],
   },
 
   "jina-ai": {

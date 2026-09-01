@@ -32,6 +32,7 @@ import { stripTrailingSlashes } from "../utils/urlSanitize.ts";
 import { fetchRemoteImage } from "@/shared/network/remoteImageFetch";
 import {
   hasStructuredEmbeddingInput,
+  normalizeClovaEmbeddingV2Response,
   prepareJinaMixedEmbeddingInput,
   prepareStructuredEmbeddingRequest,
 } from "./embeddingStructuredInput.ts";
@@ -405,14 +406,102 @@ export async function handleEmbedding({
       }
     }
 
-    // Log provider request
-    reqLogger.logTargetRequest(upstreamUrl, headers, upstreamBody);
+    // Providers whose endpoint embeds exactly one text per request need a batched
+    // `/v1/embeddings` call fanned out into sequential upstream calls. A parallel
+    // burst would race the connection's own rate limit before the batch can finish.
+    const singleTexts =
+      providerConfig.singleTextProtocol === "clova-v2"
+        ? Array.isArray(body.input)
+          ? body.input
+          : [body.input]
+        : null;
 
-    const response = await fetch(upstreamUrl, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(upstreamBody),
-    });
+    if (
+      singleTexts &&
+      (singleTexts.length === 0 ||
+        singleTexts.some((item) => typeof item !== "string" || item.trim().length === 0))
+    ) {
+      return {
+        success: false,
+        status: 400,
+        error: "CLOVA Studio embedding v2 accepts non-empty text strings only",
+      };
+    }
+
+    if (singleTexts && body.encoding_format === "base64") {
+      return {
+        success: false,
+        status: 400,
+        error: "CLOVA Studio embedding v2 supports float encoding only",
+      };
+    }
+
+    if (singleTexts && body.dimensions !== undefined && Number(body.dimensions) !== 1024) {
+      return {
+        success: false,
+        status: 400,
+        error: "CLOVA Studio embedding v2 has a fixed dimension of 1024",
+      };
+    }
+
+    let response: Response;
+    if (singleTexts) {
+      const collectedEmbeddings: Array<Record<string, unknown>> = [];
+      const collectedUsage = { prompt_tokens: 0, total_tokens: 0 };
+      let failedResponse: Response | null = null;
+      let lastHeaders = new Headers();
+
+      for (const text of singleTexts as string[]) {
+        const requestBody = { text };
+        reqLogger.logTargetRequest(upstreamUrl, headers, requestBody);
+
+        const itemResponse = await fetch(upstreamUrl, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(requestBody),
+        });
+        lastHeaders = itemResponse.headers;
+        if (!itemResponse.ok) {
+          failedResponse = itemResponse;
+          break;
+        }
+
+        const rawData = (await itemResponse.json()) as Record<string, unknown>;
+        const parsed = normalizeClovaEmbeddingV2Response(rawData) as {
+          data?: unknown;
+          usage?: { prompt_tokens?: number; total_tokens?: number };
+        };
+        if (!Array.isArray(parsed.data)) {
+          throw new Error("CLOVA Studio embedding v2 returned an invalid data list");
+        }
+        for (const item of parsed.data) {
+          flattenSingleRowEmbedding(item);
+          if (!item || typeof item !== "object") {
+            throw new Error("CLOVA Studio embedding v2 returned an invalid embedding item");
+          }
+          (item as { index?: number }).index = collectedEmbeddings.length;
+          collectedEmbeddings.push(item as Record<string, unknown>);
+        }
+        collectedUsage.prompt_tokens +=
+          parsed.usage?.prompt_tokens || parsed.usage?.total_tokens || 0;
+        collectedUsage.total_tokens +=
+          parsed.usage?.total_tokens || parsed.usage?.prompt_tokens || 0;
+      }
+
+      response =
+        failedResponse ??
+        new Response(JSON.stringify({ data: collectedEmbeddings, usage: collectedUsage }), {
+          status: 200,
+          headers: lastHeaders,
+        });
+    } else {
+      reqLogger.logTargetRequest(upstreamUrl, headers, upstreamBody);
+      response = await fetch(upstreamUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(upstreamBody),
+      });
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -544,7 +633,8 @@ export async function handleEmbedding({
           model: model || undefined,
           cost: {
             tokens: data.usage?.prompt_tokens || data.usage?.total_tokens || 0,
-            requests: 1,
+            // A fanned-out batch is N upstream requests, not one.
+            requests: singleTexts?.length ?? 1,
           },
         });
       } catch {
