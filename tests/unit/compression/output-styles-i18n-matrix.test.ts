@@ -41,7 +41,7 @@ const BASELINE_LANGUAGES: Record<string, string[]> = {
   // localizes to pt-BR/es/de/fr/it/ru/zh/ja/id/vi — keep the two in sync.
   "terse-prose": ["pt-BR", "es", "de", "fr", "it", "ru", "zh", "ja", "id", "vi"],
   "less-code": ["pt-BR", "vi", "ja", "id", "es", "de", "fr", "it", "ru", "zh"],
-  ponytail: ["pt-BR", "vi", "ja", "id"],
+  ponytail: ["pt-BR", "vi", "ja", "id", "es", "de", "fr", "it", "ru", "zh"],
   "i-have-adhd": ["pt-BR", "vi", "ja", "id"],
   // locale-gated to zh: the single-language instruction IS the feature.
   "terse-cjk": [],
