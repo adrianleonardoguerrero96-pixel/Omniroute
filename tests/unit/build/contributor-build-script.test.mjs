@@ -3,13 +3,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-const packageJson = JSON.parse(
-  fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")
-);
+const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8"));
 
 test("contributor build profile selects the webpack fallback", () => {
-  assert.match(
-    packageJson.scripts["build:contributor"],
-    /OMNIROUTE_USE_TURBOPACK=0/
-  );
+  assert.match(packageJson.scripts["build:contributor"], /OMNIROUTE_USE_TURBOPACK=0/);
 });
