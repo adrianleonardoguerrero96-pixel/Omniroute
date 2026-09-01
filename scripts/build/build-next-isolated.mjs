@@ -204,14 +204,11 @@ export function resolveNextBuildEnv(baseEnv = process.env, platform = process.pl
   // exports NODE_OPTIONS=--max-old-space-size=1024 (a common dotfile leftover) made
   // the check above "respect" a ceiling far below what the compile actually needs —
   // measured 2026-09-01 on a 16 GB macOS host: the webpack production pass OOMs at
-  // a 2 GB heap and keeps consuming whatever ceiling it is given (3 GB backend-only
-  // build also exhausted its heap; full-build peak RSS ~2.5–4 GB per process). If
-  // the inherited ceiling is below the measured floor, raise it to the floor
-  // instead of failing 30–90 s into the compile with an opaque SIGABRT.
-  // Floor raised 4096→6144: a live full build with the 4 GB floor (inherited 1024
-  // replaced in place) still OOMed — 4 GB is the borderline ceiling the historical
-  // comment warns about. 6 GB sits between the measured peak and the 8 GB default.
-  const MEASURED_HEAP_FLOOR_MB = 6144;
+  // 2 GB, 4 GB and 6 GB ceilings (live builds, GC logs show full consumption at
+  // each). The historical 8 GB default is the only validated-good ceiling on this
+  // machine. If the inherited ceiling is below 8 GB, raise it to the default
+  // instead of failing minutes into the compile with an opaque SIGABRT.
+  const MEASURED_HEAP_FLOOR_MB = 8192;
   const inheritedMatch = (env.NODE_OPTIONS || "").match(/--max-old-space-size=(\d+)/);
   const inheritedMb = inheritedMatch ? Number(inheritedMatch[1]) : 0;
   if (!inheritedMatch || inheritedMb < MEASURED_HEAP_FLOOR_MB) {
@@ -220,11 +217,7 @@ export function resolveNextBuildEnv(baseEnv = process.env, platform = process.pl
     // headroom without risk. NOTE: heap size does NOT fix a poisoned scope — if the build
     // OOMs/livelocks far above this, check for worktrees/cruft leaking into the tsconfig
     // scope (run `npm run check:build-scope`), not for "more heap". See incident 2026-06-25.
-    const heapMb =
-      Number(baseEnv.OMNIROUTE_BUILD_MEMORY_MB) ||
-      // Historical default when nothing is inherited: the clean module graph peaks
-      // ~3.9 GB (brushed the old 4 GB ceiling), so an empty NODE_OPTIONS keeps 8 GB.
-      (inheritedMatch ? Math.max(inheritedMb, MEASURED_HEAP_FLOOR_MB) : 8192);
+    const heapMb = Number(baseEnv.OMNIROUTE_BUILD_MEMORY_MB) || MEASURED_HEAP_FLOOR_MB;
     // Replace any inherited ceiling in place (instead of appending a second flag) so
     // NODE_OPTIONS stays single-valued and self-documenting. Node honors the LAST
     // repeated flag, but a duplicated value reads like a bug and confuses CI logs.
