@@ -50,7 +50,8 @@ export function AgentsTab({
   const hasWork = snapshot.nodes.some((n) => n.kind === "work");
   const handleClick: NodeMouseHandler = (_e, node) => {
     if (node.type === "source") {
-      onToggleCollapse?.((node.data as OrchNode).source!);
+      const source = (node.data as unknown as OrchNode).source;
+      if (source) onToggleCollapse?.(source);
       return;
     }
     if (node.type === "work" || node.type === "activity" || node.type === "overflow")
