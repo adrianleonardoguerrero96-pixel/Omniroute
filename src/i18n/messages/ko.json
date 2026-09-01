@@ -6448,7 +6448,12 @@
     "savedModelEndpointSettings": "저장된 모델 엔드포인트 설정",
     "searchByModelAria": "모델로 검색",
     "selectSupportedEndpoint": "지원되는 엔드포인트를 최소한 하나 선택하세요.",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Clear cooldown",
+    "clearConnectionCooldownInProgress": "Clearing…",
+    "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
+    "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
+    "failedClearConnectionCooldown": "Failed to clear cooldown"
   },
   "settings": {
     "title": "설정",
@@ -12531,6 +12536,8 @@
     "typeApikey": "API 키",
     "sortTypeFirst": "쉬운 순서대로",
     "sortTypeFirstHelp": "가입 난이도별로 그룹화(가입 불필요 → OAuth 로그인 → API 키)하고, 각 그룹 내에서 품질 순서 유지",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "가입 불필요 = 설정 없음 · OAuth 로그인 = 본인 계정으로 로그인 · API 키 = 본인 키 사용 또는 해당 제공업체의 무료 등급",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
@@ -13370,6 +13377,9 @@
     "colContext": "컨텍스트",
     "colCapabilities": "기능",
     "colTos": "ToS 위험",
+    "colLimits": "__MISSING__:Rate limits",
+    "trainsOnPrompts": "__MISSING__:Trains on prompts",
+    "trainsOnPromptsHelp": "__MISSING__:This provider's terms state it may train on the prompts you send. Models without this badge either state they do not, or do not document it — an absent statement is not a guarantee.",
     "newBadge": "새로 만들기",
     "setupGuide": "설정 가이드",
     "disabledByFeed": "레이더 피드에 의해 비활성화됨",

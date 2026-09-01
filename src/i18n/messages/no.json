@@ -6448,7 +6448,12 @@
     "savedModelEndpointSettings": "Innstillinger for lagrede modellendepunkter",
     "searchByModelAria": "Søk etter modell",
     "selectSupportedEndpoint": "Velg minst ett støttet endepunkt",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Clear cooldown",
+    "clearConnectionCooldownInProgress": "Clearing…",
+    "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
+    "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
+    "failedClearConnectionCooldown": "Failed to clear cooldown"
   },
   "settings": {
     "title": "Innstillinger",
@@ -12531,6 +12536,8 @@
     "typeApikey": "API-nøkkel",
     "sortTypeFirst": "Enkleste først",
     "sortTypeFirstHelp": "Grupper etter registreringsinnsats (Ingen registrering → OAuth-innlogging → API-nøkkel), og behold kvalitetsrekkefølgen innenfor hver gruppe",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "Ingen registrering = null oppsett · OAuth-innlogging = logg inn med din egen konto · API-nøkkel = ta med din egen nøkkel eller leverandørens gratisnivå",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
@@ -13370,6 +13377,9 @@
     "colContext": "Kontekst",
     "colCapabilities": "Muligheter",
     "colTos": "ToS Risiko",
+    "colLimits": "__MISSING__:Rate limits",
+    "trainsOnPrompts": "__MISSING__:Trains on prompts",
+    "trainsOnPromptsHelp": "__MISSING__:This provider's terms state it may train on the prompts you send. Models without this badge either state they do not, or do not document it — an absent statement is not a guarantee.",
     "newBadge": "ny",
     "setupGuide": "Oppsettsveiledning",
     "disabledByFeed": "Deaktivert av Radar-strøm",
