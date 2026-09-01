@@ -85,6 +85,27 @@ function countScoringFactors() {
   return parseScoringFactors(fs.readFileSync(file, "utf8"));
 }
 
+// PURE: the reference document must NAME every shipped pack. Reporting which one is
+// missing is the point — "6 packs" tells a doc it is stale, "chaos-mode is missing"
+// tells it what to write.
+export function makeModePackNamesValidator(names) {
+  return (content) => {
+    if (!names.length) return { ok: true, detail: "no mode packs found in source — skipping" };
+    // Token boundary, not `includes`: "ship-fast" is a substring of
+    // "ship-fast-v2", so a doc could satisfy the gate while naming a pack that
+    // does not ship — and a future pack named as a prefix of another would be
+    // masked by it.
+    const missing = names.filter(
+      (name) =>
+        !new RegExp(`(^|[^\\w-])${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^\\w-]|$)`).test(
+          content
+        )
+    );
+    if (!missing.length) return { ok: true, detail: `all ${names.length} mode packs are named` };
+    return { ok: false, detail: `mode pack(s) never named in this file: ${missing.join(", ")}` };
+  };
+}
+
 // PURE: parse the canonical provider total out of the auto-generated catalog text.
 export function parseProviderTotal(referenceText) {
   if (!referenceText) return 0;
@@ -164,6 +185,7 @@ export function tallyDrift(checks, getContent) {
 function readCodeFacts() {
   const script = [
     'import {computeFreeModelTotals} from "./open-sse/config/freeModelCatalog.ts";',
+    'import {MODE_PACKS} from "./open-sse/services/autoCombo/modePacks.ts";',
     'import {ENGINE_IDS} from "./open-sse/services/compression/engineCatalog.ts";',
     'import {CLI_TOOLS} from "./src/shared/constants/cliTools.ts";',
     'import {countUniqueMcpTools} from "./open-sse/mcp-server/toolCount.ts";',
@@ -203,7 +225,8 @@ function readCodeFacts() {
     'console.log("@@"+JSON.stringify({freeSteady:t.steadyRecurringTokens,entries:t.perModel.length,',
     "freeFirst:t.firstMonthRealisticTokens,freePools:t.poolCount,engines:ENGINE_IDS.length,",
     "cliTotal:cli.length,cliCode:by('code'),cliAgent:by('agent'),",
-    "mcpTools:countUniqueMcpTools(cols),mcpScopes:sc.size,providers:pids.size,freeForever:ff.size}));",
+    "mcpTools:countUniqueMcpTools(cols),mcpScopes:sc.size,providers:pids.size,freeForever:ff.size,",
+    "modePacks:Object.keys(MODE_PACKS)}));",
   ].join("");
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "docs-counts-"));
   try {
@@ -317,10 +340,31 @@ export function extractNumberClaims(content, { pattern, skipBefore, skipAfter })
   return claims;
 }
 
+// Three spellings of the same claim are in use across the docs, and all three
+// must be watched: "6 curated **mode packs**", "6 pre-defined weight profiles",
+// "4 weight profiles". Matching only the first left the other two unguarded.
+const MODE_PACK_CLAIM_PATTERN =
+  /(\d+)\s+(?:curated\s+|pre-defined\s+)?\*{0,2}(?:mode\s+packs?|weight\s+profiles?)\b/gi;
+
 export function makeNumberClaimValidator(expected, opts) {
   return (content) => {
     const claims = extractNumberClaims(content, opts);
-    if (!claims.length) return { ok: true, detail: `no ${opts.what} claim in this file` };
+    if (!claims.length) {
+      // Most files in a check's list legitimately never mention the number, so
+      // "no claim" is normally a pass. But for a reference document that is
+      // supposed to state it, silence is the failure mode that matters: reword
+      // the sentence past the pattern and the gate goes quiet while reporting
+      // green. `requireClaim` says this file must carry the claim.
+      if (opts.requireClaim)
+        return {
+          ok: false,
+          detail:
+            `no ${opts.what} claim found, and this file is required to state one — ` +
+            `either the sentence was reworded past the pattern, or it was deleted ` +
+            `(code has ${expected})`,
+        };
+      return { ok: true, detail: `no ${opts.what} claim in this file` };
+    }
     const stale = claims.filter((c) => c.value !== expected);
     if (!stale.length)
       return { ok: true, detail: `${claims.length} ${opts.what} claim(s) match the code` };
@@ -477,7 +521,56 @@ export function buildChecks() {
         files,
         validate: makeNumberClaimValidator(expected, { what, ...opts }),
       });
+      const packs = Array.isArray(f.modePacks) ? f.modePacks : [];
       return [
+        {
+          // Two packs shipped after the docs were written and nothing noticed.
+          // The count and the names are two different gates: a table can carry
+          // the right number and still describe the wrong four out of six.
+          label: "Auto-Combo mode packs",
+          actual: packs.length,
+          docKey: "mode packs",
+          strict: true,
+          files: [
+            "README.md",
+            "llm.txt",
+            "docs/guides/FEATURES.md",
+            "docs/architecture/ARCHITECTURE.md",
+            "docs/architecture/REPOSITORY_MAP.md",
+            "docs/routing/AUTO-COMBO.md",
+          ],
+          validate: makeNumberClaimValidator(packs.length, {
+            what: "mode packs",
+            // Three spellings are in use across the docs, and all three are the
+            // same claim: "6 curated **mode packs**", "6 pre-defined weight
+            // profiles", "4 weight profiles". Matching only the first left the
+            // other two unwatched.
+            pattern: MODE_PACK_CLAIM_PATTERN,
+          }),
+        },
+        {
+          // Same claim, but on the one document that MUST carry it. Without
+          // `requireClaim` the strongest gate in this file is also the easiest to
+          // silence: reword the sentence and "no claim in this file" reads as a pass.
+          label: "Auto-Combo mode packs (reference doc must state the count)",
+          actual: packs.length,
+          docKey: "mode packs",
+          strict: true,
+          files: ["docs/routing/AUTO-COMBO.md"],
+          validate: makeNumberClaimValidator(packs.length, {
+            what: "mode packs",
+            pattern: MODE_PACK_CLAIM_PATTERN,
+            requireClaim: true,
+          }),
+        },
+        {
+          label: "Auto-Combo mode packs (named in the reference doc)",
+          actual: packs.length,
+          docKey: "mode packs",
+          strict: true,
+          files: ["docs/routing/AUTO-COMBO.md"],
+          validate: makeModePackNamesValidator(packs),
+        },
         {
           label: "Provider reference total (doc vs live modules)",
           actual: f.providers,
@@ -600,6 +693,12 @@ export function buildChecks() {
         "docs/diagrams/strategies-grid.svg",
         "docs/diagrams/auto-combo-scoring.mmd",
         "llm.txt",
+        "docs/architecture/ARCHITECTURE.md",
+        "docs/architecture/REPOSITORY_MAP.md",
+        "docs/architecture/RESILIENCE_GUIDE.md",
+        "docs/frameworks/OPEN_SSE_ARCHITECTURE.md",
+        "docs/getting-started/AUTO-COMBO-GUIDE.md",
+        "skills/omni-combos-routing/SKILL.md",
         "open-sse/services/autoCombo/routerStrategy.ts",
         "open-sse/services/taskAwareRouter.ts",
         "tests/unit/lkgp-enabled-context-11181.test.ts",

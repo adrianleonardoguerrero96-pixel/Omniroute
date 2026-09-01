@@ -390,3 +390,80 @@ test("version gate compares README-footer and llm.txt prose against package.json
   assert.equal(v("no version here").ok, true);
   assert.equal(makeVersionValidator(null)("anything").ok, false);
 });
+
+// --- Mode packs ------------------------------------------------------------
+// Two packs (`reliability-first`, `chaos-mode`) shipped without ever reaching
+// the reference table, and two documents still claimed four. A count alone would
+// not have caught the table: it names four packs and says so. So the gate reads
+// the pack NAMES from the module itself and asks the reference document to
+// mention each one.
+import { makeModePackNamesValidator } from "../../scripts/check/check-docs-counts-sync.mjs";
+
+const packNames = makeModePackNamesValidator as (
+  names: string[]
+) => (content: string) => { ok: boolean; detail: string };
+
+test("a document that names every pack passes", () => {
+  const validate = packNames(["ship-fast", "cost-saver"]);
+  assert.equal(validate("We ship ship-fast and cost-saver profiles.").ok, true);
+});
+
+test("a document that forgets a pack fails, and says which one", () => {
+  const validate = packNames(["ship-fast", "chaos-mode"]);
+  const result = validate("We ship the ship-fast profile.");
+  assert.equal(result.ok, false);
+  assert.match(result.detail, /chaos-mode/);
+});
+
+test("a longer name does not satisfy the gate for a shorter one", () => {
+  // `includes` would let "ship-fast-v2" stand in for "ship-fast", so a doc could
+  // pass while naming a pack that does not ship.
+  assert.equal(packNames(["ship-fast"])("only ship-fast-v2 is documented here").ok, false);
+  assert.equal(packNames(["chaos"])("we document chaos-mode only").ok, false);
+});
+
+test("the name gate stays quiet when the source yields nothing", () => {
+  assert.equal(packNames([])("anything at all").ok, true);
+});
+
+// The pack names come from the same tsx subprocess that already reads every other
+// code-derived count, not from a regex over the source text: a reader that parses
+// TypeScript by hand is a gate that can be silently wrong, which is worse than no
+// gate at all.
+test("the module is the source of the names, so the gate cannot misparse it", async () => {
+  const { MODE_PACKS } = await import("../../open-sse/services/autoCombo/modePacks.ts");
+  const names = Object.keys(MODE_PACKS);
+  assert.ok(names.length > 0);
+  const page = names.join(", ");
+  assert.equal(packNames(names)(page).ok, true);
+  assert.equal(packNames(names)(names.slice(1).join(", ")).ok, false);
+});
+
+const MODE_PACK_CLAIM = {
+  what: "mode packs",
+  pattern: /(\d+)\s+(?:curated\s+|pre-defined\s+)?\*{0,2}(?:mode\s+packs?|weight\s+profiles?)\b/gi,
+};
+
+test("a stale mode pack count is rejected, in each spelling the docs use", () => {
+  const v = makeValidator(6, MODE_PACK_CLAIM);
+  assert.equal(v("- **4 mode packs**: coding, fast, cheap, smart").ok, false);
+  assert.equal(v("| modePacks.ts | 4 weight profiles (ship-fast, ...) |").ok, false);
+  assert.equal(v("4 pre-defined weight profiles").ok, false);
+});
+
+test("markdown emphasis does not hide a mode pack count", () => {
+  const v = makeValidator(6, MODE_PACK_CLAIM);
+  assert.equal(v("Backed by 6 curated **mode packs** (ship-fast, ...)").ok, true);
+  assert.equal(v("6 pre-defined weight profiles in `modePacks.ts`").ok, true);
+});
+
+test("a required claim cannot be silenced by rewording it away", () => {
+  // This is the failure mode the gate exists to prevent: reword the sentence past
+  // the pattern and "no claim in this file" used to read as a pass.
+  const optional = makeValidator(6, MODE_PACK_CLAIM);
+  const required = makeValidator(6, { ...MODE_PACK_CLAIM, requireClaim: true });
+  const reworded = "half a dozen curated profiles ship with the engine";
+  assert.equal(optional(reworded).ok, true, "a file that need not state it still passes");
+  assert.equal(required(reworded).ok, false, "the reference document must state it");
+  assert.match(required(reworded).detail, /required to state one/);
+});
