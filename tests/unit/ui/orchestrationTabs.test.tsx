@@ -26,8 +26,13 @@ vi.mock("@/shared/components/flow/FlowCanvas", () => ({
     return <div data-testid="flow-canvas" />;
   },
 }));
+vi.mock("@/app/(dashboard)/dashboard/combos/live/ComboLiveStudio", () => ({
+  ComboLiveStudio: () => <div data-testid="combo-live-studio" />,
+}));
+
 import { AgentsTab } from "@/app/(dashboard)/dashboard/orchestration/tabs/AgentsTab";
 import { OverviewTab } from "@/app/(dashboard)/dashboard/orchestration/tabs/OverviewTab";
+import { RoutingTab } from "@/app/(dashboard)/dashboard/orchestration/tabs/RoutingTab";
 
 function render(el: React.ReactElement) {
   const c = document.createElement("div");
@@ -131,6 +136,22 @@ describe("OverviewTab", () => {
       (card as HTMLElement).click();
     });
     expect(clicked).toBe("cloud-agent:1");
+    cleanup();
+  });
+});
+
+describe("RoutingTab", () => {
+  it("renders ComboLiveStudio with the props received", () => {
+    const { c, cleanup } = render(
+      <RoutingTab
+        comboEvents={[]}
+        combos={[]}
+        isConnected={false}
+        providerHealth={{}}
+        connectionHealth={{}}
+      />
+    );
+    expect(c.querySelector('[data-testid="combo-live-studio"]')).toBeTruthy();
     cleanup();
   });
 });
