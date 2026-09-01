@@ -9,6 +9,7 @@ export const claude_webProvider: RegistryEntry = {
   authType: "apikey",
   authHeader: "cookie",
   models: [
+    { id: "claude-fable-5-1", name: "Claude Fable 5.1 (web)", toolCalling: false },
     { id: "claude-fable-5", name: "Claude Fable 5 (web)", toolCalling: false },
     {
       id: "claude-opus-5",

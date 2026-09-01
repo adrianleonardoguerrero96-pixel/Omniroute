@@ -29,6 +29,13 @@ export const claudeProvider: RegistryEntry = {
   },
   models: [
     {
+      id: "claude-fable-5-1",
+      name: "Claude Fable 5.1",
+      contextLength: 1000000,
+      maxOutputTokens: 128000,
+      unsupportedParams: ["temperature", "top_p", "top_k"],
+    },
+    {
       id: "claude-fable-5",
       name: "Claude Fable 5",
       contextLength: 1000000,

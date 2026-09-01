@@ -13,6 +13,7 @@
  * without importing each other.
  */
 export const CONTEXT_1M_SUPPORTED_MODELS = [
+  "claude-fable-5-1",
   "claude-fable-5",
   "claude-sonnet-5",
   "claude-sonnet-4-6",

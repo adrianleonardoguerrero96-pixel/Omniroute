@@ -17,6 +17,15 @@ export const anthropicProvider: RegistryEntry = {
   },
   models: [
     {
+      id: "claude-fable-5-1",
+      name: "Claude Fable 5.1",
+      contextLength: 1048576,
+      maxOutputTokens: 128000,
+      // Fable 5.1 (2026-09-01) keeps Fable 5's request surface: adaptive-only thinking,
+      // non-default temperature/top_p/top_k rejected with a 400.
+      unsupportedParams: ["temperature", "top_p", "top_k"],
+    },
+    {
       id: "claude-fable-5",
       name: "Claude Fable 5",
       contextLength: 1048576,

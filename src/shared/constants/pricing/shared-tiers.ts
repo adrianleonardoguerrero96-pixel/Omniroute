@@ -52,6 +52,16 @@ export const GEMINI_3_7_FLASH_PROMO_PRICING = {
   cache_creation: 0.75,
 };
 
+// Claude Fable 5.1 (2026-09-01): same list price as Fable 5's official $10/$50 tier,
+// with cache reads dropped to $0.25/MTok (a quarter of Fable 5's read price).
+export const CLAUDE_FABLE_5_1_PRICING = {
+  input: 10.0,
+  output: 50.0,
+  cached: 0.25,
+  reasoning: 50.0,
+  cache_creation: 12.5,
+};
+
 export const CLAUDE_FABLE_5_PRICING = {
   input: 15.0,
   output: 75.0,
