@@ -180,6 +180,7 @@ function buildRootAndSourceEdges(
         label: s.source,
         sublabel: s.offline ? "offline" : "error",
         sourceIssue: s.offline ? "offline" : "error",
+        staleSince: s.staleSince,
       });
       sourceIds.add(`source:${s.source}`);
     }

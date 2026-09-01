@@ -36,6 +36,10 @@ export interface OrchNode {
   // SourceNode only: set by mergeSnapshot's buildRootAndSourceEdges placeholder for a
   // failed/offline source. `sublabel` still carries the same value for display compat.
   sourceIssue?: SourceIssue;
+  // SourceNode only: ISO timestamp mirrored from the originating SourceStatus.staleSince
+  // (set only for `sourceIssue === "error"` placeholders — buildSourceStatuses never sets
+  // it for the `offline` case). Feeds SourceNode's `sourceStale` ICU message.
+  staleSince?: string;
 }
 
 export interface OrchEdge {

@@ -74,7 +74,26 @@ describe("orchestration nodes", () => {
     cleanup();
   });
 
-  it("SourceNode with sourceIssue=error shows the sourceStale text", () => {
+  it("SourceNode with sourceIssue=error and a parseable staleSince renders the formatted time in sourceStale", () => {
+    const staleSince = "2026-09-01T12:34:56.000Z";
+    const data = {
+      id: "source:a2a",
+      kind: "source",
+      source: "a2a",
+      label: "A2A",
+      sublabel: "error",
+      sourceIssue: "error",
+      staleSince,
+    };
+    const { c, cleanup } = render(<SourceNode data={data as never} />);
+    // Mocked next-intl `t` returns `${key}:${JSON.stringify(values)}` when values are passed —
+    // asserts the component actually forwards `{ since }`, not just the raw key.
+    const since = new Date(staleSince).toLocaleTimeString();
+    expect(c.textContent).toContain(`sourceStale:${JSON.stringify({ since })}`);
+    cleanup();
+  });
+
+  it("SourceNode with sourceIssue=error and no staleSince falls back to an em dash", () => {
     const data = {
       id: "source:a2a",
       kind: "source",
@@ -84,7 +103,22 @@ describe("orchestration nodes", () => {
       sourceIssue: "error",
     };
     const { c, cleanup } = render(<SourceNode data={data as never} />);
-    expect(c.textContent).toContain("sourceStale");
+    expect(c.textContent).toContain(`sourceStale:${JSON.stringify({ since: "—" })}`);
+    cleanup();
+  });
+
+  it("SourceNode with sourceIssue=error and an unparseable staleSince also falls back to an em dash", () => {
+    const data = {
+      id: "source:a2a",
+      kind: "source",
+      source: "a2a",
+      label: "A2A",
+      sublabel: "error",
+      sourceIssue: "error",
+      staleSince: "not-a-date",
+    };
+    const { c, cleanup } = render(<SourceNode data={data as never} />);
+    expect(c.textContent).toContain(`sourceStale:${JSON.stringify({ since: "—" })}`);
     cleanup();
   });
 

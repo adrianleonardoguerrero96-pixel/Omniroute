@@ -355,6 +355,26 @@ describe("mergeSnapshot", () => {
     assert.equal(offlineNode?.sourceIssue, "offline");
     assert.equal(offlineNode?.sublabel, "offline");
   });
+  it("failed source placeholder carries staleSince from the SourceStatus (undefined when the status has none)", () => {
+    const staleSince = "2026-09-01T12:00:00.000Z";
+    const errSrc = [{ source: "conductor" as const, ok: false, staleSince }];
+    const errSnap = mergeSnapshot({ cloudAgent: empty, a2a: empty, conductor: empty }, errSrc, {
+      now: NOW,
+    });
+    const errNode = errSnap.nodes.find((n) => n.id === "source:conductor");
+    assert.equal(errNode?.staleSince, staleSince);
+
+    // buildSourceStatuses never sets staleSince for the offline case — mergeSnapshot must
+    // not invent one, so the placeholder node's staleSince stays undefined.
+    const offlineSrc = [{ source: "conductor" as const, ok: true, offline: true }];
+    const offlineSnap = mergeSnapshot(
+      { cloudAgent: empty, a2a: empty, conductor: empty },
+      offlineSrc,
+      { now: NOW }
+    );
+    const offlineNode = offlineSnap.nodes.find((n) => n.id === "source:conductor");
+    assert.equal(offlineNode?.staleSince, undefined);
+  });
   it("overflow node carries droppedByState with the per-state counts of dropped work nodes", () => {
     const many = Array.from({ length: MAX_WORK_NODES + 5 }, (_, i) =>
       caTask({

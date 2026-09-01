@@ -20,6 +20,12 @@ function SourceNodeImpl({ data }: { data: OrchNode }) {
   const stale = data.sourceIssue === "error"; // set by mergeSnapshot for failed sources
   const collapsed = !!data.collapsed; // set by orchestrationToFlow's opts.collapsed
   const label = data.source && LABEL_KEY[data.source] ? t(LABEL_KEY[data.source]) : data.label;
+  // Formatting a prop, not sampling the clock during render (react-hooks/purity) —
+  // `data.staleSince` is a snapshot value set once by mergeSnapshot, not `Date.now()`.
+  const since =
+    data.staleSince && Number.isFinite(Date.parse(data.staleSince))
+      ? new Date(data.staleSince).toLocaleTimeString()
+      : "—";
   return (
     <div
       className={`rounded-lg border bg-surface px-3 py-2 min-w-[150px] ${stale ? "opacity-70 border-warning" : "border-border"}`}
@@ -32,7 +38,7 @@ function SourceNodeImpl({ data }: { data: OrchNode }) {
         {stale && <span aria-hidden>⚠</span>}
         {label}
       </div>
-      {stale && <div className="text-[10px] text-warning">{t("sourceStale")}</div>}
+      {stale && <div className="text-[10px] text-warning">{t("sourceStale", { since })}</div>}
       {data.sourceIssue === "offline" && (
         <div className="text-[10px] text-muted">{t("sourceOffline")}</div>
       )}
