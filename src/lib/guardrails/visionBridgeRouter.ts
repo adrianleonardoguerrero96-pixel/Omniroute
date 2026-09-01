@@ -231,7 +231,9 @@ async function getVisionCapableModels(
         };
       });
 
-      return candidates.filter((candidate): candidate is VisionModelCandidate => candidate !== null);
+      return candidates.filter(
+        (candidate): candidate is VisionModelCandidate => candidate !== null
+      );
     })
   );
 
@@ -289,6 +291,17 @@ export async function getBestVisionModel(
   // on an instance with no OpenAI connection/key) must not short-circuit the
   // credential check — fall through to auto-selection instead.
   if (fullConfig.fixedModel) {
+    // (#12237) `auto` / `auto/*` ids are VIRTUAL combos: there is no provider
+    // row for "auto", so the credential check always reports `false` for
+    // them. Member-level credentials are enforced downstream when the combo
+    // dispatches (mirrors the reroute guard in visionBridge.ts), so a virtual
+    // combo must never be discarded by the #8430 short-circuit — otherwise
+    // the combo silently falls through to auto-selection and never rotates.
+    const isVirtualCombo =
+      fullConfig.fixedModel === "auto" || fullConfig.fixedModel.startsWith("auto/");
+    if (isVirtualCombo) {
+      return fullConfig.fixedModel;
+    }
     const checkCreds = deps.hasUsableCredentials ?? hasUsableCredentialsForModel;
     const usable = await checkCreds(fullConfig.fixedModel);
     // Only skip credential validation when the check is indeterminate (null).

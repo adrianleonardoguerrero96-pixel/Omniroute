@@ -80,8 +80,37 @@ test("getBestVisionModel — should exclude specified models", async () => {
 test("getBestVisionModel — excludes a candidate with no usable active connection", async () => {
   // Every candidate reports a confirmed-unusable connection (`false`) ->
   // no candidate survives -> returns null instead of an unreachable default.
+  const model = await getBestVisionModel({}, { hasUsableCredentials: async () => false });
+  assert.equal(model, null);
+});
+
+test("getBestVisionModel — keeps an auto/* virtual-combo fixedModel when its credential check is false (#12237)", async () => {
+  // `auto/*` ids are VIRTUAL combos: there is no provider row for "auto", so
+  // hasUsableCredentialsForModel reports a confirmed `false`. The #8430
+  // short-circuit must not discard the combo — member credentials are
+  // enforced downstream when the combo dispatches (same exemption as the
+  // reroute guard in visionBridge.ts).
+  const fixedModel = "auto/vision";
   const model = await getBestVisionModel(
-    {},
+    { fixedModel },
+    { hasUsableCredentials: async () => false }
+  );
+  assert.equal(model, fixedModel);
+});
+
+test('getBestVisionModel — keeps a bare "auto" fixedModel when its credential check is false (#12237)', async () => {
+  const model = await getBestVisionModel(
+    { fixedModel: "auto" },
+    { hasUsableCredentials: async () => false }
+  );
+  assert.equal(model, "auto");
+});
+
+test("getBestVisionModel — still falls through when a concrete fixedModel has no usable credentials (#8430)", async () => {
+  // Regression guard for the exemption above: a non-virtual fixedModel with
+  // a confirmed-unusable credential check must still be discarded.
+  const model = await getBestVisionModel(
+    { fixedModel: "openai/gpt-4o-mini" },
     { hasUsableCredentials: async () => false }
   );
   assert.equal(model, null);
@@ -105,20 +134,17 @@ test("getBestVisionModel — does not query live catalogs for providers without 
   assert.equal(catalogCalls, 0);
 });
 
-test(
-  "getBestVisionModel — selects a credentialed candidate over an uncredentialed higher-priority one",
-  async () => {
-    // openai (priority 50, would normally win) has no usable connection;
-    // every other vision-capable provider does.
-    const model = await getBestVisionModel(
-      {},
-      {
-        hasUsableCredentials: async (fullModelId) => fullModelId.split("/")[0] !== "openai",
-      }
-    );
-    assert.equal(model.startsWith("openai/"), false);
-  }
-);
+test("getBestVisionModel — selects a credentialed candidate over an uncredentialed higher-priority one", async () => {
+  // openai (priority 50, would normally win) has no usable connection;
+  // every other vision-capable provider does.
+  const model = await getBestVisionModel(
+    {},
+    {
+      hasUsableCredentials: async (fullModelId) => fullModelId.split("/")[0] !== "openai",
+    }
+  );
+  assert.equal(model.startsWith("openai/"), false);
+});
 
 test("getBestVisionModel — excludes static models missing from an authoritative live catalog", async () => {
   const model = await getBestVisionModel(
@@ -188,17 +214,14 @@ test("getFallbackModels — should respect max fallback attempts", async () => {
   assert.ok(fallbacks.length <= 2);
 });
 
-test(
-  "getFallbackModels — does not include candidates with a confirmed-unusable connection",
-  async () => {
-    const fallbacks = await getFallbackModels(
-      "openai/gpt-4o-mini",
-      {},
-      { hasUsableCredentials: async (fullModelId) => fullModelId.split("/")[0] !== "anthropic" }
-    );
-    assert.ok(!fallbacks.some((m) => m.startsWith("anthropic/")));
-  }
-);
+test("getFallbackModels — does not include candidates with a confirmed-unusable connection", async () => {
+  const fallbacks = await getFallbackModels(
+    "openai/gpt-4o-mini",
+    {},
+    { hasUsableCredentials: async (fullModelId) => fullModelId.split("/")[0] !== "anthropic" }
+  );
+  assert.ok(!fallbacks.some((m) => m.startsWith("anthropic/")));
+});
 
 test("getFallbackModels — excludes fallbacks missing from an authoritative live catalog", async () => {
   const fallbacks = await getFallbackModels(
