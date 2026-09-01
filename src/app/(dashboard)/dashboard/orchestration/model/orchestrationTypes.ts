@@ -28,6 +28,9 @@ export interface OrchNode {
   droppedByState?: Partial<Record<OrchState, number>>;
   mirrorOf?: string;
   raw?: unknown;
+  // SourceNode only: set to `true` by orchestrationToFlow's `opts.collapsed` when this
+  // source is currently collapsed by the operator. Never set on any other node kind.
+  collapsed?: boolean;
 }
 
 export interface OrchEdge {
