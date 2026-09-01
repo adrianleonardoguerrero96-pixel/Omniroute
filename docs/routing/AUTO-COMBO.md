@@ -289,6 +289,26 @@ OmniRoute's combo engine supports **19 routing strategies** (declared in `src/sh
 
 ⭐ = New in v3.8.0 · 🧬 = New in v3.8.36
 
+### `weighted` semantics
+
+`weighted` is a **proportional random draw per request**
+(`open-sse/services/combo/targetSorters.ts` → `selectWeightedTarget`), not an equalizer:
+
+- Each request draws **one** step with probability `weight / totalWeight`; the remaining steps
+  are ordered by descending weight as the fallback chain for that request.
+- A step whose weight is `0` (or missing) is **never drawn** while any other step has a
+  weight > 0 — it can only serve as a fallback after the drawn step fails. Only when **all**
+  weights are 0 does selection become uniform.
+- Steps whose targets are all unavailable — provider circuit breaker `OPEN`, connection
+  cooldown, model lockout — are removed from the draw before it happens
+  (`open-sse/services/combo/targetResolution.ts`), so a single healthy step can temporarily
+  win every request.
+- `stickyWeightedLimit` (combo config, default `1` = off) pins the drawn step for that many
+  consecutive successes before re-drawing.
+
+For strict rotation use `round-robin`; equal weights on `weighted` give statistical — not
+strict — balance.
+
 ## Fusion Strategy
 
 `fusion` is the one strategy that does **not** pick a single target. It fans the prompt
