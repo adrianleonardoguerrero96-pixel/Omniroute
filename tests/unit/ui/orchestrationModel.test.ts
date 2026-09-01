@@ -7,8 +7,8 @@ import assert from "node:assert/strict";
 import {
   ORCH_STATES,
   orchStateColor,
+  orchStateBadgeBg,
 } from "../../../src/app/(dashboard)/dashboard/orchestration/model/orchestrationTypes.ts";
-import { STATUS_HEX } from "../../../src/shared/constants/statusColors.ts";
 import { fromCloudAgent } from "../../../src/app/(dashboard)/dashboard/orchestration/model/fromCloudAgent.ts";
 import type { CloudAgentTask } from "../../../src/lib/cloudAgent/types.ts";
 import { fromA2A } from "../../../src/app/(dashboard)/dashboard/orchestration/model/fromA2A.ts";
@@ -22,20 +22,30 @@ import {
 } from "../../../src/app/(dashboard)/dashboard/orchestration/model/orchestrationTypes.ts";
 
 describe("orchestrationTypes", () => {
-  it("covers all six states with a color each", () => {
+  it("covers all six states with a theme-aware CSS var color each", () => {
     assert.equal(ORCH_STATES.length, 6);
     for (const s of ORCH_STATES) {
-      assert.match(orchStateColor(s), /^#[0-9a-f]{6}$/i, s);
+      assert.match(orchStateColor(s), /^var\(--orch-status-[a-z]+\)$/, s);
     }
   });
-  it("waiting_approval maps to the new STATUS_HEX.approval violet", () => {
-    assert.equal(orchStateColor("waiting_approval"), STATUS_HEX.approval);
-    assert.equal(STATUS_HEX.approval, "#8b5cf6");
+  it("waiting_approval maps to the approval token", () => {
+    assert.equal(orchStateColor("waiting_approval"), "var(--orch-status-approval)");
   });
   it("running maps to warning, succeeded to success, failed to error", () => {
-    assert.equal(orchStateColor("running"), STATUS_HEX.warning);
-    assert.equal(orchStateColor("succeeded"), STATUS_HEX.success);
-    assert.equal(orchStateColor("failed"), STATUS_HEX.error);
+    assert.equal(orchStateColor("running"), "var(--orch-status-warning)");
+    assert.equal(orchStateColor("succeeded"), "var(--orch-status-success)");
+    assert.equal(orchStateColor("failed"), "var(--orch-status-error)");
+  });
+  it("queued and cancelled both map to the muted token", () => {
+    assert.equal(orchStateColor("queued"), "var(--orch-status-muted)");
+    assert.equal(orchStateColor("cancelled"), "var(--orch-status-muted)");
+  });
+  it("orchStateBadgeBg produces a color-mix over the matching state token", () => {
+    for (const s of ORCH_STATES) {
+      const bg = orchStateBadgeBg(s);
+      assert.match(bg, /^color-mix\(in srgb, var\(--orch-status-[a-z]+\) 13%, transparent\)$/, s);
+      assert.ok(bg.includes(orchStateColor(s)), `${s} badge bg should embed its own token`);
+    }
   });
 });
 

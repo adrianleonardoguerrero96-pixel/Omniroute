@@ -2,7 +2,12 @@
 import { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { useTranslations } from "next-intl";
-import { ORCH_STATES, orchStateColor, type OrchNode } from "../model/orchestrationTypes";
+import {
+  ORCH_STATES,
+  orchStateColor,
+  orchStateBadgeBg,
+  type OrchNode,
+} from "../model/orchestrationTypes";
 const HANDLE = "!bg-transparent !border-0 !w-0 !h-0";
 const LABEL_KEY: Record<string, string> = {
   "cloud-agent": "sourceCloudAgent",
@@ -31,7 +36,7 @@ function SourceNodeImpl({ data }: { data: OrchNode }) {
           <span
             key={s}
             className="text-[9px] px-1.5 py-0.5 rounded-full"
-            style={{ backgroundColor: `${orchStateColor(s)}20`, color: orchStateColor(s) }}
+            style={{ backgroundColor: orchStateBadgeBg(s), color: orchStateColor(s) }}
           >
             {data.counts?.[s]}
           </span>
