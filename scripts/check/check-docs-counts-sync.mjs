@@ -184,7 +184,7 @@ export function tallyDrift(checks, getContent) {
 // Returns null when tsx is unavailable so the gate degrades to a skip, not a false red.
 function readCodeFacts() {
   const script = [
-    'import {computeFreeModelTotals} from "./open-sse/config/freeModelCatalog.ts";',
+    'import {computeFreeModelTotals,FREE_MODEL_BUDGETS} from "./open-sse/config/freeModelCatalog.ts";',
     'import {MODE_PACKS} from "./open-sse/services/autoCombo/modePacks.ts";',
     'import {ENGINE_IDS} from "./open-sse/services/compression/engineCatalog.ts";',
     'import {CLI_TOOLS} from "./src/shared/constants/cliTools.ts";',
@@ -226,7 +226,9 @@ function readCodeFacts() {
     "freeFirst:t.firstMonthRealisticTokens,freePools:t.poolCount,engines:ENGINE_IDS.length,",
     "cliTotal:cli.length,cliCode:by('code'),cliAgent:by('agent'),",
     "mcpTools:countUniqueMcpTools(cols),mcpScopes:sc.size,providers:pids.size,freeForever:ff.size,",
-    "modePacks:Object.keys(MODE_PACKS)}));",
+    "modePacks:Object.keys(MODE_PACKS),",
+    "hardStop:FREE_MODEL_BUDGETS.filter(e=>e.hardStopGuaranteed===true).length,",
+    "trainsOnPrompts:FREE_MODEL_BUDGETS.filter(e=>e.trainsOnPrompts===true).length}));",
   ].join("");
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "docs-counts-"));
   try {
@@ -662,6 +664,37 @@ export function buildChecks() {
             skipAfter: /^\s+with a published positive/i,
           },
           ["README.md", "docs/diagrams/free-tier-budget.svg", "docs/reference/FREE_TIERS.md"]
+        ),
+        // The reference page says what an entry vouches for. These two facts are
+        // curated by hand rather than inferred, so the page quotes their counts —
+        // and quoting a count is how a page goes stale. The patterns are deliberately
+        // narrow: FREE_TIERS.md is full of numbers, and a loose one would gate a
+        // token budget by accident.
+        claim(
+          f.hardStop,
+          "hard-stop-guaranteed entries",
+          {
+            // `requireClaim`: this page is the one place that states the number,
+            // so a reworded or deleted sentence must fail rather than pass as
+            // "no claim in this file" — otherwise the gate is one edit from silent.
+            requireClaim: true,
+            pattern:
+              /(\d+) entr(?:y|ies) (?:that )?(?:carry|carries) an? independently documented hard stop/gi,
+          },
+          ["docs/reference/FREE_TIERS.md"]
+        ),
+        claim(
+          f.trainsOnPrompts,
+          "training-disclosure entries",
+          {
+            // `requireClaim`: this page is the one place that states the number,
+            // so a reworded or deleted sentence must fail rather than pass as
+            // "no claim in this file" — otherwise the gate is one edit from silent.
+            requireClaim: true,
+            pattern:
+              /(\d+) entr(?:y|ies) (?:that )?(?:carry|carries) a (?:prompt-)?training disclosure/gi,
+          },
+          ["docs/reference/FREE_TIERS.md"]
         ),
       ];
     })(),

@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
   parseProviderTotal,
@@ -466,4 +467,61 @@ test("a required claim cannot be silenced by rewording it away", () => {
   assert.equal(optional(reworded).ok, true, "a file that need not state it still passes");
   assert.equal(required(reworded).ok, false, "the reference document must state it");
   assert.match(required(reworded).detail, /required to state one/);
+});
+
+// --- Free-tier reference: the two curated facts ----------------------------
+// FREE_TIERS.md is dense with numbers, so these two patterns are deliberately
+// narrow. A loose one would gate a token budget by accident, and a gate that
+// fires on the wrong number gets deleted rather than fixed.
+const HARD_STOP_CLAIM = {
+  what: "hard-stop-guaranteed entries",
+  pattern:
+    /(\d+) entr(?:y|ies) (?:that )?(?:carry|carries) an? independently documented hard stop/gi,
+};
+
+const TRAINING_CLAIM = {
+  what: "training-disclosure entries",
+  pattern: /(\d+) entr(?:y|ies) (?:that )?(?:carry|carries) a (?:prompt-)?training disclosure/gi,
+};
+
+test("the hard-stop claim passes on the real sentence and fails on a stale count", () => {
+  const v = makeValidator(7, HARD_STOP_CLAIM);
+  assert.equal(v("7 entries carry an independently documented hard stop, and").ok, true);
+  assert.equal(v("99 entries carry an independently documented hard stop, and").ok, false);
+});
+
+test("the training claim passes on the real sentence and fails on a stale count", () => {
+  const v = makeValidator(13, TRAINING_CLAIM);
+  assert.equal(v("13 entries carry a prompt-training disclosure.").ok, true);
+  assert.equal(v("13 entries carry a training disclosure.").ok, true);
+  assert.equal(v("4 entries carry a prompt-training disclosure.").ok, false);
+});
+
+test("a reworded or deleted sentence fails, instead of passing as absent", () => {
+  // The gate's real failure mode is not a stale number, it is silence: reword the
+  // sentence past the pattern and "no claim in this file" used to read green.
+  const required = makeValidator(7, { ...HARD_STOP_CLAIM, requireClaim: true });
+  assert.equal(required("7 entries have a provider-documented hard-stop guarantee.").ok, false);
+  assert.equal(required("the page no longer mentions it at all").ok, false);
+  assert.equal(required("7 entries carry an independently documented hard stop.").ok, true);
+
+  const trainingRequired = makeValidator(13, { ...TRAINING_CLAIM, requireClaim: true });
+  assert.equal(trainingRequired("13 entries disclose training use.").ok, false);
+  assert.equal(trainingRequired("13 entries carry a prompt-training disclosure.").ok, true);
+});
+
+test("the live page actually satisfies both required gates", () => {
+  // A unit test on synthetic strings proves the validator; this one proves the
+  // document. Without it, the two could drift apart and both stay green.
+  const page = readFileSync(path.resolve(here, "../../docs/reference/FREE_TIERS.md"), "utf8");
+  assert.equal(makeValidator(7, { ...HARD_STOP_CLAIM, requireClaim: true })(page).ok, true);
+  assert.equal(makeValidator(13, { ...TRAINING_CLAIM, requireClaim: true })(page).ok, true);
+});
+
+test("neither claim fires on the other numbers the page is full of", () => {
+  const page =
+    "446 cataloged free-tier entries across 30 recurring pools, 12.5M tokens/mo, " +
+    "$10 deposit unlock, 24M/mo boost, 800 output tokens, 2026-06-17.";
+  assert.equal(makeValidator(7, HARD_STOP_CLAIM)(page).ok, true);
+  assert.equal(makeValidator(13, TRAINING_CLAIM)(page).ok, true);
 });
