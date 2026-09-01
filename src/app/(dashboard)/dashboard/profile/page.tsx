@@ -97,7 +97,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedBadge, setSelectedBadge] = useState<BadgeDef | null>(null);
-  const [streak] = useState(0); // streak data comes from future API
+  const [streak, setStreak] = useState(0);
 
   const fetchData = useCallback(async () => {
     try {
@@ -114,6 +114,7 @@ export default function ProfilePage() {
       if (levelRes.ok) {
         const data = await levelRes.json();
         setUserLevel(data.level ?? data);
+        setStreak(Number(data.streak?.current) || 0);
       }
       if (badgesRes.ok) {
         const data = await badgesRes.json();
