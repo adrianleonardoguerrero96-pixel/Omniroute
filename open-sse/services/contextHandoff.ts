@@ -770,33 +770,22 @@ async function generateUniversalHandoffAsync(options: {
 
   const response = await options.handleSingleModel(summaryBody, summaryModel);
   if (!response.ok) {
-    logUniversalHandoffOutcome(
-      "unavailable",
-      options.comboName,
-      `summary model call failed: status=${response.status} model=${summaryModel}`
-    );
+    const detail = `summary model call failed: status=${response.status} model=${summaryModel}`;
+    logUniversalHandoffOutcome("unavailable", options.comboName, detail);
     return "unavailable";
   }
 
   let content = "";
   try {
-    const json = (await response.clone().json()) as Record<string, unknown>;
-    content = getResponseText(json);
+    content = getResponseText((await response.clone().json()) as Record<string, unknown>);
   } catch {
-    try {
-      content = await response.clone().text();
-    } catch {
-      content = "";
-    }
+    content = await response.clone().text().catch(() => "");
   }
 
   const parsed = parseHandoffJSON(content);
   if (!parsed) {
-    logUniversalHandoffOutcome(
-      "unparseable",
-      options.comboName,
-      `model=${summaryModel} contentPreview=${JSON.stringify(content.slice(0, 200))}`
-    );
+    const preview = JSON.stringify(content.slice(0, 200));
+    logUniversalHandoffOutcome("unparseable", options.comboName, `model=${summaryModel} contentPreview=${preview}`);
     return "unparseable";
   }
 
