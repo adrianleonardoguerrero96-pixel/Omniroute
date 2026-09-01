@@ -286,6 +286,9 @@ const nextConfig = {
       // (better-sqlite3 → node:sqlite → sql.js). Next traces sql-wasm.js but can
       // omit the runtime sql-wasm.wasm asset from the standalone bundle.
       "./node_modules/sql.js/dist/sql-wasm.wasm",
+      // tiktoken is server-externalized below so Node selects its CommonJS entry.
+      // That entry reads the tokenizer WASM beside itself at runtime.
+      "./node_modules/tiktoken/tiktoken_bg.wasm",
     ],
   },
   outputFileTracingExcludes: {
@@ -339,6 +342,10 @@ const nextConfig = {
     "tough-cookie",
     "@ngrok/ngrok",
     "@huggingface/transformers",
+    // The ESM entry imports tiktoken_bg.wasm as a module. Turbopack can compile
+    // that graph but omits the runtime asset, making provider routes fail during
+    // module evaluation. Keep Node's CommonJS loader and colocated WASM intact.
+    "tiktoken",
     // copilot-m365-web.ts imports 'ws' as a client-side WebSocket. When bundled,
     // ws cannot resolve its 'bufferutil' native addon (frame masking) and throws
     // TypeError: b.mask is not a function on the first outgoing frame, causing
