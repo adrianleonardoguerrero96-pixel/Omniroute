@@ -15,7 +15,11 @@ interface PrefixAnalysis {
 
 function normalizeContent(content: string | unknown[]): string {
   if (typeof content === "string") return content;
-  return JSON.stringify(content);
+  try {
+    return JSON.stringify(content) || "";
+  } catch {
+    return "";
+  }
 }
 
 function estimateTokens(text: string): number {

@@ -48,34 +48,56 @@ function normalizeResponsesInput(body: Record<string, unknown>): Array<{
   role: string;
   content: string | unknown[];
 }> | null {
+  const result: Array<{ role: string; content: string | unknown[] }> = [];
+
+  if (body.system !== undefined && body.system !== null) {
+    const systemContent = normalizeMessageContent(body.system);
+    if (systemContent.length > 0) {
+      result.push({ role: "system", content: systemContent });
+    }
+  }
+
+  if (Array.isArray(body.tools) && body.tools.length > 0) {
+    const toolsContent = normalizeMessageContent(body.tools);
+    if (toolsContent.length > 0) {
+      result.push({ role: "tool", content: toolsContent });
+    }
+  }
+
+  let pushedMessages = false;
   if (Array.isArray(body.messages) && body.messages.length > 0) {
-    return body.messages
-      .map((item) => {
-        const record = asRecord(item);
-        return record && typeof record.role === "string"
-          ? { role: record.role, content: normalizeMessageContent(record.content) }
-          : null;
-      })
-      .filter((item): item is { role: string; content: string | unknown[] } => item !== null);
+    for (const item of body.messages) {
+      const record = asRecord(item);
+      if (record && typeof record.role === "string") {
+        result.push({ role: record.role, content: normalizeMessageContent(record.content) });
+        pushedMessages = true;
+      }
+    }
   }
 
-  if (typeof body.input === "string" && body.input.length > 0) {
-    return [{ role: "user", content: body.input }];
+  if (!pushedMessages) {
+    if (typeof body.input === "string" && body.input.length > 0) {
+      result.push({ role: "user", content: body.input });
+    } else if (Array.isArray(body.input) && body.input.length > 0) {
+      for (const item of body.input) {
+        if (typeof item === "string") {
+          result.push({ role: "user", content: item });
+        } else {
+          const record = asRecord(item);
+          if (record) {
+            const role = typeof record.role === "string" ? record.role : "user";
+            const content =
+              record.content !== undefined
+                ? normalizeMessageContent(record.content)
+                : normalizeMessageContent(record);
+            result.push({ role, content });
+          }
+        }
+      }
+    }
   }
 
-  if (Array.isArray(body.input) && body.input.length > 0) {
-    return body.input
-      .map((item) => {
-        if (typeof item === "string") return { role: "user", content: item };
-        const record = asRecord(item);
-        return record && typeof record.role === "string"
-          ? { role: record.role, content: normalizeMessageContent(record.content) }
-          : null;
-      })
-      .filter((item): item is { role: string; content: string | unknown[] } => item !== null);
-  }
-
-  return null;
+  return result.length > 0 ? result : null;
 }
 
 function readExplicitPromptCacheKey(body: Record<string, unknown>): string | null {
