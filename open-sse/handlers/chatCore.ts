@@ -1,6 +1,6 @@
 import {
   extractRequestToolIdentityMap,
-  toToolNameAliasMap,
+  resolveResponseToolNameMap,
 } from "./chatCore/requestToolIdentity.ts";
 import { injectMemoryAndSkills } from "./chatCore/memorySkillsInjection.ts";
 import { resolveChatCoreRequestSetup } from "./chatCore/requestSetup.ts";
@@ -77,7 +77,7 @@ import {
   isStripReasoningRequested,
 } from "./chatCore/headers.ts";
 import { markCodexScopeRateLimited } from "./chatCore/codexFailover.ts";
-import { getCodexClientSessionId, isCodexOriginatedHeaders } from "../config/codexIdentity.ts";
+import { getCodexClientSessionId, isCodexOriginatedHeaders, isClaudeCodeOriginatedHeaders } from "../config/codexIdentity.ts";
 import {
   noteCodexTurnStateProvenance,
   readCodexTurnStateHeader,
@@ -131,7 +131,7 @@ import { resolveChatCoreRequestFormat } from "./chatCore/requestFormat.ts";
 import { resolveChatCoreTargetFormat } from "./chatCore/targetFormat.ts";
 import { resolveOmniGlyphTransport } from "../services/compression/imageTransportPolicy.ts";
 import { stripStore, usesClaudeBridge } from "./chatCore/agentRouterProtocol.ts";
-import { defaultClaudeToolType } from "./chatCore/claudeToolDefaults.ts";
+import { normalizeClaudeToolsForDispatch } from "./chatCore/claudeToolDefaults.ts";
 import { injectSystemPrompt, injectCustomSystemPrompt } from "../services/systemPrompt.ts";
 import { translateRequest, needsTranslation } from "../translator/index.ts";
 import { FORMATS } from "../translator/formats.ts";
@@ -399,8 +399,12 @@ import {
   acquireMany as acquireConcurrencyGates,
   markBlocked as markAccountSemaphoreBlocked,
 } from "../services/accountSemaphore.ts";
-import { lockModel, lockModelIfPerModelQuota } from "../services/accountFallback.ts";
-import { lockExactModel } from "../services/accountFallback.ts";
+import {
+  lockModel,
+  lockModelIfPerModelQuota,
+  recordCoreOwnedAntigravityQuotaState,
+  shouldDeferAntigravityQuotaStateToCaller,
+} from "../services/accountFallback.ts";
 import {
   generateSignature,
   getCachedResponse,
@@ -704,8 +708,9 @@ export async function handleChatCore({
   const recordKeyHealthStatus = (
     status: number,
     creds: Record<string, unknown> | null | undefined,
-    transport?: string
-  ): void => recordKeyHealthStatusFor(status, creds, log, transport);
+    transport?: string,
+    failureDetail?: string
+  ): void => recordKeyHealthStatusFor(status, creds, log, transport, failureDetail);
   // ── Phase 9.2: Idempotency check ──
   // Resolve the idempotency key once here and reuse it at the Phase 9.2 save site below,
   // rather than re-deriving it. (#3821-review LEDGER-6)
@@ -920,6 +925,19 @@ export async function handleChatCore({
     });
   if (webSearchFallbackPlan.enabled) {
     body = bodyWithWebSearchFallback as typeof body;
+    // Server-side web-search execution cannot be injected into an arbitrary
+    // client SSE stream (streaming interception is not implemented — #9725), so
+    // a stream:true OpenAI Responses request whose web_search tool was converted
+    // to the fallback is executed non-streaming: the assembled response then
+    // carries the executed results (function_call_output + web_search_call) and
+    // JSON-tolerating Responses clients (pi-web-access) consume it directly.
+    if (
+      sourceFormat === FORMATS.OPENAI_RESPONSES &&
+      (body as Record<string, unknown>).stream === true
+    ) {
+      (body as Record<string, unknown>).stream = false;
+      log?.info?.("TOOLS", `web_search fallback forced non-streaming response for ${provider}`);
+    }
     log?.info?.(
       "TOOLS",
       `Converted ${webSearchFallbackPlan.convertedToolCount} web_search tool(s) to OmniRoute fallback for ${provider}`
@@ -963,8 +981,14 @@ export async function handleChatCore({
   const isCodexResponsesEcho =
     (isResponsesEndpoint || sourceFormat === FORMATS.OPENAI_RESPONSES) &&
     isCodexOriginatedHeaders(clientRawRequest?.headers);
+
+  // Detect Claude Code CLI so we can auto-enable model echo — this prevents
+  // session restore failures when the resolved upstream model (e.g.
+  // `oc/nemotron-3-ultra-free`) is not recognized by the client on `--resume`.
+  const isClaudeCodeClient = isClaudeCodeOriginatedHeaders(clientRawRequest?.headers);
+
   let echoModel =
-    (settings.echoRequestedModelName === true || isCodexResponsesEcho) &&
+    (settings.echoRequestedModelName === true || isCodexResponsesEcho || isClaudeCodeClient) &&
     typeof requestedModel === "string" &&
     requestedModel
       ? requestedModel
@@ -1422,7 +1446,7 @@ export async function handleChatCore({
       };
       if ((isCombo && comboName) || routingComboId) {
         try {
-          const { getComboByName } = await import("../../src/lib/localDb");
+          const { getComboByName } = await import("@/lib/db/combos");
           let comboConfig = await getComboByName(comboName);
           if (!comboConfig && comboName?.startsWith("combo/")) {
             comboConfig = await getComboByName(comboName.substring(6));
@@ -1913,7 +1937,7 @@ export async function handleChatCore({
     if (isCombo && comboName) {
       log?.info?.("CONTEXT", `Attempting to resolve combo limits for comboName=${comboName}`);
       try {
-        const { getComboByName } = await import("../../src/lib/localDb");
+        const { getComboByName } = await import("@/lib/db/combos");
         const { resolveComboTargets } = await import("../services/combo.ts");
         let comboConfig = await getComboByName(comboName);
         if (!comboConfig && comboName.startsWith("combo/")) {
@@ -1942,10 +1966,22 @@ export async function handleChatCore({
         // target's window; min(...allTargets) is only a defensive fallback —
         // the old unconditional min compressed a 1M-target request at the
         // smallest sibling's window ("agent keeps forgetting things").
+        // An explicit `context_length` on the combo record (Agent Features →
+        // Context length) is an operator declaration and outranks the inferred
+        // per-target window — see resolveComboContextLimit().
+        const rawComboContextLength = (comboConfig as { context_length?: unknown } | null)
+          ?.context_length;
+        const comboContextLength =
+          typeof rawComboContextLength === "number" &&
+          Number.isFinite(rawComboContextLength) &&
+          rawComboContextLength > 0
+            ? rawComboContextLength
+            : null;
         const resolved = resolveComboContextLimit({
           provider,
           model: effectiveModel,
           comboTargetLimits,
+          comboContextLength,
         });
         contextLimit = resolved.limit;
         log?.info?.(
@@ -2585,9 +2621,13 @@ export async function handleChatCore({
   // definitions that omit the required `type` discriminator with HTTP 400. Default
   // a missing `type` to "custom" before dispatch, mirroring Anthropic's own
   // inference, so legacy Claude-format tool payloads survive strict gateways (#2195).
+  // AgentRouter is the opposite quirk: its Rust deserializer only accepts versioned
+  // tool types and 400s on `type: "custom"` — there the discriminator is stripped
+  // instead (see claudeToolDefaults.ts).
   if (targetFormat === FORMATS.CLAUDE && Array.isArray(translatedBody.tools)) {
-    translatedBody.tools = defaultClaudeToolType(
-      translatedBody.tools
+    translatedBody.tools = normalizeClaudeToolsForDispatch(
+      translatedBody.tools,
+      provider
     ) as typeof translatedBody.tools;
   }
 
@@ -2596,19 +2636,14 @@ export async function handleChatCore({
   const nativeClaudeToolNameMap = isClaudePassthrough
     ? buildClaudePassthroughToolNameMap(body)
     : null;
-  let toolNameMap: Map<string, string> | null =
-    translatedToolNameMap instanceof Map && translatedToolNameMap.size > 0
-      ? translatedToolNameMap
-      : nativeClaudeToolNameMap;
-
-  // For providers whose _toolNameMap was extracted as requestToolIdentityMap
-  // before the Kiro merge block (Gemini/Antigravity), merge it into the
-  // response toolNameMap so the response translator can restore tool names
-  // from their lowercased form (#9568). Only merge string-valued entries
-  // (tool name aliases), not object-valued namespace identities (#7936).
-  if (!toolNameMap) {
-    toolNameMap = toToolNameAliasMap(requestToolIdentityMap);
-  }
+  // Resolution order matters: `_toolNameMap` was already deleted by
+  // `extractRequestToolIdentityMap`, so Gemini/Antigravity depend on the
+  // `requestToolIdentityMap` fallback inside this helper (#9568 / #7936).
+  const toolNameMap = resolveResponseToolNameMap(
+    translatedToolNameMap,
+    nativeClaudeToolNameMap,
+    requestToolIdentityMap
+  );
   delete translatedBody._toolNameMap;
   delete translatedBody._disableToolPrefix;
 
@@ -2696,6 +2731,7 @@ export async function handleChatCore({
 
   const previousResponseIdPolicy = applyResponsesPreviousResponseIdPolicy(translatedBody, {
     mode: settings.responsesPreviousResponseIdMode,
+    provider,
     sourceFormat,
     targetFormat,
     credentials,
@@ -2808,7 +2844,12 @@ export async function handleChatCore({
     log?.debug?.("PARAMS", `Renamed max_completion_tokens to max_tokens for ${model}`);
   }
 
-  stripStore(translatedBody, provider, targetFormat);
+  stripStore(
+    translatedBody,
+    provider,
+    targetFormat,
+    credentials?.providerSpecificData as Record<string, unknown> | null | undefined
+  );
 
   // Chat clients may send stream_options.include_usage, but OpenAI Responses
   // upstreams (including Azure AI Foundry /responses) reject stream_options.
@@ -2988,7 +3029,10 @@ export async function handleChatCore({
 
   const dedupRequestBody = { ...translatedBody, model: `${provider}/${model}`, stream };
   const dedupEnabled = shouldDeduplicate(dedupRequestBody);
-  const dedupHash = dedupEnabled ? computeRequestHash(dedupRequestBody) : null;
+  // Namespaced by the calling API key: dedup hands the SAME response object to
+  // every joiner, so a shared hash across keys is a cross-principal response
+  // leak (GHSA-6c7w-56xp-wpc6).
+  const dedupHash = dedupEnabled ? computeRequestHash(dedupRequestBody, apiKeyInfo?.id) : null;
 
   const executeProviderRequest = async (modelToCall = effectiveModel, allowDedup = false) => {
     const execute = async () => {
@@ -3179,11 +3223,20 @@ export async function handleChatCore({
               });
 
               if (
-                res.response.status === 401 &&
+                stream &&
+                (res.response.ok ||
+                  res.response.status === HTTP_STATUS.UNAUTHORIZED ||
+                  res.response.status === HTTP_STATUS.FORBIDDEN) &&
                 executionConnectionId &&
                 !(await shouldIsolateProbeFailures())
               ) {
-                recordKeyHealthStatus(401, execCreds);
+                const failureDetail = res.response.ok
+                  ? ""
+                  : await res.response
+                      .clone()
+                      .text()
+                      .catch(() => "");
+                recordKeyHealthStatus(res.response.status, execCreds, res.transport, failureDetail);
               }
 
               if (isModelScope() && res.response.status === 429 && attempts < maxAttempts - 1) {
@@ -3534,13 +3587,6 @@ export async function handleChatCore({
         // Non-stream: release semaphore immediately after reading full response body.
         const status = rawResult.response.status;
 
-        // Use execution credentials captured during request processing
-        if (
-          rawResult._executionCredentials?.connectionId &&
-          rawResult._executionCredentials?.apiKey
-        ) {
-          recordKeyHealthStatus(status, rawResult._executionCredentials, rawResult.transport);
-        }
         releaseRawResultAccountSemaphore =
           typeof rawResult._accountSemaphoreRelease === "function"
             ? rawResult._accountSemaphoreRelease
@@ -3566,6 +3612,19 @@ export async function handleChatCore({
           contentType,
           upstreamStream
         );
+        // Use the exact execution credential selected for this request. Model capability
+        // failures stay in routing telemetry; authoritative success only recovers this key.
+        if (
+          rawResult._executionCredentials?.connectionId &&
+          (rawResult._executionCredentials.apiKey || rawResult._executionCredentials.accessToken)
+        ) {
+          recordKeyHealthStatus(
+            status,
+            rawResult._executionCredentials,
+            rawResult.transport,
+            status >= 400 ? payload : ""
+          );
+        }
         releaseRawResultAccountSemaphore();
         releaseRawResultAccountSemaphore = () => {};
 
@@ -4246,79 +4305,121 @@ export async function handleChatCore({
                 `[provider] Node ${errorConnectionId} probe ${errorType} (${statusCode}) — connection stays active`
               );
             } else {
-            // Kimi's 403 says "billing cycle" for both an exhausted subscription and a
-            // temporary request window. Read its official usage endpoint before making
-            // the connection terminal: a non-zero Weekly quota plus an empty Ratelimit
-            // window must recover automatically at the reported reset time.
-            let kimiRateLimitResetAt: string | null = null;
-            if (provider === "kimi-coding") {
-              try {
-                const { fetchAndPersistProviderLimits } =
-                  await import("@/lib/usage/providerLimits");
-                const { usage } = await fetchAndPersistProviderLimits(errorConnectionId, "manual");
-                kimiRateLimitResetAt = getKimiTemporaryRateLimitResetAt(usage);
-              } catch {
-                // Preserve the existing quota handling when Kimi's usage endpoint is unavailable.
+              // Kimi's 403 says "billing cycle" for both an exhausted subscription and a
+              // temporary request window. Read its official usage endpoint before making
+              // the connection terminal: a non-zero Weekly quota plus an empty Ratelimit
+              // window must recover automatically at the reported reset time.
+              let kimiRateLimitResetAt: string | null = null;
+              if (provider === "kimi-coding") {
+                try {
+                  const { fetchAndPersistProviderLimits } =
+                    await import("@/lib/usage/providerLimits");
+                  const { usage } = await fetchAndPersistProviderLimits(
+                    errorConnectionId,
+                    "manual"
+                  );
+                  kimiRateLimitResetAt = getKimiTemporaryRateLimitResetAt(usage);
+                } catch {
+                  // Preserve the existing quota handling when Kimi's usage endpoint is unavailable.
+                }
               }
-            }
 
-            // Providers with per-model quotas — lock the model only, not the connection
-            const quotaCooldownMs = kimiRateLimitResetAt
-              ? Math.max(new Date(kimiRateLimitResetAt).getTime() - Date.now(), 0)
-              : retryAfterMs || COOLDOWN_MS.rateLimit;
-            const accountSemaphoreKey = resolveAccountSemaphoreKey({
-              provider,
-              model: currentModel,
-              connectionId: errorConnectionId,
-              credentials,
-            });
-            if (accountSemaphoreKey) {
-              markAccountSemaphoreBlocked(accountSemaphoreKey, quotaCooldownMs);
-            }
-            if (kimiRateLimitResetAt) {
-              await updateProviderConnection(errorConnectionId, {
-                testStatus: "unavailable",
-                rateLimitedUntil: kimiRateLimitResetAt,
-                backoffLevel: 0,
-                lastErrorType: PROVIDER_ERROR_TYPES.RATE_LIMITED,
-                lastError: message,
-                errorCode: statusCode,
-              });
-              console.warn(
-                `[provider] Node ${errorConnectionId} Kimi request window exhausted (${statusCode}) — retrying after ${kimiRateLimitResetAt}`
-              );
-            } else if (isModelScope() && errorConnectionId) {
-              const lockFn = provider === "antigravity" ? lockExactModel : lockModel;
-              lockFn(provider, errorConnectionId, model, "quota_exhausted", quotaCooldownMs);
-              console.warn(
-                `[provider] Node ${errorConnectionId} ModelScope model quota exhausted (${statusCode}) for ${model} - ${Math.ceil(quotaCooldownMs / 1000)}s (connection stays active)`
-              );
-            } else if (
-              lockModelIfPerModelQuota(
+              // Providers with per-model quotas — lock the model only, not the connection
+              let quotaCooldownMs = kimiRateLimitResetAt
+                ? Math.max(new Date(kimiRateLimitResetAt).getTime() - Date.now(), 0)
+                : retryAfterMs || COOLDOWN_MS.rateLimit;
+              const deferAntigravityQuotaStateToCaller = shouldDeferAntigravityQuotaStateToCaller(
                 provider,
-                errorConnectionId,
-                model,
-                "quota_exhausted",
-                quotaCooldownMs
-              )
-            ) {
-              const quotaScope = getQuotaScopeLabelForProvider(provider, model);
-              console.warn(
-                `[provider] Node ${errorConnectionId} ${quotaScope}-only quota exhausted (${statusCode}) for ${model} - ${Math.ceil(quotaCooldownMs / 1000)}s (cooldown_scope=${quotaScope}, ttl_source=${retryAfterMs ? "upstream" : "inferred"}, connection stays active)`
+                typeof onStreamFailure === "function"
               );
-            } else {
-              await writeTerminalStatus(
-                errorConnectionId,
-                {
-                  testStatus: "credits_exhausted",
+              const isAntigravityQuotaFamily = shouldDeferAntigravityQuotaStateToCaller(
+                provider,
+                true
+              );
+              let coreOwnedAntigravityLockout: {
+                cooldownMs: number;
+                failureCount: number;
+              } | null = null;
+              if (isAntigravityQuotaFamily && !deferAntigravityQuotaStateToCaller) {
+                const quotaErrorText =
+                  typeof upstreamErrorBody === "string"
+                    ? upstreamErrorBody
+                    : upstreamErrorBody == null
+                      ? message
+                      : JSON.stringify(upstreamErrorBody);
+                coreOwnedAntigravityLockout = await recordCoreOwnedAntigravityQuotaState({
+                  provider,
+                  connectionId: errorConnectionId,
+                  model,
+                  status: statusCode,
+                  errorText: quotaErrorText,
+                  headers: providerResponse.headers,
+                });
+                quotaCooldownMs = coreOwnedAntigravityLockout.cooldownMs;
+              }
+              const accountSemaphoreKey = resolveAccountSemaphoreKey({
+                provider,
+                model: currentModel,
+                connectionId: errorConnectionId,
+                credentials,
+              });
+              if (accountSemaphoreKey && !deferAntigravityQuotaStateToCaller) {
+                markAccountSemaphoreBlocked(accountSemaphoreKey, quotaCooldownMs);
+              }
+              if (deferAntigravityQuotaStateToCaller) {
+                // Defer both model and account-semaphore cooldowns to
+                // markAccountUnavailable, where header/body provenance and the
+                // configured maxCooldownMs are available. Direct consumers such
+                // as Responses pass no owner callback and retain core ownership.
+              } else if (coreOwnedAntigravityLockout) {
+                console.warn(
+                  `[provider] Node ${errorConnectionId} Antigravity model quota exhausted (${statusCode}) for ${model} - ${Math.ceil(coreOwnedAntigravityLockout.cooldownMs / 1000)}s (failureCount=${coreOwnedAntigravityLockout.failureCount}, owner=core)`
+                );
+              } else if (kimiRateLimitResetAt) {
+                await updateProviderConnection(errorConnectionId, {
+                  testStatus: "unavailable",
+                  rateLimitedUntil: kimiRateLimitResetAt,
+                  backoffLevel: 0,
+                  lastErrorType: PROVIDER_ERROR_TYPES.RATE_LIMITED,
                   lastError: message,
-                  lastErrorType: errorType,
-                  errorCode: String(statusCode),
-                },
-                "production"
-              );
-              console.warn(`[provider] Node ${errorConnectionId} exhausted quota (${statusCode})`);
-            }
+                  errorCode: statusCode,
+                });
+                console.warn(
+                  `[provider] Node ${errorConnectionId} Kimi request window exhausted (${statusCode}) — retrying after ${kimiRateLimitResetAt}`
+                );
+              } else if (isModelScope() && errorConnectionId) {
+                lockModel(provider, errorConnectionId, model, "quota_exhausted", quotaCooldownMs);
+                console.warn(
+                  `[provider] Node ${errorConnectionId} ModelScope model quota exhausted (${statusCode}) for ${model} - ${Math.ceil(quotaCooldownMs / 1000)}s (connection stays active)`
+                );
+              } else if (
+                lockModelIfPerModelQuota(
+                  provider,
+                  errorConnectionId,
+                  model,
+                  "quota_exhausted",
+                  quotaCooldownMs
+                )
+              ) {
+                const quotaScope = getQuotaScopeLabelForProvider(provider, model);
+                console.warn(
+                  `[provider] Node ${errorConnectionId} ${quotaScope}-only quota exhausted (${statusCode}) for ${model} - ${Math.ceil(quotaCooldownMs / 1000)}s (cooldown_scope=${quotaScope}, ttl_source=${retryAfterMs ? "upstream" : "inferred"}, connection stays active)`
+                );
+              } else {
+                await writeTerminalStatus(
+                  errorConnectionId,
+                  {
+                    testStatus: "credits_exhausted",
+                    lastError: message,
+                    lastErrorType: errorType,
+                    errorCode: String(statusCode),
+                  },
+                  "production"
+                );
+                console.warn(
+                  `[provider] Node ${errorConnectionId} exhausted quota (${statusCode})`
+                );
+              }
             } // close probeIsolated3 else
           }
         } else if (errorType === PROVIDER_ERROR_TYPES.UNAUTHORIZED) {
@@ -5371,6 +5472,7 @@ export async function handleChatCore({
 
   const streamReadiness = await ensureStreamReadiness(providerResponse, {
     timeoutMs: streamReadinessPolicy.timeoutMs,
+    maxTimeoutMs: streamReadinessPolicy.maxTimeoutMs,
     provider,
     model,
     log,
@@ -5686,6 +5788,8 @@ export async function handleChatCore({
     });
 
     // Plugin onStreamComplete hook — fire-and-forget, fail-open (#9571)
+    // Pass traceId as requestId so plugins can correlate the stream-completion event
+    // with the originating request (the same id used for onRequest/onResponse). (#11825)
     runPluginOnStreamCompleteHook({
       status: normalizedStreamStatus,
       usage: streamUsage as Record<string, unknown> | undefined,
@@ -5694,6 +5798,7 @@ export async function handleChatCore({
       provider,
       errorCode: streamErrorCode,
       startTime,
+      requestId: traceId,
     });
   };
 

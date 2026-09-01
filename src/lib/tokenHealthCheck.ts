@@ -11,13 +11,9 @@
  * updates the DB, and logs the result.
  */
 
-import {
-  getProviderConnections,
-  getCachedProviderConnectionById,
-  updateProviderConnection,
-  getSettings,
-  resolveProxyForConnection,
-} from "@/lib/localDb";
+import { getProviderConnections, updateProviderConnection } from "@/lib/db/providers";
+import { getCachedProviderConnectionById } from "@/lib/db/readCache";
+import { getSettings, resolveProxyForConnection } from "@/lib/db/settings";
 import {
   getAccessToken,
   getDeprecationNotice,
@@ -30,6 +26,10 @@ import { isAutomatedTestProcess } from "@/shared/utils/testProcess";
 import { refreshGithubCopilotSubTokenIfNeeded } from "@/lib/tokenHealthCheckCopilot";
 import { checkCursorConnectionIfNeeded } from "@/lib/tokenHealthCheckCursor";
 import { checkKimiWebConnectionIfNeeded } from "@/lib/tokenHealthCheckKimi";
+import {
+  checkWebCookieConnectionIfNeeded,
+  isWebCookieHealthProbeCandidate,
+} from "@/lib/tokenHealthCheckWebCookie";
 
 const LOG_PREFIX = "[HealthCheck]";
 const TRUE_ENV_VALUES = new Set(["1", "true", "yes", "on"]);
@@ -128,9 +128,7 @@ function withExpiredRetry(
   return { ...psd, expiredRetry: { count, at } };
 }
 
-function withClearedExpiredRetry(
-  psd: Record<string, unknown>
-): Record<string, unknown> {
+function withClearedExpiredRetry(psd: Record<string, unknown>): Record<string, unknown> {
   const next = { ...psd };
   delete next.expiredRetry;
   return next;
@@ -481,7 +479,12 @@ export async function sweep(): Promise<number> {
   }
   state.sweeping = true;
   try {
-    const connections = await getProviderConnections({ authType: "oauth" });
+    const connections = [
+      ...(await getProviderConnections({ authType: "oauth" })),
+      // #11488: web-cookie rows (auth_type 'cookie') were never swept — a dead
+      // cookie stayed "active" until a live request failed against it.
+      ...(await getProviderConnections({ authType: "cookie" })),
+    ];
 
     if (!connections || connections.length === 0) return 0;
 
@@ -665,6 +668,22 @@ export async function checkConnection(conn) {
       log,
       logWarn,
       logError,
+      getConnectionLogLabel,
+      logPrefix: LOG_PREFIX,
+    });
+    return;
+  }
+
+  // Generic web-cookie verify-only probe (#11488): every catalogued cookie
+  // provider without its own bespoke leaf above. Kimi-web already returned.
+  if (isWebCookieHealthProbeCandidate(conn.provider)) {
+    const now = new Date().toISOString();
+    await checkWebCookieConnectionIfNeeded({
+      conn,
+      now,
+      intervalMin,
+      log,
+      logWarn,
       getConnectionLogLabel,
       logPrefix: LOG_PREFIX,
     });
