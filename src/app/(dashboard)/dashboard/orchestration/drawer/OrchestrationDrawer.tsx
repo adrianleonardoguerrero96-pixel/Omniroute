@@ -7,6 +7,8 @@ import { useDrawerDetail } from "./useDrawerDetail";
 import type { CloudAgentTask } from "@/lib/cloudAgent/types";
 import type { A2ATask } from "@/lib/a2a/taskManager";
 
+type Translate = ReturnType<typeof useTranslations>;
+
 const STATE_KEY: Record<OrchState, string> = {
   queued: "stateQueued",
   running: "stateRunning",
@@ -70,6 +72,144 @@ function Timeline({ node, detail }: { node: OrchNode; detail: unknown }) {
   );
 }
 
+/** Header row: status dot, label/source/state, close button. */
+function DrawerHeader({
+  node,
+  state,
+  t,
+  onClose,
+}: {
+  node: OrchNode;
+  state: OrchState;
+  t: Translate;
+  onClose: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-2 mb-4">
+      <StatusDot
+        color={orchStateColor(state)}
+        error={state === "failed"}
+        pulse={state === "running"}
+      />
+      <div className="min-w-0">
+        <div className="text-sm font-semibold truncate">{node.label}</div>
+        <div className="text-[10px] text-muted">
+          {node.source} · {t(STATE_KEY[state])}
+        </div>
+      </div>
+      <button className="ml-auto text-muted" onClick={onClose} aria-label="close">
+        ✕
+      </button>
+    </div>
+  );
+}
+
+/** Cost/duration metrics section — omitted entirely when neither value is present. */
+function DrawerMetrics({
+  node,
+  ca,
+  t,
+}: {
+  node: OrchNode;
+  ca: CloudAgentTask | null;
+  t: Translate;
+}) {
+  if (node.cost == null && ca?.result?.duration == null) return null;
+  return (
+    <Section title={t("drawerMetrics")}>
+      <p className="text-xs">
+        {node.cost != null && usd.format(node.cost)}
+        {ca?.result?.duration != null && ` · ${ca.result.duration}s`}
+      </p>
+    </Section>
+  );
+}
+
+/** Result section: Cloud Agent PR link (sanitized, see `isHttpUrl`) + A2A artifacts. */
+function DrawerResult({
+  ca,
+  a2a,
+  t,
+}: {
+  ca: CloudAgentTask | null;
+  a2a: A2ATask | null;
+  t: Translate;
+}) {
+  const hasResult = !!ca?.result?.prUrl || (a2a?.artifacts?.length ?? 0) > 0;
+  if (!hasResult) return null;
+  return (
+    <Section title={t("drawerResult")}>
+      {ca?.result?.prUrl &&
+        (isHttpUrl(ca.result.prUrl) ? (
+          <a className="text-xs underline" href={ca.result.prUrl} target="_blank" rel="noreferrer">
+            {ca.result.prUrl}
+          </a>
+        ) : (
+          <span className="text-xs break-words">{ca.result.prUrl}</span>
+        ))}
+      {a2a?.artifacts?.map((art, i) => (
+        <pre key={i} className="text-[10px] bg-surface-muted rounded p-2 mt-1 overflow-x-auto">
+          {art.content}
+        </pre>
+      ))}
+    </Section>
+  );
+}
+
+/** Approve/cancel action buttons — omitted when neither action is available. */
+function DrawerActions({
+  canApprove,
+  canCancel,
+  approve,
+  cancel,
+  onActionDone,
+  t,
+}: {
+  canApprove: boolean;
+  canCancel: boolean;
+  approve: () => Promise<boolean>;
+  cancel: () => Promise<boolean>;
+  onActionDone: () => void;
+  t: Translate;
+}) {
+  if (!canApprove && !canCancel) return null;
+  const run = async (fn: () => Promise<boolean>) => {
+    if (await fn()) onActionDone();
+  };
+  return (
+    <Section title={t("drawerActions")}>
+      <div className="flex gap-2">
+        {canApprove && (
+          <button
+            className="text-xs rounded border border-success px-2 py-1"
+            onClick={() => run(approve)}
+          >
+            {t("actionApprove")}
+          </button>
+        )}
+        {canCancel && (
+          <button
+            className="text-xs rounded border border-error px-2 py-1"
+            onClick={() => run(cancel)}
+          >
+            {t("actionCancel")}
+          </button>
+        )}
+      </div>
+    </Section>
+  );
+}
+
+/** Closes the drawer on Escape while `node` is set. */
+function useCloseOnEscape(node: OrchNode | null, onClose: () => void) {
+  useEffect(() => {
+    if (!node) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [node, onClose]);
+}
+
 export function OrchestrationDrawer({
   node,
   onClose,
@@ -82,22 +222,12 @@ export function OrchestrationDrawer({
   const t = useTranslations("orchestration");
   const { detail, isLoading, error, canApprove, canCancel, approve, cancel } =
     useDrawerDetail(node);
-
-  useEffect(() => {
-    if (!node) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [node, onClose]);
+  useCloseOnEscape(node, onClose);
 
   if (!node) return null;
   const state = node.state ?? "queued";
   const ca = node.source === "cloud-agent" ? (detail as CloudAgentTask | null) : null;
   const a2a = node.source === "a2a" ? (detail as A2ATask | null) : null;
-
-  const run = async (fn: () => Promise<boolean>) => {
-    if (await fn()) onActionDone();
-  };
 
   return (
     <>
@@ -107,22 +237,7 @@ export function OrchestrationDrawer({
         role="dialog"
         aria-label={node.label}
       >
-        <div className="flex items-center gap-2 mb-4">
-          <StatusDot
-            color={orchStateColor(state)}
-            error={state === "failed"}
-            pulse={state === "running"}
-          />
-          <div className="min-w-0">
-            <div className="text-sm font-semibold truncate">{node.label}</div>
-            <div className="text-[10px] text-muted">
-              {node.source} · {t(STATE_KEY[state])}
-            </div>
-          </div>
-          <button className="ml-auto text-muted" onClick={onClose} aria-label="close">
-            ✕
-          </button>
-        </div>
+        <DrawerHeader node={node} state={state} t={t} onClose={onClose} />
 
         {error && <div className="text-xs text-error mb-3">{t("actionFailed", { error })}</div>}
         {isLoading && <div className="text-xs text-muted mb-3">…</div>}
@@ -135,61 +250,16 @@ export function OrchestrationDrawer({
         <Section title={t("drawerTimeline")}>
           <Timeline node={node} detail={detail} />
         </Section>
-        {(node.cost != null || ca?.result?.duration != null) && (
-          <Section title={t("drawerMetrics")}>
-            <p className="text-xs">
-              {node.cost != null && usd.format(node.cost)}
-              {ca?.result?.duration != null && ` · ${ca.result.duration}s`}
-            </p>
-          </Section>
-        )}
-        {(ca?.result?.prUrl || (a2a?.artifacts?.length ?? 0) > 0) && (
-          <Section title={t("drawerResult")}>
-            {ca?.result?.prUrl &&
-              (isHttpUrl(ca.result.prUrl) ? (
-                <a
-                  className="text-xs underline"
-                  href={ca.result.prUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {ca.result.prUrl}
-                </a>
-              ) : (
-                <span className="text-xs break-words">{ca.result.prUrl}</span>
-              ))}
-            {a2a?.artifacts?.map((art, i) => (
-              <pre
-                key={i}
-                className="text-[10px] bg-surface-muted rounded p-2 mt-1 overflow-x-auto"
-              >
-                {art.content}
-              </pre>
-            ))}
-          </Section>
-        )}
-        {(canApprove || canCancel) && (
-          <Section title={t("drawerActions")}>
-            <div className="flex gap-2">
-              {canApprove && (
-                <button
-                  className="text-xs rounded border border-success px-2 py-1"
-                  onClick={() => run(approve)}
-                >
-                  {t("actionApprove")}
-                </button>
-              )}
-              {canCancel && (
-                <button
-                  className="text-xs rounded border border-error px-2 py-1"
-                  onClick={() => run(cancel)}
-                >
-                  {t("actionCancel")}
-                </button>
-              )}
-            </div>
-          </Section>
-        )}
+        <DrawerMetrics node={node} ca={ca} t={t} />
+        <DrawerResult ca={ca} a2a={a2a} t={t} />
+        <DrawerActions
+          canApprove={canApprove}
+          canCancel={canCancel}
+          approve={approve}
+          cancel={cancel}
+          onActionDone={onActionDone}
+          t={t}
+        />
       </aside>
     </>
   );

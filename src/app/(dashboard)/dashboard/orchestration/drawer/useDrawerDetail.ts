@@ -10,6 +10,8 @@ interface SourceRoute {
   approveReq: { url: string; init: RequestInit } | null;
 }
 
+const TERMINAL_STATES = new Set(["succeeded", "failed", "cancelled"]);
+
 function routeFor(node: OrchNode): SourceRoute {
   const post = (body?: unknown): RequestInit => ({
     method: "POST",
@@ -63,29 +65,50 @@ function unwrapDetailBody(nodeId: string, body: unknown): unknown {
   return b.data ?? body;
 }
 
-export function useDrawerDetail(node: OrchNode | null) {
-  // `syncedId` tracks which node identity `detail`/`error`/`isLoading` currently
-  // reflect. When it drifts from `node?.id` (a new node was selected, or the
-  // drawer closed) we reset those three DURING this render — React's documented
-  // "adjust state when a prop changes" idiom — instead of inside the effect
-  // below. That keeps the effect a pure "subscribe to node.id, fetch, setState
-  // from the async .then/.catch callbacks" shape with no synchronous setState
-  // call in its body, so it lints clean under `react-hooks/set-state-in-effect`
-  // with zero suppressions (same technique as the dashboard/cli-code and
-  // dashboard/settings react-hooks compiler-rule batches on this release, #12146).
-  const [syncedId, setSyncedId] = useState<string | undefined>(undefined);
-  const [detail, setDetail] = useState<unknown | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const route = node ? routeFor(node) : null;
+/** Derives approve/cancel availability from the route + node state. */
+function deriveActionAvailability(route: SourceRoute | null, node: OrchNode | null) {
+  const canApprove = !!route?.approveReq && node?.state === "waiting_approval";
+  const isTerminal = !!node?.state && TERMINAL_STATES.has(node.state);
+  const canCancel = !!route?.cancelReq && !!node?.state && !isTerminal;
+  return { canApprove, canCancel };
+}
 
+/**
+ * Resets `detail`/`error`/`isLoading` during render when the selected node
+ * identity changes — React's documented "adjust state when a prop changes"
+ * idiom, kept out of the fetch effect below (see `useFetchDetail`).
+ */
+function useSyncedNodeIdentity(
+  node: OrchNode | null,
+  route: SourceRoute | null,
+  setDetail: (d: unknown | null) => void,
+  setError: (e: string | null) => void,
+  setIsLoading: (b: boolean) => void
+) {
+  const [syncedId, setSyncedId] = useState<string | undefined>(undefined);
   if (node?.id !== syncedId) {
     setSyncedId(node?.id);
     setDetail(node?.raw ?? null);
     setError(null);
     setIsLoading(!!(node && route?.detailUrl));
   }
+}
 
+/**
+ * Fetches the detail payload for `node` whenever its id changes; aborts on
+ * unmount/change. Kept as a pure "subscribe to node.id, fetch, setState from
+ * the async .then/.catch callbacks" shape with no synchronous setState call
+ * in its body, so it lints clean under `react-hooks/set-state-in-effect` with
+ * zero suppressions (same technique as the dashboard/cli-code and
+ * dashboard/settings react-hooks compiler-rule batches on this release, #12146).
+ */
+function useFetchDetail(
+  node: OrchNode | null,
+  route: SourceRoute | null,
+  setDetail: (d: unknown | null) => void,
+  setError: (e: string | null) => void,
+  setIsLoading: (b: boolean) => void
+) {
   useEffect(() => {
     if (!node || !route?.detailUrl) return;
     const controller = new AbortController();
@@ -99,29 +122,41 @@ export function useDrawerDetail(node: OrchNode | null) {
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by node identity
   }, [node?.id]);
+}
 
-  const act = async (req: { url: string; init: RequestInit } | null): Promise<boolean> => {
-    if (!req) return false;
-    try {
-      const res = await fetch(req.url, req.init);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return true;
-    } catch (err) {
-      setError(sanitizeErrorMessage(err));
-      return false;
-    }
-  };
+async function performAction(
+  req: { url: string; init: RequestInit } | null,
+  setError: (e: string | null) => void
+): Promise<boolean> {
+  if (!req) return false;
+  try {
+    const res = await fetch(req.url, req.init);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return true;
+  } catch (err) {
+    setError(sanitizeErrorMessage(err));
+    return false;
+  }
+}
+
+export function useDrawerDetail(node: OrchNode | null) {
+  const [detail, setDetail] = useState<unknown | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const route = node ? routeFor(node) : null;
+
+  useSyncedNodeIdentity(node, route, setDetail, setError, setIsLoading);
+  useFetchDetail(node, route, setDetail, setError, setIsLoading);
+
+  const { canApprove, canCancel } = deriveActionAvailability(route, node);
 
   return {
     detail,
     isLoading,
     error,
-    canApprove: !!route?.approveReq && node?.state === "waiting_approval",
-    canCancel:
-      !!route?.cancelReq &&
-      !!node?.state &&
-      !["succeeded", "failed", "cancelled"].includes(node.state),
-    approve: () => act(route?.approveReq ?? null),
-    cancel: () => act(route?.cancelReq ?? null),
+    canApprove,
+    canCancel,
+    approve: () => performAction(route?.approveReq ?? null, setError),
+    cancel: () => performAction(route?.cancelReq ?? null, setError),
   };
 }
