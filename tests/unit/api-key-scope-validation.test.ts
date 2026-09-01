@@ -47,6 +47,25 @@ test("api key validation accepts more than sixteen scopes", () => {
   assert.equal(updateKeyPermissionsSchema.safeParse({ scopes }).success, true);
 });
 
+test("createKeySchema rejects an allow-all mode with a non-empty model allowlist", () => {
+  assert.equal(
+    createKeySchema.safeParse({
+      name: "contradictory-model-policy",
+      modelAccessMode: "all",
+      allowedModels: ["openai/gpt-4.1"],
+    }).success,
+    false
+  );
+  assert.equal(
+    createKeySchema.safeParse({
+      name: "deny-all-model-policy",
+      modelAccessMode: "restricted",
+      allowedModels: [],
+    }).success,
+    true
+  );
+});
+
 test("lease scope requires an explicit non-empty connection allowlist", () => {
   const connection = "00000000-0000-4000-8000-000000000001";
   assert.equal(

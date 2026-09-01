@@ -134,6 +134,57 @@ test("POST /api/keys creates a key, preserves special characters, and persists n
   assert.equal(compliance.isNoLog(body.id), true);
 });
 
+test("POST /api/keys persists a restricted model and Combo ACL", async () => {
+  await enableManagementAuth();
+  await createManagementKey();
+
+  const response = await listRoute.POST(
+    await makeManagementSessionRequest("http://localhost/api/keys", {
+      method: "POST",
+      body: {
+        name: "Restricted Create",
+        modelAccessMode: "restricted",
+        allowedModels: [],
+        allowedCombos: ["my-combo"],
+      },
+    })
+  );
+  const body = (await response.json()) as { id: string; key: string };
+  const stored = await apiKeysDb.getApiKeyById(body.id);
+
+  assert.equal(response.status, 201);
+  assert.equal(stored?.modelAccessMode, "restricted");
+  assert.deepEqual(stored?.allowedModels, []);
+  assert.deepEqual(stored?.allowedCombos, ["my-combo"]);
+  assert.equal(await apiKeysDb.isModelAllowedForKey(body.key, "openai/gpt-4.1"), false);
+});
+
+test("POST /api/keys preserves an explicit model allowlist", async () => {
+  await enableManagementAuth();
+  await createManagementKey();
+
+  const response = await listRoute.POST(
+    await makeManagementSessionRequest("http://localhost/api/keys", {
+      method: "POST",
+      body: {
+        name: "Allowlisted Create",
+        modelAccessMode: "restricted",
+        allowedModels: ["openai/gpt-4.1"],
+      },
+    })
+  );
+  const body = (await response.json()) as { id: string; key: string };
+  const stored = await apiKeysDb.getApiKeyById(body.id);
+
+  assert.equal(response.status, 201);
+  assert.deepEqual(stored?.allowedModels, ["openai/gpt-4.1"]);
+  assert.equal(await apiKeysDb.isModelAllowedForKey(body.key, "openai/gpt-4.1"), true);
+  assert.equal(
+    await apiKeysDb.isModelAllowedForKey(body.key, "anthropic/claude-3-5-sonnet"),
+    false
+  );
+});
+
 test("POST /api/keys validates missing and oversized names", async () => {
   await enableManagementAuth();
   await createManagementKey();

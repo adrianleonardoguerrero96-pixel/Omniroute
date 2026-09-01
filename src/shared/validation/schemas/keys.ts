@@ -42,10 +42,22 @@ export const createKeySchema = z
     dailyUsageLimitUsd: z.coerce.number().min(0).optional().nullable(),
     weeklyUsageLimitUsd: z.coerce.number().min(0).optional().nullable(),
     chaosModeEnabled: z.boolean().optional(),
+    modelAccessMode: z.enum(["all", "restricted"]).optional(),
+    allowedModels: z.array(z.string().trim().min(1)).max(1000).optional(),
+    allowedCombos: z.array(z.string().trim().min(1).max(200)).max(500).optional(),
     scopes: z.array(z.string().trim().min(1).max(64)).max(32).optional(),
     allowedConnections: z.array(z.string().uuid()).min(1).max(100).optional(),
   })
-  .superRefine(requireExclusiveLeaseConnections);
+  .superRefine((value, ctx) => {
+    requireExclusiveLeaseConnections(value, ctx);
+    if (value.modelAccessMode === "all" && value.allowedModels?.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "allowedModels must be empty when modelAccessMode is 'all'",
+        path: ["allowedModels"],
+      });
+    }
+  });
 
 export const createSyncTokenSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(200),

@@ -79,6 +79,9 @@ export async function POST(request) {
       dailyUsageLimitUsd,
       weeklyUsageLimitUsd,
       chaosModeEnabled,
+      modelAccessMode,
+      allowedModels,
+      allowedCombos,
     } = validation.data;
 
     // Always get machineId from server
@@ -91,7 +94,10 @@ export async function POST(request) {
       usageLimitEnabled === true ||
       dailyUsageLimitUsd !== undefined ||
       weeklyUsageLimitUsd !== undefined ||
-      chaosModeEnabled === true
+      chaosModeEnabled === true ||
+      modelAccessMode !== undefined ||
+      allowedModels !== undefined ||
+      allowedCombos !== undefined
     ) {
       await updateApiKeyPermissions(apiKey.id, {
         ...(noLog === true && { noLog: true }),
@@ -100,6 +106,9 @@ export async function POST(request) {
         ...(dailyUsageLimitUsd !== undefined && { dailyUsageLimitUsd }),
         ...(weeklyUsageLimitUsd !== undefined && { weeklyUsageLimitUsd }),
         ...(chaosModeEnabled === true && { chaosModeEnabled: true }),
+        ...(modelAccessMode !== undefined && { modelAccessMode }),
+        ...(allowedModels !== undefined && { allowedModels }),
+        ...(allowedCombos !== undefined && { allowedCombos }),
       });
     }
 
