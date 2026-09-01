@@ -273,3 +273,14 @@ export const OUTPUT_STYLE_IDS: string[] = Object.keys(OUTPUT_STYLE_CATALOG);
 export function outputStyleMeta(id: string): OutputStyle {
   return OUTPUT_STYLE_CATALOG[id];
 }
+
+/** Sorted union of every language an output style can instruct in (i18n keys + locale gates + en). */
+export function outputStyleLanguages(): string[] {
+  const langs = new Set<string>(["en"]);
+  for (const id of OUTPUT_STYLE_IDS) {
+    const meta = OUTPUT_STYLE_CATALOG[id];
+    if (meta.locale) langs.add(meta.locale);
+    for (const lang of Object.keys(meta.i18n ?? {})) langs.add(lang);
+  }
+  return [...langs].sort();
+}
