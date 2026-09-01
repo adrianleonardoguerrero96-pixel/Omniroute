@@ -1,6 +1,5 @@
 /** OrchSnapshot → @xyflow nodes/edges with a deterministic shallow 3-layer layout. Pure. */
 import type { Edge, Node } from "@xyflow/react";
-import { edgeStyle } from "@/shared/components/flow/edgeStyles";
 import type { OrchNodeKind, OrchSnapshot, OrchSource } from "./orchestrationTypes";
 
 const LAYER_Y: Record<OrchNodeKind, number> = {
@@ -66,17 +65,13 @@ export function orchestrationToFlow(
       >,
     };
   });
-  const edges: Edge[] = visibleEdges.map((e) => {
-    const target = stateOf.get(e.to);
-    const style = edgeStyle(e.active, false, target === "failed", target === "succeeded");
-    return {
-      id: e.id,
-      source: e.from,
-      target: e.to,
-      animated: e.active,
-      style: e.kind === "mirror" ? { ...style, strokeDasharray: "6 4" } : style,
-    };
-  });
+  const edges: Edge[] = visibleEdges.map((e) => ({
+    id: e.id,
+    source: e.from,
+    target: e.to,
+    type: "status",
+    data: { state: stateOf.get(e.to), active: e.active, mirror: e.kind === "mirror" },
+  }));
 
   const workIdsKey = visibleNodes
     .filter((n) => n.kind === "work")

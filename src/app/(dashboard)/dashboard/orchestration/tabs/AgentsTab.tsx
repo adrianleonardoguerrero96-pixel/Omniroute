@@ -1,6 +1,6 @@
 "use client";
 import { useMemo } from "react";
-import type { NodeTypes, NodeMouseHandler } from "@xyflow/react";
+import type { NodeTypes, EdgeTypes, NodeMouseHandler } from "@xyflow/react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { FlowCanvas } from "@/shared/components/flow/FlowCanvas";
@@ -11,6 +11,7 @@ import { SourceNode } from "../nodes/SourceNode";
 import { WorkNode } from "../nodes/WorkNode";
 import { ActivityNode } from "../nodes/ActivityNode";
 import { OverflowNode } from "../nodes/OverflowNode";
+import { StatusEdge } from "../edges/StatusEdge";
 
 const NODE_TYPES: NodeTypes = {
   orchestrator: OrchestratorNode as never,
@@ -19,6 +20,7 @@ const NODE_TYPES: NodeTypes = {
   activity: ActivityNode as never,
   overflow: OverflowNode as never,
 };
+const EDGE_TYPES: EdgeTypes = { status: StatusEdge as never };
 
 export function AgentsTab({
   snapshot,
@@ -71,6 +73,7 @@ export function AgentsTab({
         nodes={nodes}
         edges={edges}
         nodeTypes={NODE_TYPES}
+        edgeTypes={EDGE_TYPES}
         fitKey={fitKey}
         onNodeClick={handleClick}
         className="h-full"

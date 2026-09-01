@@ -840,4 +840,7 @@ html[dir="rtl"] :where(.material-symbols-outlined, .traffic-lights, .react-flow)
     animation: none;
     stroke-dasharray: none;
   }
+  .orchestration-canvas .orch-edge-particle {
+    display: none;
+  }
 }

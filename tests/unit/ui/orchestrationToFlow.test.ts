@@ -65,11 +65,32 @@ describe("orchestrationToFlow", () => {
     assert.equal(ys.get("source:a2a"), 150);
     assert.equal(ys.get("a2a:t1"), 320);
   });
-  it("active edge is animated; edge to failed work is red", () => {
+  it('edges carry type "status" and data.{state,active,mirror}; no animated/style leak', () => {
     const { edges } = orchestrationToFlow(snap);
-    assert.equal(edges.find((e) => e.id === "e2")?.animated, true);
-    const failedEdge = edges.find((e) => e.id === "e3");
-    assert.equal((failedEdge?.style as { stroke?: string })?.stroke, "#ef4444");
+    const activeEdge = edges.find((e) => e.id === "e2");
+    assert.equal(activeEdge?.type, "status");
+    assert.deepEqual(activeEdge?.data, { state: "running", active: true, mirror: false });
+    assert.equal((activeEdge as { animated?: boolean }).animated, undefined);
+    assert.equal((activeEdge as { style?: unknown }).style, undefined);
+
+    const edgeToFailed = edges.find((e) => e.id === "e3");
+    assert.equal(edgeToFailed?.type, "status");
+    assert.deepEqual(edgeToFailed?.data, { state: "failed", active: false, mirror: false });
+  });
+  it("mirror edges carry data.mirror === true", () => {
+    const mirrorSnap: OrchSnapshot = {
+      ...snap,
+      edges: [
+        ...snap.edges,
+        { id: "e4", from: "a2a:t1", to: "source:a2a", kind: "mirror", active: false },
+      ],
+    };
+    const { edges } = orchestrationToFlow(mirrorSnap);
+    const mirrorEdge = edges.find((e) => e.id === "e4");
+    assert.equal(mirrorEdge?.type, "status");
+    assert.equal((mirrorEdge?.data as { mirror?: boolean })?.mirror, true);
+    const ownsEdge = edges.find((e) => e.id === "e2");
+    assert.equal((ownsEdge?.data as { mirror?: boolean })?.mirror, false);
   });
   it("fitKey only tracks the set of work ids", () => {
     const k1 = orchestrationToFlow(snap).fitKey;

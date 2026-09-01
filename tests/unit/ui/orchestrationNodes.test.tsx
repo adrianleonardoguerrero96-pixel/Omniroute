@@ -19,8 +19,10 @@ vi.mock("next-intl", () => ({
     v ? `${k}:${JSON.stringify(v)}` : k,
 }));
 
+import type { EdgeProps } from "@xyflow/react";
 import { WorkNode } from "@/app/(dashboard)/dashboard/orchestration/nodes/WorkNode";
 import { SourceNode } from "@/app/(dashboard)/dashboard/orchestration/nodes/SourceNode";
+import { StatusEdge } from "@/app/(dashboard)/dashboard/orchestration/edges/StatusEdge";
 
 function render(el: React.ReactElement) {
   const c = document.createElement("div");
@@ -66,6 +68,52 @@ describe("orchestration nodes", () => {
     };
     const { c, cleanup } = render(<SourceNode data={data as never} />);
     expect(c.textContent).toContain("⚠");
+    cleanup();
+  });
+});
+
+describe("StatusEdge", () => {
+  const baseProps = {
+    id: "e1",
+    source: "a",
+    target: "b",
+    sourceX: 0,
+    sourceY: 0,
+    targetX: 100,
+    targetY: 100,
+    sourcePosition: "bottom",
+    targetPosition: "top",
+  };
+
+  it("data.active renders PARTICLES ellipses, each starting opacity=0 with a paired <set> reveal", () => {
+    const props = { ...baseProps, data: { state: "running", active: true, mirror: false } };
+    const { c, cleanup } = render(
+      <svg>
+        <StatusEdge {...(props as unknown as EdgeProps)} />
+      </svg>
+    );
+    const ellipses = c.querySelectorAll("ellipse.orch-edge-particle");
+    expect(ellipses.length).toBe(3);
+    ellipses.forEach((ellipse) => {
+      expect(ellipse.getAttribute("opacity")).toBe("0");
+      const set = ellipse.querySelector("set");
+      expect(set).toBeTruthy();
+      expect(set?.getAttribute("attributeName")).toBe("opacity");
+      expect(set?.getAttribute("to")).toBe("1");
+      expect(set?.getAttribute("fill")).toBe("freeze");
+      expect(ellipse.querySelector("animateMotion")).toBeTruthy();
+    });
+    cleanup();
+  });
+
+  it("without data.active there is no particle ellipse", () => {
+    const props = { ...baseProps, data: { state: "succeeded", active: false, mirror: false } };
+    const { c, cleanup } = render(
+      <svg>
+        <StatusEdge {...(props as unknown as EdgeProps)} />
+      </svg>
+    );
+    expect(c.querySelectorAll("ellipse.orch-edge-particle").length).toBe(0);
     cleanup();
   });
 });
