@@ -6450,7 +6450,12 @@
     "savedModelEndpointSettings": "Configurações do endpoint do modelo salvo",
     "searchByModelAria": "Pesquisar por modelo",
     "selectSupportedEndpoint": "Selecione pelo menos um endpoint suportado",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Limpar cooldown",
+    "clearConnectionCooldownInProgress": "Limpando…",
+    "clearConnectionCooldownTitle": "Limpar o cooldown agora — use quando a cota já foi renovada no upstream",
+    "connectionCooldownCleared": "Cooldown limpo — a conexão voltou ao roteamento",
+    "failedClearConnectionCooldown": "Falha ao limpar cooldown"
   },
   "settings": {
     "title": "Configurações",
@@ -13378,6 +13383,9 @@
     "colProvider": "Provedor",
     "colModel": "Modelo",
     "colQuota": "Cota",
+    "colLimits": "Limites",
+    "trainsOnPrompts": "Treina com prompts",
+    "trainsOnPromptsHelp": "Este provedor declara que pode usar seus prompts para treinar modelos",
     "colContext": "Contexto",
     "colCapabilities": "Capacidades",
     "colTos": "Risco ToS",
