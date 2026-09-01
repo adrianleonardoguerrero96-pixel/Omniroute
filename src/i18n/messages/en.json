@@ -989,6 +989,7 @@
   "featureFlagArenaEloSyncEnabledDescription": "Enable periodic Arena AI leaderboard ELO sync for model intelligence rankings.",
   "featureFlagUniversalContextHandoffEnabledDescription": "Generate and inject conversation summaries when combo routing switches models. Disable to treat model switches independently and prevent background handoff requests for all existing and future combos.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Advertise claude/&lt;provider&gt;/&lt;model&gt; mirror ids on /v1/models so Claude Code gateway model discovery lists non-Claude models. Warning: doubles catalog entries for all clients when enabled globally.",
+  "featureFlagNoThinkingAliasEnabledDescription": "Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "Enable per-tenant adaptive virtual admission lanes for provider dispatch (#9654): one tenant's burst no longer 503s another. The OMNIROUTE_CHAT_VIRTUAL_LANES env var wins over this dashboard override; changes take effect at server restart.",
   "sidebar": {
     "home": "Home",
@@ -1292,6 +1293,8 @@
     "discoverySubtitle": "Scan providers for free access",
     "conductor": "Conductor",
     "conductorSubtitle": "CLI-agent fleet",
+    "orchestration": "Orchestration",
+    "orchestrationSubtitle": "Live view of everything running",
     "resilienceConnections": "Connection Resilience",
     "resilienceConnectionsSubtitle": "Cooldown, breaker, lockout state",
     "settingsModalityBridge": "Modality Bridge",
@@ -1770,7 +1773,8 @@
     "tools": "Tools",
     "agentBridge": "Agent Bridge",
     "trafficInspector": "Traffic Inspector",
-    "usage": "Usage"
+    "usage": "Usage",
+    "orchestration": "Orchestration"
   },
   "home": {
     "quickStart": "Quick Start",
@@ -5884,6 +5888,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Minimum time (ms) between requests. Overrides the default rate limiter delay.",
     "rateLimitOverridesMinTimeLabel": "Min Interval (ms)",
+    "rateLimitOverridesRpdHint": "Max requests per day for this connection. Overrides the provider default.",
+    "rateLimitOverridesRpdLabel": "RPD (Requests/day)",
     "rateLimitOverridesRpmHint": "Max requests per minute for this connection. Overrides the provider default.",
     "rateLimitOverridesRpmLabel": "RPM (Requests/min)",
     "rateLimitOverridesTpdHint": "Max tokens per day for this connection. Overrides the provider default.",
@@ -9217,6 +9223,13 @@
     "grokAutoTopUpMax": "max",
     "grokAutoTopUpMonth": "month",
     "grokAdditionalCredits": "Additional Credits",
+    "kiloAccountBalance": "Account Balance",
+    "kiloPassBonus": "Available bonus",
+    "kiloPassMeterLabel": "Kilo Pass usage meter",
+    "kiloPassPaid": "Paid",
+    "kiloPassRemaining": "Remaining",
+    "kiloPassRenews": "Renews {count} days",
+    "kiloPassUsageLabel": "This month's usage",
     "kimiExtraUsageCredits": "Extra Usage Credits",
     "kimiExtraUsage": "Extra Usage",
     "kimiExtraUsageEnabled": "Enabled",
@@ -11247,7 +11260,8 @@
       "tps": "TPS",
       "duration": "Duration",
       "time": "Time",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",
@@ -12311,7 +12325,7 @@
       },
       "omni-mcp": {
         "name": "MCP Server",
-        "description": "Connect to the OmniRoute MCP server (37 tools, 3 transports: SSE/stdio/HTTP). Covers routing, cache, compression, memory, skills, providers, and audit tools across 16 permission scopes."
+        "description": "Connect to the OmniRoute MCP server (110 tools, 3 transports: SSE/stdio/HTTP). Covers routing, cache, compression, memory, skills, providers, and audit tools across 33 permission scopes."
       },
       "omni-agents-a2a": {
         "name": "Agents & A2A Protocol",
@@ -13912,6 +13926,41 @@
     "ttsFailed": "Speech synthesis failed (check the TTS model/provider)",
     "micDenied": "Microphone unavailable or permission denied"
   },
+  "orchestration": {
+    "title": "Orchestration",
+    "description": "Everything OmniRoute is running right now — agents, fleet and routing",
+    "tabAgents": "Agents",
+    "tabRouting": "Routing",
+    "tabOverview": "Overview",
+    "showCompleted": "Show completed",
+    "sourceCloudAgent": "Cloud Agent",
+    "sourceA2A": "A2A",
+    "sourceConductor": "Conductor",
+    "sourceStale": "Stale since {since}",
+    "sourceOffline": "Offline",
+    "stateQueued": "Queued",
+    "stateRunning": "Running",
+    "stateWaitingApproval": "Waiting approval",
+    "stateSucceeded": "Succeeded",
+    "stateFailed": "Failed",
+    "stateCancelled": "Cancelled",
+    "overflowMore": "+{count} more",
+    "emptyTitle": "Nothing running yet",
+    "emptyCloudAgentCta": "Set up Cloud Agents",
+    "emptyA2ACta": "Open A2A",
+    "emptyConductorCta": "Open Conductor",
+    "drawerObjective": "Objective",
+    "drawerTimeline": "Timeline",
+    "drawerMetrics": "Metrics",
+    "drawerResult": "Result",
+    "drawerActions": "Actions",
+    "actionApprove": "Approve plan",
+    "actionCancel": "Cancel",
+    "actionSeeInGraph": "See in graph",
+    "actionDone": "Action applied",
+    "actionFailed": "Action failed: {error}",
+    "mirroredInA2A": "Mirrored in A2A"
+  },
   "cliproxyProviderExposure": {
     "title": "Provider Exposure",
     "description": "Expose CLIProxyAPI models as a routing target under the <prefix>cliproxyapi/</prefix> prefix.",
@@ -13986,5 +14035,6 @@
     "cta": "Get an API Key",
     "partnerLinkNote": "Partner link",
     "dismissAriaLabel": "Dismiss"
-  }
+  },
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }
