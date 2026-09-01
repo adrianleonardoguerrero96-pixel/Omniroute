@@ -38,8 +38,8 @@ const KNOWN_ENGLISH_ONLY: Record<string, string> = {
  */
 const BASELINE_LANGUAGES: Record<string, string[]> = {
   // terse-prose reuses CAVEMAN_INSTRUCTION_BY_LANGUAGE (outputMode.ts), which
-  // localizes to pt-BR/ja/id/vi — keep the two in sync when adding a language.
-  "terse-prose": ["pt-BR", "ja", "id", "vi"],
+  // localizes to pt-BR/es/de/fr/it/ru/zh/ja/id/vi — keep the two in sync.
+  "terse-prose": ["pt-BR", "es", "de", "fr", "it", "ru", "zh", "ja", "id", "vi"],
   "less-code": ["pt-BR", "vi", "ja", "id"],
   ponytail: ["pt-BR", "vi", "ja", "id"],
   "i-have-adhd": ["pt-BR", "vi", "ja", "id"],
