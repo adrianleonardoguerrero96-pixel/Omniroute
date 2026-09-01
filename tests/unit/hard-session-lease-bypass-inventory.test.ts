@@ -26,7 +26,10 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "src/app/api/v1/audio/transcriptions/route.ts": 2,
     "src/app/api/v1/audio/translations/route.ts": 1,
     "src/app/api/v1/classify/route.ts": 1,
-    "src/app/api/v1/images/edits/route.ts": 6,
+    // v3.8.51 #11754: the second resolveImageRouteModel() call (a duplicate
+    // of the retirement-check one hoisted before enforceApiKeyPolicy) was
+    // removed as dead redundant code, 6->5.
+    "src/app/api/v1/images/edits/route.ts": 5,
     "src/app/api/v1/images/generations/route.ts": 3,
     "src/app/api/v1/images/upscale/route.ts": 1,
     "src/app/api/v1/messages/count_tokens/route.ts": 1,
@@ -57,9 +60,12 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "open-sse/handlers/chatCore.ts": 3,
     "open-sse/handlers/chatCore/cliproxyModelMapping.ts": 1,
     "open-sse/handlers/chatCore/cliproxyapiCredentials.ts": 1,
-    "open-sse/handlers/imageGeneration.ts": 1,
-    "open-sse/handlers/imageGeneration/providers/chatgptWeb.ts": 1,
-    "open-sse/handlers/imageGeneration/providers/geminiWeb.ts": 1,
+    // v3.8.51 #11754: the retired common ChatGPT Web's synthetic
+    // image-edit-continuation ChatGptWebExecutor.execute() call (the sole
+    // executor.execute() site in this file) was removed with the provider;
+    // no executor site remains here.
+    // Gemini Web's own image handler+file (open-sse/handlers/imageGeneration/providers/geminiWeb.ts)
+    // was already retired by #11708 (its .execute() site removed then too).
     "open-sse/handlers/videoGeneration.ts": 1,
     "open-sse/services/compression/eval/executorModelClient.ts": 1,
     "src/lib/compression/judgeModelClient.ts": 1,
@@ -85,6 +91,7 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "src/app/api/models/route.ts": 1,
     "src/app/api/monitoring/health/route.ts": 1,
     "src/app/api/oauth/[provider]/[action]/route.ts": 4,
+    "src/app/api/oauth/codex/import/route.ts": 1,
     "src/app/api/oauth/kiro/api-key/route.ts": 1,
     "src/app/api/oauth/kiro/auto-import/route.ts": 2,
     "src/app/api/oauth/kiro/import/route.ts": 1,
@@ -97,7 +104,10 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "src/app/api/providers/client/route.ts": 1,
     "src/app/api/providers/free-onboarding/route.ts": 2,
     "src/app/api/providers/import/route.ts": 1,
-    "src/app/api/providers/route.ts": 2,
+    // Base drift (already present before #11754 boarded, from earlier-merged
+    // #11698/#11720 retirement PRs): a third getProviderConnections-family
+    // call site landed here without a golden-inventory update at the time.
+    "src/app/api/providers/route.ts": 3,
     "src/app/api/providers/test-batch/route.ts": 2,
     "src/app/api/rate-limits/route.ts": 1,
     "src/app/api/services/dario/admin/import-from-omniroute/route.ts": 2,
@@ -121,6 +131,10 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "src/lib/combos/builderOptions.ts": 1,
     "src/lib/copilot/tools.ts": 1,
     "src/lib/credentialHealth/scheduler.ts": 1,
+    // Base drift (already present before #11754 boarded, from earlier-merged
+    // #11698/#11720 retirement PRs' combined getProviderConnectionById
+    // fallback in the three write-path functions): not introduced by this PR.
+    "src/lib/db/providers.ts": 3,
     "src/lib/db/readCache.ts": 2,
     "src/lib/freeProviderRankings.ts": 1,
     "src/lib/guardrails/visionBridgeCredentials.ts": 1,
@@ -134,10 +148,19 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "src/lib/oauth/utils/codexAuthImport.ts": 1,
     "src/lib/providerModels/managedModelImport.ts": 1,
     "src/lib/providers/codexConnectionDefaults.ts": 1,
+    // Volcano Ark plan connect flow (commit d732cf615): both are connection *persistence*
+    // sites, not dispatch. volcenginePlanBinding looks the plan connection up by name to
+    // decide update-vs-create during connect (same shape as oauth/connectionPersistence);
+    // volcPlanAutoSyncBackfill is a one-shot boot backfill that patches a providerSpecificData
+    // flag and issues no upstream call. Neither selects a connection to serve a request, so
+    // both stay class C (see CLASSIFICATION below).
+    "src/lib/providers/volcPlanAutoSyncBackfill.ts": 1,
+    "src/lib/providers/volcenginePlanBinding.ts": 1,
     "src/lib/proxyEgress.ts": 1,
     "src/lib/quota/connectionRecovery.ts": 2,
     "src/lib/sync/bundle.ts": 1,
-    "src/lib/tokenHealthCheck.ts": 1,
+    // #11495: verify-only sweep queries oauth + cookie connections
+    "src/lib/tokenHealthCheck.ts": 2,
     "src/lib/tokenHealthCheckCopilot.ts": 1,
     "src/lib/usage/callLogs.ts": 1,
     "src/lib/usage/codexResetCredits.ts": 1,
@@ -169,9 +192,6 @@ const CLASSIFICATION: Record<InventoryKind, Record<string, BypassClass>> = {
     "open-sse/handlers/chatCore.ts": "A",
     "open-sse/handlers/chatCore/cliproxyModelMapping.ts": "A",
     "open-sse/handlers/chatCore/cliproxyapiCredentials.ts": "A",
-    "open-sse/handlers/imageGeneration.ts": "B",
-    "open-sse/handlers/imageGeneration/providers/chatgptWeb.ts": "B",
-    "open-sse/handlers/imageGeneration/providers/geminiWeb.ts": "B",
     "open-sse/handlers/videoGeneration.ts": "B",
     "open-sse/services/compression/eval/executorModelClient.ts": "B",
     "src/lib/compression/judgeModelClient.ts": "B",
@@ -183,6 +203,7 @@ const CLASSIFICATION: Record<InventoryKind, Record<string, BypassClass>> = {
       [
         "open-sse/handlers/autoComboCandidates.ts",
         "open-sse/handlers/chatCore.ts",
+        "open-sse/services/combo.ts",
         "open-sse/services/alibabaFreeTier.ts",
         "open-sse/services/alibabaFreeTierQuotaFetcher.ts",
         "open-sse/services/combo.ts",
@@ -290,11 +311,14 @@ test("managed request surfaces are fenced centrally or rejected before independe
     "src/lib/api/modelTestRunner.ts",
     "src/lib/services/quotaAutoPing.ts",
     "src/lib/usage/codexResetCredits.ts",
-    "src/lib/usage/providerLimits.ts",
     "src/lib/vncSession/service.ts",
     "src/lib/warmupScheduler.ts",
     "src/shared/services/modelSyncScheduler.ts",
   ].map((file) => fs.readFileSync(path.join(REPO_ROOT, file), "utf8"));
+  const unfencedUsageRefreshSource = fs.readFileSync(
+    path.join(REPO_ROOT, "src/lib/usage/providerLimits.ts"),
+    "utf8"
+  );
 
   assert.match(chat, /parseManagedLeaseRequestContext\(request\.headers\)/);
   assert.match(chat, /isManagedComboUnsupported/);
@@ -309,6 +333,10 @@ test("managed request surfaces are fenced centrally or rejected before independe
   for (const source of auxiliaryIsolationSources) {
     assert.match(source, /isConnectionUnavailableToAuxiliaryActivity/);
   }
+  // Usage/quota refresh is read-only admin telemetry (#11758) and must not inherit
+  // the exclusive-lease auxiliary fence that blocks model tests, translation, VNC,
+  // reset-credits, and warmup.
+  assert.doesNotMatch(unfencedUsageRefreshSource, /isConnectionUnavailableToAuxiliaryActivity/);
 });
 
 test("SQLite claim-race retry removes only the lost candidate from the same policy-valid set", () => {

@@ -16,6 +16,10 @@ import { isTurbopackCacheCorruption, purgeAllTurbopackCaches } from "./turbopack
 import { randomUUID } from "node:crypto";
 import { getMainServerTimeoutConfig } from "./main-server-timeouts.mjs";
 import { createSystemdNotifier } from "./systemd-notify.mjs";
+import {
+  attachRequestStreamGuards,
+  installProcessCrashGuard,
+} from "./httpClientAbortGuard.mjs";
 
 const { maybeHandleDisallowedMethod } = methodGuard;
 const { wrapRequestListenerWithHeadResponseGuard } = headResponseGuard;
@@ -133,6 +137,11 @@ function createNextApp() {
   });
 }
 
+// The custom HTTP server owns process exit. Application instrumentation still
+// registers its cleanup function, but must not install a competing signal
+// listener that can race this runner's async server/Next teardown.
+globalThis.__omnirouteCustomServerOwnsShutdown = true;
+
 let nextApp = createNextApp();
 
 // Best-effort self-heal for a corrupted Turbopack persistent dev cache (#6289):
@@ -162,6 +171,13 @@ async function prepareWithHeal() {
 }
 
 async function start() {
+  // Safety net: a client aborting a connection (browser navigation, HMR reconnect,
+  // Back/Forward cache) can emit `Error: aborted`/`ECONNRESET` on the request
+  // stream. Without this the single missed listener becomes an uncaughtException
+  // that takes the whole server down — surfacing as a wall of ERR_CONNECTION_REFUSED
+  // after login. Benign aborts are swallowed; genuine errors still crash loudly.
+  installProcessCrashGuard();
+
   await prepareWithHeal();
 
   const requestHandler = nextApp.getRequestHandler();
@@ -176,6 +192,10 @@ async function start() {
 
   const server = http.createServer(
     wrapRequestListenerWithHeadResponseGuard((req, res) => {
+      // Absorb client-abort errors (browser closes the socket during
+      // navigation/HMR/bfcache) on the request/response streams so they never
+      // surface as an uncaughtException that kills the whole server (#fix-dev-server-aborted).
+      attachRequestStreamGuards(req, res);
       if (maybeHandleDisallowedMethod(req, res)) return;
       // Stamp the real TCP peer IP before Next sees the request, so the authz
       // middleware can decide LOCAL_ONLY locality without trusting the Host header.
@@ -216,6 +236,7 @@ async function start() {
     systemdNotifier.stopping();
     try {
       await new Promise((resolve) => server.close(resolve));
+      await globalThis.__omnirouteRequestShutdown?.(signal);
       await nextApp.close();
     } catch (error) {
       console.error("[SHUTDOWN] Failed during signal:", signal, error);

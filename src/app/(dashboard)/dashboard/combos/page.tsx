@@ -54,6 +54,16 @@ import KimiComboPresetCard from "./KimiComboPresetCard";
 import { KIMI_CODING_PRESET, hasKimiCodingPreset } from "./kimiComboPreset";
 import BuilderIntelligentStep from "./BuilderIntelligentStep";
 import IntelligentComboPanel from "./IntelligentComboPanel";
+import { ComboSortSelect } from "./ComboSortSelect";
+import {
+  sortComboStepsSync,
+  sortComboStepsByScore,
+  fetchProviderRankings,
+  normalizeSortMethod,
+  isValidSortMethod,
+  type SortMethod,
+} from "@/lib/combos/comboSort";
+import type { ComboStep } from "@/lib/combos/steps";
 import {
   filterCombosByStrategyCategory,
   getStrategyCategory,
@@ -376,6 +386,17 @@ const STRATEGY_RECOMMENDATIONS_FALLBACK = {
 };
 
 const COMBO_USAGE_GUIDE_STORAGE_KEY = "omniroute:combos:hide-usage-guide";
+
+// Pure predicate hoisted out of the page component to keep its cyclomatic budget flat
+// (check:complexity new-code mode).
+function isStaleIntelligentSelection(
+  intelligentCombos: Array<{ id: string }>,
+  selectedId: string | null
+): boolean {
+  if (selectedId === null) return false;
+  if (intelligentCombos.length === 0) return true;
+  return !intelligentCombos.some((combo) => combo.id === selectedId);
+}
 const COMBO_FORM_STAGE_META = [
   {
     id: "basics",
@@ -739,7 +760,15 @@ export default function CombosPage() {
   const [proxyConfig, setProxyConfig] = useState(null);
   const { comboProxyAssignedIds, fetchComboProxyAssignments } = useComboProxyAssignments();
   const [providerNodes, setProviderNodes] = useState([]);
-  const [showUsageGuide, setShowUsageGuide] = useState(true);
+  const [showUsageGuide, setShowUsageGuide] = useState(() => {
+    // Lazy initializer instead of a mount effect (react-hooks/set-state-in-effect).
+    try {
+      return globalThis.localStorage?.getItem(COMBO_USAGE_GUIDE_STORAGE_KEY) !== "1";
+    } catch {
+      // Ignore storage access errors (privacy mode / restricted environments)
+      return true;
+    }
+  });
   const [recentlyCreatedCombo, setRecentlyCreatedCombo] = useState("");
   const [creatingKimiPreset, setCreatingKimiPreset] = useState(false);
   const [comboDragIndex, setComboDragIndex] = useState(null);
@@ -771,45 +800,11 @@ export default function CombosPage() {
     return activeFilter === "intelligent" ? intelligentCombos[0] : null;
   }, [activeFilter, intelligentCombos, selectedIntelligentComboId]);
 
-  useEffect(() => {
-    if (intelligentCombos.length === 0) {
-      setSelectedIntelligentComboId(null);
-      return;
-    }
-
-    if (
-      selectedIntelligentComboId &&
-      !intelligentCombos.some((combo) => combo.id === selectedIntelligentComboId)
-    ) {
-      setSelectedIntelligentComboId(null);
-    }
-  }, [intelligentCombos, selectedIntelligentComboId]);
-
-  useEffect(() => {
-    fetchData();
-    fetch("/api/settings")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((settings) => setComboConfigMode(normalizeComboConfigMode(settings?.comboConfigMode)))
-      .catch(() => setComboConfigMode("guided"));
-    fetch("/api/settings/compression")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((settings) => setPromptCompressionEnabled(settings?.enabled === true))
-      .catch(() => setPromptCompressionEnabled(false));
-    fetch("/api/settings/proxy")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((c) => setProxyConfig(c))
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    try {
-      if (globalThis.localStorage?.getItem(COMBO_USAGE_GUIDE_STORAGE_KEY) === "1") {
-        setShowUsageGuide(false);
-      }
-    } catch {
-      // Ignore storage access errors (privacy mode / restricted environments)
-    }
-  }, []);
+  // Drop a stale selection when the list no longer contains it — state adjustment
+  // during render (react-hooks/set-state-in-effect).
+  if (isStaleIntelligentSelection(intelligentCombos, selectedIntelligentComboId)) {
+    setSelectedIntelligentComboId(null);
+  }
 
   const fetchData = async () => {
     try {
@@ -837,6 +832,27 @@ export default function CombosPage() {
       setLoading(false);
     }
   };
+
+  // Mount load — placed after fetchData so the effect does not read the binding in its
+  // TDZ (react-hooks/immutability); the call sits behind an async boundary
+  // (react-hooks/set-state-in-effect).
+  useEffect(() => {
+    void (async () => {
+      await fetchData();
+    })();
+    fetch("/api/settings")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((settings) => setComboConfigMode(normalizeComboConfigMode(settings?.comboConfigMode)))
+      .catch(() => setComboConfigMode("guided"));
+    fetch("/api/settings/compression")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((settings) => setPromptCompressionEnabled(settings?.enabled === true))
+      .catch(() => setPromptCompressionEnabled(false));
+    fetch("/api/settings/proxy")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((c) => setProxyConfig(c))
+      .catch(() => {});
+  }, []);
 
   const handleCreate = async (data) => {
     try {
@@ -895,6 +911,9 @@ export default function CombosPage() {
       if (res.ok) {
         setCombos(combos.filter((c) => c.id !== id));
         notify.success(t("comboDeleted"));
+      } else {
+        const err = await res.json().catch(() => null);
+        notify.error(err?.error?.message || err?.error || t("errorDeleting"));
       }
     } catch (error) {
       notify.error(t("errorDeleting"));
@@ -2026,6 +2045,29 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
   const [builderStage, setBuilderStage] = useState<string>(COMBO_BUILDER_STAGES[0]);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [config, setConfig] = useState(sanitizeComboRuntimeConfig(combo?.config));
+  // Validate persisted enum; ensure reset on combo change not just first mount.
+  const initialSortMethod = normalizeSortMethod(
+    (config.modelSort as { method?: unknown } | undefined)?.method
+  );
+  const [sortMethod, setSortMethod] = useState<SortMethod>(initialSortMethod);
+  // Sync point: when the combo identity changes, re-derive sort method — state
+  // adjustment during render (react-hooks/set-state-in-effect). Manual edits via
+  // handleSortChange already set sortMethod inside resetFormForCombo; this guards the
+  // modal-reuse case (edit-A→close→edit-B without unmount).
+  const [prevSortComboId, setPrevSortComboId] = useState(combo?.id);
+  if (combo?.id !== prevSortComboId) {
+    setPrevSortComboId(combo?.id);
+    setSortMethod(normalizeSortMethod(combo?.config?.modelSort?.method));
+  }
+  const modelsRef = useRef(models);
+  const sortMethodRef = useRef<SortMethod>(sortMethod);
+  const resetSortGenerationRef = useRef(0);
+  useEffect(() => {
+    modelsRef.current = models;
+  }, [models]);
+  useEffect(() => {
+    sortMethodRef.current = sortMethod;
+  }, [sortMethod]);
   const [showStrategyNudge, setShowStrategyNudge] = useState(false);
   const strategyChangeMountedRef = useRef(false);
   // Agent features (#399 / #401 / #454)
@@ -2060,9 +2102,34 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
             Object.fromEntries(Object.entries(nextDefaults).filter(([key]) => key !== "strategy"))
           );
 
+      // Validate persisted enum; tolerate hand-edited DB values.
+      const loadedMethod = normalizeSortMethod(nextCombo?.config?.modelSort?.method);
+      // Generation guard so a stale score fetch can't clobber the next combo.
+      const myGen = ++resetSortGenerationRef.current;
+      setSortMethod(loadedMethod);
+      sortMethodRef.current = loadedMethod;
       setName(nextCombo?.name || "");
       setDescription(nextCombo?.description || "");
-      setModels((nextCombo?.models || []).map((m) => normalizeModelEntry(m)));
+      // Branch so only one setModels runs (no raw-then-sorted double set).
+      // Score branch is async; guard with generation + cancelled from the caller's effect.
+      if (loadedMethod === "manual") {
+        setModels((nextCombo?.models || []).map((m) => normalizeModelEntry(m)));
+      } else if (loadedMethod === "score") {
+        const base = (nextCombo?.models || []).map((mm) => normalizeModelEntry(mm)) as ComboStep[];
+        fetchProviderRankings()
+          .then((rk) => sortComboStepsByScore(base, rk))
+          .then((sorted) => {
+            if (resetSortGenerationRef.current !== myGen) return;
+            setModels(sorted as typeof base);
+          })
+          .catch(() => {
+            if (resetSortGenerationRef.current !== myGen) return;
+            setModels(base);
+          });
+      } else {
+        const base = (nextCombo?.models || []).map((mm) => normalizeModelEntry(mm)) as ComboStep[];
+        setModels(sortComboStepsSync(base, loadedMethod));
+      }
       setStrategy(nextCombo?.strategy || comboDefaults?.strategy || "priority");
       setConfig(nextConfig);
       setShowAdvanced(isExpertMode);
@@ -2102,11 +2169,11 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
     contextLength,
   ]);
 
-  useEffect(() => {
-    if (!comboBuilderStages.includes(builderStage)) {
-      setBuilderStage("strategy");
-    }
-  }, [builderStage, comboBuilderStages]);
+  // Keep the stage on a real option — self-extinguishing state adjustment during
+  // render (react-hooks/set-state-in-effect).
+  if (!comboBuilderStages.includes(builderStage)) {
+    setBuilderStage("strategy");
+  }
 
   const hasPricingForModel = useCallback(
     (modelValue) => {
@@ -2177,6 +2244,9 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
             builderConnectionId !== COMBO_BUILDER_AUTO_CONNECTION ? builderConnectionId : null,
           connectionLabel: selectedBuilderConnection?.label || null,
           allowedConnectionIds: builderEffectiveAllowedConnectionIds,
+          // #11433: use the already-corrected routing prefix (e.g. "oc" for
+          // OpenCode Free) instead of letting it default to the raw providerId.
+          modelPrefix: parseQualifiedModel(selectedBuilderModel.qualifiedModel)?.providerId,
         })
       : null;
   const builderHasDuplicate =
@@ -2336,36 +2406,39 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
   };
 
   useEffect(() => {
-    if (isOpen) fetchModalData();
+    // Async continuation — see react-hooks/set-state-in-effect.
+    if (isOpen) {
+      void (async () => {
+        await fetchModalData();
+      })();
+    }
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    setBuilderProviderId("");
-    setBuilderModelId("");
-    setBuilderConnectionId(COMBO_BUILDER_AUTO_CONNECTION);
-    setBuilderAllowedConnectionIds([]);
-    setManualModelInput("");
-    setManualModelError("");
-    setBuilderComboRefName("");
-    setBuilderError("");
-    setBuilderStage("basics");
-  }, [combo?.id, isOpen]);
+  // Reset the builder inputs whenever the modal (re)opens or switches combos —
+  // state adjustment during render (react-hooks/set-state-in-effect).
+  const [prevBuilderResetKey, setPrevBuilderResetKey] = useState<{
+    comboId: string | undefined;
+    isOpen: boolean;
+  }>({ comboId: combo?.id, isOpen });
+  if (prevBuilderResetKey.comboId !== combo?.id || prevBuilderResetKey.isOpen !== isOpen) {
+    setPrevBuilderResetKey({ comboId: combo?.id, isOpen });
+    if (isOpen) {
+      setBuilderProviderId("");
+      setBuilderModelId("");
+      setBuilderConnectionId(COMBO_BUILDER_AUTO_CONNECTION);
+      setBuilderAllowedConnectionIds([]);
+      setManualModelInput("");
+      setManualModelError("");
+      setBuilderComboRefName("");
+      setBuilderError("");
+      setBuilderStage("basics");
+    }
+  }
 
   useEffect(() => {
     if (!isOpen) return;
 
     let cancelled = false;
-
-    if (combo) {
-      resetFormForCombo(combo);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    createDraftStateRef.current = getEmptyCreateDraftSnapshot();
-    resetFormForCombo(null, null);
 
     const loadDefaults = async () => {
       try {
@@ -2392,20 +2465,30 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
       }
     };
 
-    loadDefaults();
+    // Async continuation — the compiler rejects sync calls to setter-capturing
+    // callbacks from the effect body (react-hooks/set-state-in-effect).
+    void (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      if (combo) {
+        resetFormForCombo(combo);
+        return;
+      }
+      createDraftStateRef.current = getEmptyCreateDraftSnapshot();
+      resetFormForCombo(null, null);
+      await loadDefaults();
+    })();
 
     return () => {
       cancelled = true;
     };
   }, [combo, getEmptyCreateDraftSnapshot, isExpertMode, isOpen, resetFormForCombo]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    if (builderProviderId) return;
-    if (builderProviders.length === 1) {
-      setBuilderProviderId(builderProviders[0].providerId);
-    }
-  }, [builderProviderId, builderProviders, isOpen]);
+  // Default to the only available provider — self-extinguishing state adjustment
+  // during render (react-hooks/set-state-in-effect).
+  if (isOpen && !builderProviderId && builderProviders.length === 1) {
+    setBuilderProviderId(builderProviders[0].providerId);
+  }
 
   useEffect(() => {
     if (!strategyChangeMountedRef.current) {
@@ -2501,6 +2584,9 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
         builderConnectionId !== COMBO_BUILDER_AUTO_CONNECTION ? builderConnectionId : null,
       connectionLabel: selectedBuilderConnection?.label || null,
       allowedConnectionIds: builderEffectiveAllowedConnectionIds,
+      // #11433: use the already-corrected routing prefix (e.g. "oc" for
+      // OpenCode Free) instead of letting it default to the raw providerId.
+      modelPrefix: parseQualifiedModel(selectedBuilderModel.qualifiedModel)?.providerId,
     });
 
     if (hasExactModelStepDuplicate(models, nextStep)) {
@@ -2591,7 +2677,10 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
     setBuilderError("");
   };
 
-  const handleAddModel = (model) => {
+  const handleAddModel = async (model) => {
+    // Use refs to avoid stale closure when awaiting a score fetch.
+    const currentModels = (modelsRef.current ?? models) as typeof models;
+    const currentMethod = sortMethodRef.current;
     const qualifiedModel = typeof model?.value === "string" ? model.value : "";
     const parsedModel = parseQualifiedModel(qualifiedModel);
     const resolvedProviderId =
@@ -2605,7 +2694,7 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
       ...(resolvedProviderId ? { providerId: resolvedProviderId } : {}),
       weight: 0,
     };
-    if (hasExactModelStepDuplicate(models, nextEntry)) {
+    if (hasExactModelStepDuplicate(currentModels, nextEntry)) {
       setBuilderError(
         getI18nOrFallback(
           t,
@@ -2615,7 +2704,21 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
       );
       return;
     }
-    setModels([...models, nextEntry]);
+    const added = [...currentModels, nextEntry];
+    if (currentMethod === "manual") {
+      setModels(added);
+    } else if (currentMethod === "score") {
+      try {
+        const rankings = await fetchProviderRankings();
+        // Single-user modal; rapid double-add while fetch is in flight is low-probability.
+        const sorted = await sortComboStepsByScore(added, rankings);
+        setModels(sorted);
+      } catch {
+        setModels(added);
+      }
+    } else {
+      setModels(sortComboStepsSync(added, currentMethod as "provider" | "name"));
+    }
     setBuilderError("");
   };
 
@@ -2643,10 +2746,29 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
   // would each close over the same stale `models` snapshot and keep only the
   // last entry. Extracted so tests exercise this real implementation instead
   // of a hand-maintained mirror (#8526).
-  const handleAddModels = (selected) => {
-    const { next, addedAny } = computeBatchAddModelSteps(models, selected, builderProviders);
+  const handleAddModels = async (selected) => {
+    // Same ref discipline as handleAddModel — don't rely on closed-over render snapshot.
+    const currentModels = (modelsRef.current ?? models) as typeof models;
+    const currentMethod = sortMethodRef.current;
+    const { next, addedAny } = computeBatchAddModelSteps(currentModels, selected, builderProviders);
     if (!addedAny) return;
-    setModels(next);
+    if (currentMethod === "manual") {
+      setModels(next);
+    } else if (currentMethod === "score") {
+      try {
+        const rankings = await fetchProviderRankings();
+        // Functional note: `next` is the post-batch snapshot. Concurrent single-add
+        // racing this batch is low-probability single-user; last write wins.
+        const sorted = await sortComboStepsByScore(next as ComboStep[], rankings);
+        setModels(sorted as typeof next);
+      } catch {
+        setModels(next);
+      }
+    } else {
+      setModels(
+        sortComboStepsSync(next as ComboStep[], currentMethod as "provider" | "name") as typeof next
+      );
+    }
     setBuilderError("");
   };
 
@@ -2777,6 +2899,30 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
     const newModels = [...models];
     [newModels[index], newModels[index + 1]] = [newModels[index + 1], newModels[index]];
     setModels(newModels);
+  };
+
+  const handleSortChange = async (next: SortMethod) => {
+    if (!isValidSortMethod(next)) return;
+    setSortMethod(next);
+    sortMethodRef.current = next;
+    setConfig((prev) => ({ ...prev, modelSort: { method: next } }));
+    if (next === "manual") return;
+    if (next === "score") {
+      try {
+        const rankings = await fetchProviderRankings();
+        // Capture snapshot; if a concurrent add lands while rankings fetch
+        // is in flight, modelsRef has the freshest value — prefer it at
+        // sort time. Single-user UI, low-probability race; fallback keeps
+        // previous models if the rankings fetch fails (mirrors load path).
+        const snapshot = (modelsRef.current ?? models) as ComboStep[];
+        const sorted = await sortComboStepsByScore(snapshot, rankings);
+        setModels(sorted as typeof models);
+      } catch {
+        // Keep previous models; same silent-fallback precedent as load path.
+      }
+      return;
+    }
+    setModels((prev) => sortComboStepsSync(prev as ComboStep[], next) as typeof prev);
   };
 
   // Drag and Drop handlers
@@ -3227,6 +3373,51 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
                   )}
                 </div>
 
+                {isExpertMode && (
+                  <div className="mt-3 rounded-md border border-black/8 dark:border-white/8 bg-white/70 dark:bg-white/[0.03] px-2.5 py-2">
+                    <label className="text-[10px] font-medium uppercase tracking-wide text-text-muted block mb-1">
+                      {getI18nOrFallback(t, "manualModel", "Manual model")}
+                    </label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        type="text"
+                        value={manualModelInput}
+                        onChange={(e) => {
+                          setManualModelInput(e.target.value);
+                          setManualModelError("");
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddManualModel();
+                          }
+                        }}
+                        placeholder="provider/model"
+                        data-testid="combo-manual-model-input"
+                        className="flex-1 text-xs py-2 px-2 rounded border border-black/10 dark:border-white/10 bg-white dark:bg-white/5 text-text-main focus:border-primary focus:outline-none font-mono"
+                      />
+                      <Button
+                        onClick={handleAddManualModel}
+                        size="sm"
+                        disabled={!manualModelInput.trim() || !!manualModelHasDuplicate}
+                        data-testid="combo-manual-model-add"
+                      >
+                        {getI18nOrFallback(t, "addModel", "Add model")}
+                      </Button>
+                    </div>
+                    {(manualModelError || manualModelHasDuplicate) && (
+                      <div className="mt-2 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-1.5 text-[10px] text-amber-700 dark:text-amber-300">
+                        {manualModelError ||
+                          getI18nOrFallback(
+                            t,
+                            "builderDuplicateExact",
+                            "This exact provider/model/account step is already in the combo."
+                          )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <GlobalModelSearchPanel
                   builderSelectionMode={builderSelectionMode}
                   onSelectionModeChange={setBuilderSelectionMode}
@@ -3476,6 +3667,14 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
                     {builderError}
                   </div>
                 )}
+              </div>
+
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <ComboSortSelect
+                  value={sortMethod}
+                  onChange={handleSortChange}
+                  t={(k, f) => getI18nOrFallback(t, k, f)}
+                />
               </div>
 
               {models.length === 0 ? (

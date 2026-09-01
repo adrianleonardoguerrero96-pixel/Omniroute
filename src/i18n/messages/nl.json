@@ -770,6 +770,7 @@
     "batchListDeleteAllCompletedTitle": "Verwijder alle voltooide batches",
     "batchListBatchesTable": "Batches",
     "changelogViewerLoading": "Wijzigingslogboek laden vanuit GitHub...",
+    "profile": "__MISSING__:Profile",
     "profileLoading": "Profiel laden...",
     "profileHowToEarn": "Hoe te verdienen",
     "bootstrapBannerDismiss": "Negeren",
@@ -805,6 +806,13 @@
     "batchConceptBenefit50pct": "50% discount on input + output tokens",
     "batchConceptAsync24h": "Async with a 24h completion window",
     "batchConceptUseCases": "Best for bulk classification, evaluations, and embeddings",
+    "batchHeaderSubtitle": "Run many requests as one job",
+    "batchStep1": "1 · Upload JSONL",
+    "batchStep1Desc": "Add requests",
+    "batchStep2": "2 · Create batch",
+    "batchStep2Desc": "Run job",
+    "batchStep3": "3 · Get results",
+    "batchStep3Desc": "Download output",
     "filesConceptTitle": "Batch files",
     "filesConceptSubtitle": "JSONL files used by batches: input requests, results, and errors.",
     "filesConceptInput": "Input — your JSONL with one request per line",
@@ -974,19 +982,13 @@
     "batchFileUsedByCount": "Gebruikt door {count, plural, one {# batch} other {# batches}}",
     "batchFilePreview": "Voorbeeld",
     "batchFilePreviewTruncated": "Eerste {shown} regels weergeven ({total} totaal regels)",
-    "batchFileDownloadFull": "Download Volledig Bestand",
-    "batchHeaderSubtitle": "Run many requests as one job",
-    "batchStep1": "1 · Upload JSONL",
-    "batchStep1Desc": "Add requests",
-    "batchStep2": "2 · Create batch",
-    "batchStep2Desc": "Run job",
-    "batchStep3": "3 · Get results",
-    "batchStep3Desc": "Download output"
+    "batchFileDownloadFull": "Download Volledig Bestand"
   },
   "disabled": "Uitgeschakeld",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Routeer verzoeken met uitgeput budget naar de gratis nood-fallbackprovider/-model.",
   "featureFlagArenaEloSyncEnabledDescription": "Schakel periodieke ELO-synchronisatie van het Arena AI-leaderboard in voor modelintelligentieranglijsten.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Adverteer claude/&lt;provider&gt;/&lt;model&gt; spiegel-id's op /v1/models zodat Claude Code gateway modelontdekking niet-Claude modellen vermeldt. Waarschuwing: dubbele catalogusvermeldingen voor alle klanten wanneer wereldwijd ingeschakeld.",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "Schakel adaptieve virtuele toegangsbanen per tenant in voor provider-dispatch (#9654): een piek van de ene tenant geeft de andere niet langer een 503. De omgevingsvariabele OMNIROUTE_CHAT_VIRTUAL_LANES wint het van deze dashboard-instelling; wijzigingen gaan in bij een serverherstart.",
   "sidebar": {
     "home": "Thuis",
@@ -1023,6 +1025,8 @@
     "logs": "Logboeken",
     "webhooks": "Webhaken",
     "webhooksSubtitle": "Blijf op de hoogte van evenementen",
+    "logExport": "Logexport",
+    "logExportSubtitle": "Aanroeplogboeken naar buiten sturen",
     "combosSubtitle": "Groepsproviders voor failover",
     "batchSubtitle": "Meerdere aanvragen verwerken",
     "contextCavemanSubtitle": "Snelle compressie",
@@ -1267,6 +1271,7 @@
     "agentBridgeSubtitle": "IDE-agentverkeer onderscheppen",
     "trafficInspector": "Traffic Inspector",
     "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
+    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client.",
     "cliCode": "CLI Code",
     "cliCodeSubtitle": "Codetools die naar OmniRoute verwijzen",
     "cliAgents": "CLI Agents",
@@ -1287,6 +1292,8 @@
     "discoverySubtitle": "Providers scannen op gratis toegang",
     "conductor": "Conductor",
     "conductorSubtitle": "CLI-agent vloot",
+    "orchestration": "Orkestratie",
+    "orchestrationSubtitle": "Live overzicht van alles wat actief is",
     "resilienceConnections": "Verbindingsveerkracht",
     "resilienceConnectionsSubtitle": "Cooldown, breaker, lockout-status",
     "settingsModalityBridge": "Modality Brug",
@@ -1300,8 +1307,7 @@
       "open": "open",
       "close": "sluiten"
     },
-    "noResults": "Geen resultaten",
-    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client."
+    "noResults": "Geen resultaten"
   },
   "webhooks": {
     "title": "Webhaken",
@@ -1766,7 +1772,8 @@
     "tools": "Tools",
     "agentBridge": "Agent Bridge",
     "trafficInspector": "Verkeersinspectie",
-    "usage": "Gebruik"
+    "usage": "Gebruik",
+    "orchestration": "Orkestratie"
   },
   "home": {
     "quickStart": "Snel beginnen",
@@ -1808,6 +1815,11 @@
     "updateStarted": "Update gestart...",
     "reloadingPageAutomatically": "Pagina automatisch herladen...",
     "providerTopology": "Provider-topologie",
+    "recentRequests": "Recent Requests",
+    "recentRequestsEmpty": "No requests yet.",
+    "recentRequestsModel": "Model",
+    "recentRequestsTokens": "In / Out",
+    "recentRequestsWhen": "When",
     "downloadDmg": "Download DMG (macOS)",
     "downloadDmgDescription": "Er is een nieuwe versie van de OmniRoute desktopapp beschikbaar. Download en installeer alstublieft de macOS DMG-installatieprogramma om bij te werken (huidig: v{version}).",
     "downloadExe": "Download EXE (Windows)",
@@ -1865,11 +1877,6 @@
     "releaseNotes": "Release-opmerkingen",
     "readMore": "Lees Meer",
     "noAuthLabel": "Geen Auth",
-    "recentRequests": "Recent Requests",
-    "recentRequestsEmpty": "No requests yet.",
-    "recentRequestsModel": "Model",
-    "recentRequestsTokens": "In / Out",
-    "recentRequestsWhen": "When",
     "readinessEyebrow": "Get ready to route",
     "readinessTitle": "Send your first request",
     "readinessSubtitle": "Four small steps. OmniRoute checks readiness as you go.",
@@ -2399,7 +2406,15 @@
     "bypassProviderQuota": "Quotalimieten van provider omzeilen",
     "bypassProviderQuotaDescription": "Hiermee kan deze sleutel het afsluitbeleid van de upstream-provider/het upstream-account negeren tijdens routering. USD-quota voor API-sleutels blijven van toepassing.",
     "quotaPill": "QUOTA",
-    "quotaModeOnly": "qtSd-only"
+    "quotaModeOnly": "qtSd-only",
+    "exclusiveLease": "__MISSING__:Exclusive Lease",
+    "exclusiveLeaseNoticeTitle": "__MISSING__:Exclusive Lease",
+    "exclusiveLeaseNoticeDesc": "__MISSING__:This API key has exclusive lease permissions for dedicated connection routing.",
+    "allConnections": "__MISSING__:All connections",
+    "onlySelectedConnections": "__MISSING__:Only selected connections",
+    "selectAtLeastOneConnection": "__MISSING__:Select at least one connection or choose All connections.",
+    "allConnectionsDesc": "__MISSING__:This key can use any active connection.",
+    "restrictedToConnections": "__MISSING__:Restricted to {count, plural, one {# connection} other {# connections}}."
   },
   "auditLog": {
     "title": "Auditlogboek",
@@ -2922,9 +2937,10 @@
       "interpreter": "Open Interpreter autonome codeeragent-CLI",
       "omp": "Oh My Pi terminal-codeeragent",
       "letta": "Letta CLI-agent met persistent geheugen en toolgebruik",
+      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
       "warp": "Warp AI-terminal met ondersteuning voor aangepaste providers",
       "agent-deck": "Agent Deck multi-agent-orchestrator",
-      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
+      "5dive": "5dive — zelf gehoste vloot van codeeragents; één auth-profiel wijst ze allemaal naar OmniRoute"
     },
     "guides": {
       "cursor": {
@@ -3849,6 +3865,9 @@
   },
   "endpoint": {
     "title": "API-eindpunt",
+    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
+    "testEndpoint": "Test endpoint →",
+    "advancedProtocols": "Advanced protocols",
     "available": "Beschikbare eindpunten",
     "cloudProxy": "Cloud-proxy",
     "disableConfirm": "Weet u zeker dat u cloudproxy wilt uitschakelen?",
@@ -4156,10 +4175,7 @@
     "notionIntegrationHelp": "Maak een interne integratie aan bij",
     "notionIntegrationToken": "Notion Interne Integratietoken",
     "notionNotConnected": "Niet verbonden",
-    "notionTokenConfigured": "Token geconfigureerd. Notion-tools zijn beschikbaar via MCP.",
-    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
-    "testEndpoint": "Test endpoint →",
-    "advancedProtocols": "Advanced protocols"
+    "notionTokenConfigured": "Token geconfigureerd. Notion-tools zijn beschikbaar via MCP."
   },
   "endpoints": {
     "tabProxy": "Endpoint Proxy",
@@ -4632,6 +4648,13 @@
     "retry": "Opnieuw proberen",
     "allOperational": "Alle systemen operationeel",
     "issuesDetected": "Systeemproblemen gedetecteerd",
+    "healthVerdictReady": "OmniRoute is ready",
+    "healthVerdictActionRequired": "Action required to restore full operation",
+    "healthVerdictCoolingDown": "Cooling down after recent changes",
+    "healthSubtitle": "System health check",
+    "advancedDiagnosticsTitle": "Advanced diagnostics",
+    "hide": "Hide",
+    "show": "Show",
     "updatedAt": "{time} bijgewerkt",
     "latency": "Latentie",
     "latencyP50": "p50",
@@ -4742,14 +4765,7 @@
     "issueCount": "{count} problemen",
     "score": "Score",
     "lastRequest": "Laatste verzoek",
-    "lastError": "Laatste fout",
-    "healthVerdictReady": "OmniRoute is ready",
-    "healthVerdictActionRequired": "Action required to restore full operation",
-    "healthVerdictCoolingDown": "Cooling down after recent changes",
-    "healthSubtitle": "System health check",
-    "advancedDiagnosticsTitle": "Advanced diagnostics",
-    "hide": "Hide",
-    "show": "Show"
+    "lastError": "Laatste fout"
   },
   "telemetry": {
     "title": "Systeemtelemetrie",
@@ -4954,7 +4970,9 @@
     "multiProvider": "Meerdere aanbieders",
     "usageTracking": "Gebruik volgen",
     "securityDesc": "Stel een wachtwoord in om uw dashboard te beschermen, of sla dit voorlopig over.",
+    "securityDescSkipWarning": "⚠️ Without a password, you won't be able to add providers during setup. You can add them later from the dashboard after setting a password.",
     "providerDesc": "Sluit uw eerste AI-provider aan. Je kunt later meer toevoegen.",
+    "providerRequiresPassword": "You need to set a password first to add providers. Please go back to the security step and set a password, or add providers later from the dashboard.",
     "apiKeyRequired": "API-sleutel (vereist)",
     "customUrlOptional": "Aangepaste URL (optioneel)",
     "testDesc": "Laten we controleren of uw providerverbinding werkt.",
@@ -5011,9 +5029,7 @@
         "skipped": "al reeds geconfigureerd",
         "failed": "mislukt"
       }
-    },
-    "securityDescSkipWarning": "⚠️ Without a password, you won't be able to add providers during setup. You can add them later from the dashboard after setting a password.",
-    "providerRequiresPassword": "You need to set a password first to add providers. Please go back to the security step and set a password, or add providers later from the dashboard."
+    }
   },
   "providers": {
     "title": "Aanbieders",
@@ -5871,6 +5887,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Minimale tijd (ms) tussen verzoeken. Overschrijft de standaardvertraging van de rate limiter.",
     "rateLimitOverridesMinTimeLabel": "Min. interval (ms)",
+    "rateLimitOverridesRpdHint": "Maximaal aantal verzoeken per dag voor deze verbinding. Overschrijft de standaardinstelling van de provider.",
+    "rateLimitOverridesRpdLabel": "RPD (Verzoeken/dag)",
     "rateLimitOverridesRpmHint": "Maximaal aantal verzoeken per minuut voor deze verbinding. Overschrijft de standaardwaarde van de provider.",
     "rateLimitOverridesRpmLabel": "RPM (Verzoeken/min)",
     "rateLimitOverridesTpdHint": "Maximaal aantal tokens per dag voor deze verbinding. Overschrijft de standaardwaarde van de provider.",
@@ -6254,13 +6272,13 @@
       "galadriel": "Verbind Galadriel met een API-sleutel.",
       "predibase": "$25 gratis proeftegoed (30 dagen geldig)",
       "chenzk": "OpenAI-compatibele gateway met een live modelcatalogus op chenzk.top.",
-      "magnific": "Genereer afbeeldingen met de Mystic API van Freepik.",
+      "magnific": "Genereer afbeeldingen met de Mystic API van Magnific.",
       "freetheai": "Gratis OpenAI-compatibele gateway met ondersteuning voor passthrough-modellen.",
-      "g4f-gemini": "Gratis no-key g4f.space reverse proxy naar Gemini, beperkt tot 5 verzoeken per minuut.",
-      "g4f-groq": "Gratis no-key g4f.space reverse proxy naar Groq, beperkt tot 5 verzoeken per minuut.",
-      "g4f-nvidia": "Gratis no-key g4f.space reverse proxy naar NVIDIA NIM, beperkt tot 5 verzoeken per minuut.",
-      "g4f-ollama": "Gratis no-key gehoste Ollama-gateway van g4f.space, beperkt tot 5 verzoeken per minuut.",
-      "g4f-pollinations": "Gratis no-key g4f.space reverse proxy naar Pollinations, beperkt tot 5 verzoeken per minuut.",
+      "g4f-gemini": "Externe g4f.space-gateway naar Gemini. Anonieme toegang vereist proof-of-work-credits van g4f.dev/chat of een API-sleutel voor leden van g4f.dev/members.html; limieten variëren.",
+      "g4f-groq": "Externe g4f.space-gateway naar Groq. Anonieme toegang vereist proof-of-work-credits van g4f.dev/chat of een API-sleutel voor leden van g4f.dev/members.html; limieten variëren.",
+      "g4f-nvidia": "Externe g4f.space-gateway naar NVIDIA NIM. Anonieme toegang vereist proof-of-work-credits van g4f.dev/chat of een API-sleutel voor leden van g4f.dev/members.html; limieten variëren.",
+      "g4f-ollama": "Externe g4f.space-gateway naar Ollama. Anonieme toegang vereist proof-of-work-credits van g4f.dev/chat of een API-sleutel voor leden van g4f.dev/members.html; limieten variëren.",
+      "g4f-pollinations": "Externe g4f.space-gateway naar Pollinations. Anonieme toegang vereist proof-of-work-credits van g4f.dev/chat of een API-sleutel voor leden van g4f.dev/members.html; limieten variëren.",
       "mixedbread": "Maak embeddings met de Mixedbread API.",
       "segmind": "Genereer afbeeldingen en video's met de gehoste modellen van Segmind.",
       "amazon-q": "Gebruikt dezelfde AWS Builder ID of geïmporteerde refresh-token-flow als Kiro, maar houdt Amazon Q-verbindingen gescheiden.",
@@ -6302,6 +6320,20 @@
     "webSessionGuideStep3": "Kopieer de vereiste inloggegevens uit het eigen domein van de provider. Kopieer voor cookies alleen de waarde van de Cookie-header en laat Cookie: weg.",
     "webSessionGuideStep3Manual": "Handmatige pad: open de browserontwikkelaarstools (F12 → Netwerk), vernieuw de pagina, open een geauthenticeerd verzoek en kopieer de waarde van de Cookie-header uit de Verzoekheaders — laat de Cookie: prefix weg.",
     "webSessionGuideStep4": "Plak het hier en controleer de verbinding. Als het niet meer werkt, logt u opnieuw in en vervangt u het door een nieuwe waarde.",
+    "harImportButtonLabel": "Import .har file",
+    "harImportButtonBusy": "Importing…",
+    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
+    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
+    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
+    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
+    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
+    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
+    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
+    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
+    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
+    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
+    "harImportErrorReadFailed": "Couldn't read that file.",
+    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file.",
     "webSessionSecurityHint": "Behandel dit als een wachtwoord: het heeft toegang tot uw ingelogde webaccount totdat het verloopt of wordt ingetrokken.",
     "webNoAuthGuideTitle": "Geen legitimatie vereist",
     "webNoAuthGuideBody": "{provider} heeft geen API-sleutel of cookie nodig. Sla de verbinding op om het gratis webeindpunt te gebruiken.",
@@ -6416,21 +6448,7 @@
     "savedModelEndpointSettings": "Instellingen voor opgeslagen model-eindpunt",
     "searchByModelAria": "Zoeken op model",
     "selectSupportedEndpoint": "Selecteer ten minste één ondersteunde eindpunt",
-    "antigravityClientProfileHarness": "Harness / CLI",
-    "harImportButtonLabel": "Import .har file",
-    "harImportButtonBusy": "Importing…",
-    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
-    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
-    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
-    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
-    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
-    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
-    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
-    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
-    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
-    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
-    "harImportErrorReadFailed": "Couldn't read that file.",
-    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file."
+    "antigravityClientProfileHarness": "Harness / CLI"
   },
   "settings": {
     "title": "Instellingen",
@@ -6710,6 +6728,18 @@
     "sidebarVisibility": "Hide sidebar items",
     "sidebarVisibilityDesc": "Hide any sidebar navigation entry to reduce visual clutter.",
     "sidebarVisibilityHint": "Any sidebar section is hidden automatically when a...",
+    "presetAll": "All",
+    "presetAllDesc": "Show everything",
+    "presetEssentials": "Essentials",
+    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
+    "presetMinimal": "Minimal",
+    "presetMinimalDesc": "Core pages only",
+    "presetDeveloper": "Developer",
+    "presetDeveloperDesc": "Dev & proxy tools",
+    "presetAdmin": "Admin",
+    "presetAdminDesc": "Monitoring & audit",
+    "settingsSidebarTitle": "Sidebar Customization",
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
     "hideHealthLogs": "Statuschecklogboeken verbergen",
     "hideHealthLogsDesc": "Indien AAN: onderdruk [HealthCheck]-berichten in de serverconsole",
     "themeAccent": "Themakleur",
@@ -7030,6 +7060,14 @@
     "providerAccountRoutingDesc": "Globale accountstrategie overschrijven voor deze provider (9router-pariteit).",
     "providerRoutingStrategy": "Accountstrategie",
     "providerRoutingInheritGlobal": "Globale standaard overnemen",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings.",
     "modelAliases": "Modelaliassen",
     "modelAliasesTitle": "Model Aliases",
     "modelAliasesDesc": "Remap model names using exact matches or wildcard patterns.",
@@ -7538,6 +7576,8 @@
     "resilienceRequestsPerMinute": "Requests per minute",
     "resilienceMinTimeBetweenRequests": "Minimum time between requests",
     "resilienceConcurrentRequests": "Concurrent requests",
+    "resilienceConnectionScopeConcurrentRequests": "__MISSING__:Concurrent requests per connection/quota scope",
+    "resilienceGlobalConcurrentRequests": "__MISSING__:Global concurrent upstream requests (0 = disabled)",
     "resilienceMaxQueueWaitTime": "Maximale wachtrijwachttijd",
     "resilienceBaseCooldown": "Base cooldown",
     "resilienceUseUpstreamRetryHints": "Use upstream retry hints",
@@ -8004,6 +8044,7 @@
     "resilienceRequestQueueDesc": "Deze laag regelt alleen wachtrijen en tempo. Er worden geen cooldowns of open stroomonderbrekers opgeslagen.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Schakelt standaard wachtrijbeveiliging in voor actieve API-sleutelverbindingen.",
     "resilienceMaxQueueWait": "Maximale wachtrijwachttijd",
+    "resilienceMaxExecutionWait": "Uitvoeringstime-out (rate-limit terugval)",
     "resilienceConnectionCooldownScope": "Individuele verbinding",
     "resilienceConnectionCooldownTrigger": "Wanneer een verbinding een tijdelijke stroomopwaartse fout retourneert",
     "resilienceConnectionCooldownEffect": "Sla die verbinding tijdelijk over en vergroot de back-off bij herhaalde fouten",
@@ -8043,6 +8084,14 @@
     "resilienceProviderCooldownEnabledDesc": "Indien ingeschakeld, worden mislukte providers globaal bijgehouden en overgeslagen gedurende een afkoelperiode.",
     "resilienceProviderCooldownMin": "Minimale afkoelperiode",
     "resilienceProviderCooldownMax": "Maximale afkoelperiode",
+    "resilienceCredentialHealthTitle": "__MISSING__:Credential Health Check",
+    "resilienceCredentialHealthScope": "__MISSING__:All active API-key and OAuth connections",
+    "resilienceCredentialHealthTrigger": "__MISSING__:Periodically, on a fixed cadence",
+    "resilienceCredentialHealthEffect": "__MISSING__:Probes each connection's credential and marks it active/error; failed connections back off exponentially",
+    "resilienceCredentialHealthDesc": "__MISSING__:Background sweep that validates every active connection's credential by calling its provider. Set 0 to disable the sweep entirely. Per-connection Health Check values (on each connection's edit dialog) always override this global default.",
+    "resilienceCredentialHealthInterval": "__MISSING__:Global check interval",
+    "resilienceCredentialHealthEveryMinutes": "__MISSING__:Every {minutes} min",
+    "resilienceCredentialHealthHint": "__MISSING__:0 disables the background sweep (max 1440 min = 24 h). Connections with their own Health Check value ignore this global default; a per-connection 0 opts that connection out even when the global sweep is on.",
     "forcedFingerprintTitle": "Always enabled for {provider} — required for OAuth account safety; cannot be turned off.",
     "forcedFingerprintBadge": "Required",
     "sessionAffinityTitle": "Sessie-affiniteit",
@@ -8186,6 +8235,7 @@
     "modalityBridgeVideoTitle": "Videobrug",
     "modalityBridgeVideoDesc": "Neem voorbeelden van videoframes, beschrijf ze met een visiemodel en ga verder met het gekozen tekstmodel.",
     "modalityBridgeVideoRuntimeReady": "Runtime gereed",
+    "modalityBridgeVideoRuntimeChecking": "Runtime controleren…",
     "modalityBridgeVideoRuntimeUnavailable": "Runtime niet beschikbaar",
     "modalityBridgeVideoRuntimeInstall": "Installeer FFmpeg en ffprobe in het PATH van de server om video-extractie in te schakelen.",
     "modalityBridgeVideoEnabled": "Videobrug inschakelen",
@@ -8277,19 +8327,7 @@
     "cliproxyapiHealth": "Gezondheid",
     "cliproxyapiPort": "Haven",
     "qdrantHost": "Host",
-    "qdrantCollection": "Verzameling",
-    "presetAll": "All",
-    "presetAllDesc": "Show everything",
-    "presetEssentials": "Essentials",
-    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
-    "presetMinimal": "Minimal",
-    "presetMinimalDesc": "Core pages only",
-    "presetDeveloper": "Developer",
-    "presetDeveloperDesc": "Dev & proxy tools",
-    "presetAdmin": "Admin",
-    "presetAdminDesc": "Monitoring & audit",
-    "settingsSidebarTitle": "Sidebar Customization",
-    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable."
+    "qdrantCollection": "Verzameling"
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -11214,7 +11252,8 @@
       "tps": "TPS",
       "duration": "Duration",
       "time": "Time",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",
@@ -11254,6 +11293,11 @@
       "copy": "Kopieer",
       "autoscrollOn": "Autoscroll: aan",
       "autoscrollOff": "Autoscroll: uit",
+      "collapseAllLevels": "__MISSING__:Collapse all",
+      "collapseOneLevel": "__MISSING__:Collapse one level",
+      "currentExpandLevel": "__MISSING__:Current expand level",
+      "expandOneLevel": "__MISSING__:Expand one level",
+      "expandAllLevels": "__MISSING__:Expand all",
       "payload": {
         "clientRawRequest": "Client Rauwe Verzoek",
         "clientRequest": "Klantverzoek",
@@ -11314,7 +11358,9 @@
       "noPayload": "Geen payloadgegevens beschikbaar voor deze logvermelding.",
       "correlationId": "Correlatie-ID",
       "correlationIdValue": "Correlatie-ID: {id}",
-      "detailedPayloadInfo": "Schakel eerst gedetailleerde logging in als je de vier-fasen client/provider payloadweergave voor nieuwe verzoeken wilt."
+      "detailedPayloadInfo": "Schakel eerst gedetailleerde logging in als je de vier-fasen client/provider payloadweergave voor nieuwe verzoeken wilt.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12075,9 +12121,9 @@
       "acp": {
         "title": "ACP Agents",
         "phrase": "CLI's die OmniRoute start als uitvoeringsbackend (omgekeerde flow)",
+        "warning": "Most users can ignore this — use only when an integration requires it.",
         "flow": "Client → OmniRoute → CLI spawnen (stdio/ACP) → respons",
-        "seeOther": "Bekijk →",
-        "warning": "Most users can ignore this — use only when an integration requires it."
+        "seeOther": "Bekijk →"
       }
     },
     "comparison": {
@@ -12271,7 +12317,7 @@
       },
       "omni-mcp": {
         "name": "MCP-server",
-        "description": "Maak verbinding met de OmniRoute MCP-server (37 tools, 3 transporten: SSE/stdio/HTTP). Omvat routering, cache, compressie, geheugen, vaardigheden, providers en audit-tools over 16 machtigingsbereiken."
+        "description": "Maak verbinding met de OmniRoute MCP-server (110 tools, 3 transporten: SSE/stdio/HTTP). Omvat routering, cache, compressie, geheugen, vaardigheden, providers en audit-tools over 33 machtigingsbereiken."
       },
       "omni-agents-a2a": {
         "name": "Agents & A2A-protocol",
@@ -12485,6 +12531,8 @@
     "typeApikey": "API-sleutel",
     "sortTypeFirst": "Makkelijkste eerst",
     "sortTypeFirstHelp": "Groeperen op registratie-inspanning (Geen registratie → OAuth-inloggen → API-sleutel), met behoud van kwaliteitsvolgorde binnen elke groep",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "Geen registratie = geen configuratie · OAuth-inloggen = inloggen met uw eigen account · API-sleutel = gebruik uw eigen sleutel of het gratis abonnement van die provider",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
@@ -12841,6 +12889,10 @@
       "ALLOW_MULTI_CONNECTIONS_PER_COMPAT_NODE": {
         "description": "Sta meerdere verbindingen toe voor elke compatibiliteitsnode."
       },
+      "DISABLE_CONTEXT_WINDOW_CHECKS": {
+        "label": "Disable Context Window Checks",
+        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
+      },
       "RESPONSES_PASSTHROUGH_DROP_COMMENTARY": {
         "description": "Verwijder interne commentary-fase-uitvoeritems uit Responses API-passthrough-streams voordat ze worden doorgestuurd naar clients. Schakel deze vlag uit om onbewerkte upstream-commentary te ontvangen."
       },
@@ -12906,11 +12958,19 @@
       },
       "SKILLS_SANDBOX_NETWORK_ENABLED": {
         "description": "Schakel netwerktoegang in de skills-sandbox in."
-      },
-      "DISABLE_CONTEXT_WINDOW_CHECKS": {
-        "label": "Disable Context Window Checks",
-        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
       }
+    }
+  },
+  "combo": {
+    "sort": {
+      "label": "__MISSING__:Sort by",
+      "method": {
+        "manual": "__MISSING__:Manual",
+        "provider": "__MISSING__:Provider",
+        "score": "__MISSING__:Score (free models)",
+        "name": "__MISSING__:Name"
+      },
+      "scoreHint": "__MISSING__:Score ranking applies to free providers only; others stay in place."
     }
   },
   "comboControl": {
@@ -13312,6 +13372,9 @@
     "colContext": "Context",
     "colCapabilities": "Capaciteiten",
     "colTos": "ToS Risico",
+    "colLimits": "__MISSING__:Rate limits",
+    "trainsOnPrompts": "__MISSING__:Trains on prompts",
+    "trainsOnPromptsHelp": "__MISSING__:This provider's terms state it may train on the prompts you send. Models without this badge either state they do not, or do not document it — an absent statement is not a guarantee.",
     "newBadge": "nieuw",
     "setupGuide": "Installatiehandleiding",
     "disabledByFeed": "Uitgeschakeld door Radar-feed",
@@ -13388,6 +13451,13 @@
   },
   "resilienceConnections": {
     "title": "Verbindingsveerkracht",
+    "reassuranceTitle": "Your connections recover automatically",
+    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
+    "plainStates": {
+      "healthy": "Requests can be sent",
+      "coolingDown": "Trying again soon",
+      "lockedOut": "Needs your attention"
+    },
     "table": {
       "status": "Status",
       "provider": "Provider",
@@ -13482,16 +13552,10 @@
         "modelLockouts": "Modelvergrendelingen",
         "count": "Aantal Verbindingen"
       }
-    },
-    "reassuranceTitle": "Your connections recover automatically",
-    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
-    "plainStates": {
-      "healthy": "Requests can be sent",
-      "coolingDown": "Trying again soon",
-      "lockedOut": "Needs your attention"
     }
   },
   "featureFlagCapabilityFilterEnabledDescription": "Weiger verzoeken vóór verzending wanneer het doellmodel ontbrekende vereiste mogelijkheden heeft (zicht, tools, gestructureerde output, contextvenster). Beschermt directe verzoeken van een enkele aanbieder die de compatibiliteitsfilter van de comb-laag omzeilen.",
+  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
   "publicSystem": {
     "notFound": {
       "title": "Pagina niet gevonden",
@@ -13859,6 +13923,41 @@
     "ttsFailed": "Spraaksynthetisatie mislukt (controleer het TTS-model/provider)",
     "micDenied": "Microfoon niet beschikbaar of toestemming geweigerd"
   },
+  "orchestration": {
+    "title": "Orkestratie",
+    "description": "Alles wat OmniRoute op dit moment uitvoert — agents, vloot en routering",
+    "tabAgents": "Agents",
+    "tabRouting": "Routering",
+    "tabOverview": "Overzicht",
+    "showCompleted": "Voltooide items tonen",
+    "sourceCloudAgent": "Cloud Agent",
+    "sourceA2A": "A2A",
+    "sourceConductor": "Conductor",
+    "sourceStale": "Verouderd sinds {since}",
+    "sourceOffline": "Offline",
+    "stateQueued": "In wachtrij",
+    "stateRunning": "Actief",
+    "stateWaitingApproval": "Wacht op goedkeuring",
+    "stateSucceeded": "Geslaagd",
+    "stateFailed": "Mislukt",
+    "stateCancelled": "Geannuleerd",
+    "overflowMore": "+{count} meer",
+    "emptyTitle": "Nog niets actief",
+    "emptyCloudAgentCta": "Cloud Agents instellen",
+    "emptyA2ACta": "A2A openen",
+    "emptyConductorCta": "Conductor openen",
+    "drawerObjective": "Doel",
+    "drawerTimeline": "Tijdlijn",
+    "drawerMetrics": "Statistieken",
+    "drawerResult": "Resultaat",
+    "drawerActions": "Acties",
+    "actionApprove": "Plan goedkeuren",
+    "actionCancel": "Annuleren",
+    "actionSeeInGraph": "Bekijk in grafiek",
+    "actionDone": "Actie toegepast",
+    "actionFailed": "Actie mislukt: {error}",
+    "mirroredInA2A": "Weergegeven in A2A"
+  },
   "cliproxyProviderExposure": {
     "title": "Provider Blootstelling",
     "description": "Exposeer CLIProxyAPI-modellen als een routerdoel onder de <prefix>cliproxyapi/</prefix> prefix.",
@@ -13927,12 +14026,12 @@
     "structuredOutputMismatch": "Provider ondersteunt geen gestructureerde uitvoer",
     "contextWindowMismatch": "Verzoek overschrijdt de contextvenster van de provider"
   },
-  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
   "cheaperInferenceSponsorBanner": {
     "title": "Cheaper Inference is an OmniRoute Open Source Friend",
     "description": "A cost-ranked gateway reselling dozens of frontier models behind one OpenAI-compatible endpoint — routing each request to the cheapest eligible provider, never above list price.",
     "cta": "Get an API Key",
     "partnerLinkNote": "Partner link",
     "dismissAriaLabel": "Dismiss"
-  }
+  },
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }
