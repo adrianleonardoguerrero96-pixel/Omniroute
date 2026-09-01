@@ -6448,7 +6448,12 @@
     "savedModelEndpointSettings": "Definições do ponto de extremidade do modelo guardado",
     "searchByModelAria": "Pesquisar por modelo",
     "selectSupportedEndpoint": "Selecione pelo menos um endpoint suportado",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Clear cooldown",
+    "clearConnectionCooldownInProgress": "Clearing…",
+    "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
+    "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
+    "failedClearConnectionCooldown": "Failed to clear cooldown"
   },
   "settings": {
     "title": "Configurações",
@@ -12531,6 +12536,8 @@
     "typeApikey": "Chave de API",
     "sortTypeFirst": "Mais fáceis primeiro",
     "sortTypeFirstHelp": "Agrupar por esforço de registo (Sem Registo → Início de Sessão OAuth → Chave de API), mantendo a ordem de qualidade dentro de cada grupo",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "Sem Registo = configuração zero · Início de Sessão OAuth = iniciar sessão com a sua própria conta · Chave de API = traga a sua própria chave ou o nível gratuito desse fornecedor",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
@@ -13370,6 +13377,9 @@
     "colContext": "Contexto",
     "colCapabilities": "Capacidades",
     "colTos": "Risco de ToS",
+    "colLimits": "__MISSING__:Rate limits",
+    "trainsOnPrompts": "__MISSING__:Trains on prompts",
+    "trainsOnPromptsHelp": "__MISSING__:This provider's terms state it may train on the prompts you send. Models without this badge either state they do not, or do not document it — an absent statement is not a guarantee.",
     "newBadge": "novo",
     "setupGuide": "Guia de configuração",
     "disabledByFeed": "Desativado pelo feed do Radar",
