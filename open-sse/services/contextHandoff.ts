@@ -404,7 +404,10 @@ async function generateHandoffAsync(options: {
     relayConfig.relayMode
   );
   const historyText = formatMessagesForPrompt(selectedMessages);
-  if (!historyText) return;
+  if (!historyText) {
+    logUniversalHandoffOutcome("unavailable", options.comboName, "empty selected-message history");
+    return;
+  }
 
   const summaryPrompt = HANDOFF_PROMPT_TEMPLATE.replace("{HISTORY}", historyText);
   const summaryBody = {
@@ -418,7 +421,14 @@ async function generateHandoffAsync(options: {
   };
 
   const response = await options.handleSingleModel(summaryBody, summaryModel);
-  if (!response.ok) return;
+  if (!response.ok) {
+    logUniversalHandoffOutcome(
+      "unavailable",
+      options.comboName,
+      `summary model call failed: status=${response.status} model=${summaryModel}`
+    );
+    return;
+  }
 
   let content = "";
   try {
@@ -433,7 +443,14 @@ async function generateHandoffAsync(options: {
   }
 
   const parsed = parseHandoffJSON(content);
-  if (!parsed) return;
+  if (!parsed) {
+    logUniversalHandoffOutcome(
+      "unparseable",
+      options.comboName,
+      `model=${summaryModel} contentPreview=${JSON.stringify(content.slice(0, 200))}`
+    );
+    return;
+  }
 
   upsertHandoff({
     sessionId: options.sessionId,
@@ -684,6 +701,23 @@ export function resetUniversalHandoffCooldowns(): void {
   universalHandoffCooldowns.clear();
 }
 
+// Every non-"generated" outcome across both handoff generators (this one and
+// the older generateHandoffAsync above) used to be silent -- context_handoffs
+// staying empty gave no signal on WHY (upstream call failing vs. malformed
+// output vs. no history to summarize). Every live handoff then falls back to
+// the bare no-summary note (buildUniversalHandoffSystemMessage's `!payload`
+// branch / the context-relay equivalent), which is what actually reaches the
+// model/user; without this log that always reads as a mystery instead of a
+// traceable cause.
+function logUniversalHandoffOutcome(
+  outcome: "unavailable" | "unparseable",
+  comboName: string,
+  detail: string
+): void {
+  if (process.env.NODE_ENV === "test") return;
+  console.warn(`[universal-handoff] ${outcome} (combo=${comboName}): ${detail}`);
+}
+
 /**
  * Generate a universal handoff summary for any model/provider switch.
  */
@@ -706,7 +740,10 @@ async function generateUniversalHandoffAsync(options: {
     options.relayMode
   );
   const historyText = formatMessagesForPrompt(selectedMessages);
-  if (!historyText) return "unavailable";
+  if (!historyText) {
+    logUniversalHandoffOutcome("unavailable", options.comboName, "empty selected-message history");
+    return "unavailable";
+  }
 
   const summaryPrompt = HANDOFF_PROMPT_TEMPLATE.replace("{HISTORY}", historyText);
   const summaryModel = options.handoffModel || options.currModel;
@@ -732,7 +769,14 @@ async function generateUniversalHandoffAsync(options: {
   };
 
   const response = await options.handleSingleModel(summaryBody, summaryModel);
-  if (!response.ok) return "unavailable";
+  if (!response.ok) {
+    logUniversalHandoffOutcome(
+      "unavailable",
+      options.comboName,
+      `summary model call failed: status=${response.status} model=${summaryModel}`
+    );
+    return "unavailable";
+  }
 
   let content = "";
   try {
@@ -747,7 +791,14 @@ async function generateUniversalHandoffAsync(options: {
   }
 
   const parsed = parseHandoffJSON(content);
-  if (!parsed) return "unparseable";
+  if (!parsed) {
+    logUniversalHandoffOutcome(
+      "unparseable",
+      options.comboName,
+      `model=${summaryModel} contentPreview=${JSON.stringify(content.slice(0, 200))}`
+    );
+    return "unparseable";
+  }
 
   upsertHandoff({
     sessionId: options.sessionId,
