@@ -70,6 +70,24 @@ describe("orchestration nodes", () => {
     expect(c.textContent).toContain("⚠");
     cleanup();
   });
+
+  it("SourceNode shows a collapse caret + aria-expanded + title reflecting !data.collapsed", () => {
+    const expandedData = { id: "source:a2a", kind: "source", source: "a2a", label: "A2A" };
+    const r1 = render(<SourceNode data={expandedData as never} />);
+    const expandedEl = r1.c.querySelector("[aria-expanded]");
+    expect(expandedEl?.getAttribute("aria-expanded")).toBe("true");
+    expect(expandedEl?.getAttribute("title")).toBe("sourceCollapse");
+    expect(r1.c.textContent).toContain("▾");
+    r1.cleanup();
+
+    const collapsedData = { ...expandedData, collapsed: true };
+    const r2 = render(<SourceNode data={collapsedData as never} />);
+    const collapsedEl = r2.c.querySelector("[aria-expanded]");
+    expect(collapsedEl?.getAttribute("aria-expanded")).toBe("false");
+    expect(collapsedEl?.getAttribute("title")).toBe("sourceExpand");
+    expect(r2.c.textContent).toContain("▸");
+    r2.cleanup();
+  });
 });
 
 describe("StatusEdge", () => {

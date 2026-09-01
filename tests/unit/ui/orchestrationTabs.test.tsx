@@ -89,6 +89,69 @@ describe("AgentsTab", () => {
     expect(r2.c.querySelector(".orchestration-canvas")).toBeTruthy();
     r2.cleanup();
   });
+
+  it("passes the collapsed set to orchestrationToFlow, dropping that source's work nodes", () => {
+    const snap = {
+      nodes: [
+        { id: "orchestrator", kind: "orchestrator", label: "OmniRoute" },
+        { id: "source:a2a", kind: "source", source: "a2a", label: "A2A" },
+        { id: "a2a:1", kind: "work", source: "a2a", state: "running", label: "a2a task" },
+        {
+          id: "cloud-agent:1",
+          kind: "work",
+          source: "cloud-agent",
+          state: "running",
+          label: "ca task",
+        },
+      ],
+      edges: [],
+      sources: [],
+      generatedAt: "x",
+    };
+    const { cleanup } = render(
+      <AgentsTab
+        snapshot={snap as never}
+        onNodeClick={() => {}}
+        showCompleted={false}
+        onToggleCompleted={() => {}}
+        collapsed={new Set(["a2a"])}
+        onToggleCollapse={() => {}}
+      />
+    );
+    const nodes = flowProps.at(-1)?.nodes as Array<{ id: string }>;
+    expect(nodes.some((n) => n.id === "a2a:1")).toBe(false);
+    expect(nodes.some((n) => n.id === "cloud-agent:1")).toBe(true);
+    cleanup();
+  });
+
+  it("clicking a source node calls onToggleCollapse with its source, not onNodeClick", () => {
+    const toggle = vi.fn();
+    const onNodeClick = vi.fn();
+    const snap = {
+      nodes: [
+        { id: "orchestrator", kind: "orchestrator", label: "OmniRoute" },
+        { id: "a2a:1", kind: "work", source: "a2a", state: "running", label: "a2a task" },
+      ],
+      edges: [],
+      sources: [],
+      generatedAt: "x",
+    };
+    const { cleanup } = render(
+      <AgentsTab
+        snapshot={snap as never}
+        onNodeClick={onNodeClick}
+        showCompleted={false}
+        onToggleCompleted={() => {}}
+        collapsed={new Set()}
+        onToggleCollapse={toggle}
+      />
+    );
+    const handleClick = flowProps.at(-1)?.onNodeClick as (e: unknown, node: unknown) => void;
+    handleClick(undefined, { id: "source:a2a", type: "source", data: { source: "a2a" } });
+    expect(toggle).toHaveBeenCalledWith("a2a");
+    expect(onNodeClick).not.toHaveBeenCalled();
+    cleanup();
+  });
 });
 
 describe("OverviewTab", () => {

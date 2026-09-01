@@ -18,13 +18,17 @@ const LABEL_KEY: Record<string, string> = {
 function SourceNodeImpl({ data }: { data: OrchNode }) {
   const t = useTranslations("orchestration");
   const stale = data.sourceIssue === "error"; // set by mergeSnapshot for failed sources
+  const collapsed = !!data.collapsed; // set by orchestrationToFlow's opts.collapsed
   const label = data.source && LABEL_KEY[data.source] ? t(LABEL_KEY[data.source]) : data.label;
   return (
     <div
       className={`rounded-lg border bg-surface px-3 py-2 min-w-[150px] ${stale ? "opacity-70 border-warning" : "border-border"}`}
       aria-label={label}
+      aria-expanded={!collapsed}
+      title={t(collapsed ? "sourceExpand" : "sourceCollapse")}
     >
       <div className="text-xs font-semibold flex items-center gap-1.5">
+        <span aria-hidden>{collapsed ? "▸" : "▾"}</span>
         {stale && <span aria-hidden>⚠</span>}
         {label}
       </div>
