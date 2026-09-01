@@ -120,8 +120,8 @@ test("resolveNextBuildEnv raises the Node heap for memory-constrained local buil
     "local build must set NODE_OPTIONS --max-old-space-size to avoid the webpack-pass OOM"
   );
   assert.ok(
-    Number(match[1]) >= 4096,
-    `build heap default must be >= 4096 MB (the V8 default ~2 GB OOMed); got ${match[1]}`
+    Number(match[1]) >= 6144,
+    `build heap default must be >= 6144 MB (the V8 default ~2 GB OOMed); got ${match[1]}`
   );
 });
 
@@ -148,8 +148,8 @@ test("resolveNextBuildEnv replaces an inherited heap ceiling below the measured 
   const match = env.NODE_OPTIONS.match(/--max-old-space-size=(\d+)/);
   assert.ok(match);
   assert.ok(
-    Number(match[1]) >= 4096,
-    `inherited 1024 must be raised to the >= 4096 MB floor; got ${match[1]}`
+    Number(match[1]) >= 6144,
+    `inherited 1024 must be raised to the >= 6144 MB floor; got ${match[1]}`
   );
 });
 test("resolveNextBuildEnv keeps unrelated NODE_OPTIONS flags when replacing the heap flag", () => {

@@ -208,7 +208,10 @@ export function resolveNextBuildEnv(baseEnv = process.env, platform = process.pl
   // build also exhausted its heap; full-build peak RSS ~2.5–4 GB per process). If
   // the inherited ceiling is below the measured floor, raise it to the floor
   // instead of failing 30–90 s into the compile with an opaque SIGABRT.
-  const MEASURED_HEAP_FLOOR_MB = 4096;
+  // Floor raised 4096→6144: a live full build with the 4 GB floor (inherited 1024
+  // replaced in place) still OOMed — 4 GB is the borderline ceiling the historical
+  // comment warns about. 6 GB sits between the measured peak and the 8 GB default.
+  const MEASURED_HEAP_FLOOR_MB = 6144;
   const inheritedMatch = (env.NODE_OPTIONS || "").match(/--max-old-space-size=(\d+)/);
   const inheritedMb = inheritedMatch ? Number(inheritedMatch[1]) : 0;
   if (!inheritedMatch || inheritedMb < MEASURED_HEAP_FLOOR_MB) {
