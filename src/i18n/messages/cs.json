@@ -6448,7 +6448,12 @@
     "savedModelEndpointSettings": "Nastavení koncového bodu uloženého modelu",
     "searchByModelAria": "Hledat podle modelu",
     "selectSupportedEndpoint": "Vyberte alespoň jeden podporovaný koncový bod",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Clear cooldown",
+    "clearConnectionCooldownInProgress": "Clearing…",
+    "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
+    "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
+    "failedClearConnectionCooldown": "Failed to clear cooldown"
   },
   "settings": {
     "title": "Nastavení",

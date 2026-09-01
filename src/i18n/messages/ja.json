@@ -6448,7 +6448,12 @@
     "savedModelEndpointSettings": "保存されたモデルエンドポイント設定",
     "searchByModelAria": "モデルで検索",
     "selectSupportedEndpoint": "サポートされているエンドポイントを少なくとも1つ選択してください",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Clear cooldown",
+    "clearConnectionCooldownInProgress": "Clearing…",
+    "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
+    "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
+    "failedClearConnectionCooldown": "Failed to clear cooldown"
   },
   "settings": {
     "title": "設定",

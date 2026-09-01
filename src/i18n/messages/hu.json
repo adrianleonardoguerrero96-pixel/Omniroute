@@ -6448,7 +6448,12 @@
     "savedModelEndpointSettings": "Mentett modell végpont beállításai",
     "searchByModelAria": "Keresés modell szerint",
     "selectSupportedEndpoint": "Válasszon ki legalább egy támogatott végpontot",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Clear cooldown",
+    "clearConnectionCooldownInProgress": "Clearing…",
+    "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
+    "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
+    "failedClearConnectionCooldown": "Failed to clear cooldown"
   },
   "settings": {
     "title": "Beállítások elemre",
