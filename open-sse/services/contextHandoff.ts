@@ -586,7 +586,7 @@ export function buildUniversalHandoffSystemMessage(
 <transfer_reason>${escapedReason}</transfer_reason>
 <previous_model>${escapedPrev}</previous_model>
 <current_model>${escapedCurr}</current_model>
-<note>A continuación se resume toda la conversacion para continuar sin perder el hilo.</note>
+<note>No prior-session summary is available for this handoff. The input below (e.g. a tool result) is the entire context you have -- do not assume or invent details about a broader conversation you cannot see.</note>
 </context_handoff>`;
   }
 
