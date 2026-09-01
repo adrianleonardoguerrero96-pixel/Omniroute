@@ -111,7 +111,17 @@ async function loadQuotaAutoPingExecutor(provider: string): Promise<BaseExecutor
 export function createDefaultQuotaAutoPingDeps(): QuotaAutoPingDeps {
   return {
     getSettings,
-    getProviderConnections,
+    // The db module returns generic row records; the scheduler's dep contract
+    // narrows them to the fields it reads. Cast through unknown at this single
+    // boundary (the db row type is a bag of optional fields, so direct assertion
+    // is rejected as insufficiently overlapping).
+    getProviderConnections: async (filter, limit, offset, columns) =>
+      (await getProviderConnections(
+        filter,
+        limit,
+        offset,
+        columns
+      )) as unknown as QuotaAutoPingConnection[],
     updateProviderConnection,
     refreshAndUpdateCredentials: async (connection) =>
       refreshAndUpdateCredentialsWithResolver(connection, loadQuotaAutoPingExecutor),
