@@ -1,0 +1,1 @@
+`PUT /api/settings/cache-config` now persists `alwaysPreserveClientCache` to the flat general settings the runtime cache-control policy actually reads; previously the value landed in the databaseSettings "cache" section and was silently ignored, so the endpoint had no effect on `cache_control` passthrough.
