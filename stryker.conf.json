@@ -283,6 +283,8 @@
       "tests/unit/model-lockout-decay.test.ts",
       "tests/unit/model-lockout-exact-cooldown-cap.test.ts",
       "tests/unit/model-lockout-max-cooldown.test.ts",
+      "tests/unit/native-codex-turn-pin-10379.test.ts",
+      "tests/unit/native-codex-turn-pin-model-scoped-fallback.test.ts",
       "tests/unit/no-memory-header.test.ts",
       "tests/unit/noauth-autocombo-lockout-7623.test.ts",
       "tests/unit/ollama-404-model-lockout-11071.test.ts",
