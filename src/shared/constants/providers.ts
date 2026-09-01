@@ -482,7 +482,7 @@ export const ID_TO_ALIAS = new Proxy({} as Record<string, string>, {
   },
 });
 
-export { USAGE_SUPPORTED_PROVIDERS, type UsageSupportedProvider } from "./providers/usageSupported";
+export { USAGE_SUPPORTED_PROVIDERS } from "./providers/usageSupported";
 
 // ── Zod validation, lazily on first AI_PROVIDERS access (perf: skips the walk
 // for processes that never touch AI_PROVIDERS, e.g. short-lived CLI commands) ──

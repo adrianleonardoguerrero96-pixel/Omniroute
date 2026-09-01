@@ -90,6 +90,19 @@ export const scoringWeightsSchema = z
     cacheAffinity: z.number().min(0).max(1).optional().default(0),
     sessionAvailability: z.number().min(0).max(1).optional().default(0.05),
     resetWindowAffinity: z.number().min(0).max(1).optional().default(0),
+    // The scorer weighs these two as well (`DEFAULT_WEIGHTS`); leaving them out
+    // meant zod dropped them from a saved config, and `normalizeScoringWeights`
+    // then read the gap as a deliberate zero — silently disabling
+    // anti-concentration and the quality signal, and inflating every other
+    // weight to make the distribution sum to 1 again.
+    //
+    // The defaults below therefore DO change the effective weights of a stored
+    // config that omitted these keys: the other thirteen stop being renormalized
+    // upward (quota 0.1549 -> 0.1429, health 0.1740 -> 0.1605, and so on). That is
+    // the correction, not a side effect — but it is a behaviour change, and the
+    // PR says so rather than claiming the routing is untouched.
+    connectionDensity: z.number().min(0).max(1).optional().default(0.0476),
+    quality: z.number().min(0).max(1).optional().default(0.03),
   })
   .optional();
 

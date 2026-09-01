@@ -6,8 +6,9 @@
  * provider-plugin manifest, `providerQuotaVisibility.ts`) can read the list
  * without pulling the ~12-module provider registry. Pure data — no imports,
  * no module state — so it cannot introduce a cycle. `providers.ts` re-exports
- * both the value and the derived type, so every existing import path keeps
- * working unchanged.
+ * the value, so every existing import path keeps working unchanged. The list
+ * stays a mutable `string[]` (no `as const`) so `.includes(providerId: string)`
+ * at the dashboard/server gates type-checks without a cast.
  */
 
 // Providers that support usage/quota API
@@ -67,6 +68,6 @@ export const USAGE_SUPPORTED_PROVIDERS = [
   "qwen-cloud-token-plan",
   // AgentRouter (New-API) console balance quota (consoleApiKey + newApiUserId)
   "agentrouter",
-] as const;
-
-export type UsageSupportedProvider = (typeof USAGE_SUPPORTED_PROVIDERS)[number];
+  // Kilo Code personal USD balance (GET /api/profile/balance, existing OAuth token)
+  "kilocode",
+];
