@@ -27,6 +27,7 @@ vi.mock("@/shared/components/flow/FlowCanvas", () => ({
   },
 }));
 import { AgentsTab } from "@/app/(dashboard)/dashboard/orchestration/tabs/AgentsTab";
+import { OverviewTab } from "@/app/(dashboard)/dashboard/orchestration/tabs/OverviewTab";
 
 function render(el: React.ReactElement) {
   const c = document.createElement("div");
@@ -82,5 +83,54 @@ describe("AgentsTab", () => {
     expect(flowProps.at(-1)?.fitKey).toBe("a2a:1");
     expect(r2.c.querySelector(".orchestration-canvas")).toBeTruthy();
     r2.cleanup();
+  });
+});
+
+describe("OverviewTab", () => {
+  const snap = {
+    nodes: [
+      { id: "orchestrator", kind: "orchestrator", label: "OmniRoute" },
+      {
+        id: "cloud-agent:1",
+        kind: "work",
+        source: "cloud-agent",
+        state: "running",
+        label: "task A",
+      },
+      {
+        id: "a2a:2",
+        kind: "work",
+        source: "a2a",
+        state: "failed",
+        label: "task B",
+        updatedAt: "2026-08-30T11:00:00Z",
+      },
+    ],
+    edges: [],
+    sources: [],
+    generatedAt: "x",
+  };
+  it("renders per-state counters and kanban cards; card click bubbles the node id", () => {
+    let clicked = "";
+    const { c, cleanup } = render(
+      <OverviewTab
+        snapshot={snap as never}
+        comboEvents={[]}
+        onCardClick={(id) => {
+          clicked = id;
+        }}
+        onSeeInGraph={() => {}}
+      />
+    );
+    expect(c.textContent).toContain("stateRunning");
+    expect(c.textContent).toContain("task A");
+    const card = Array.from(c.querySelectorAll("[data-orch-card]")).find((el) =>
+      el.textContent?.includes("task A")
+    );
+    act(() => {
+      (card as HTMLElement).click();
+    });
+    expect(clicked).toBe("cloud-agent:1");
+    cleanup();
   });
 });
