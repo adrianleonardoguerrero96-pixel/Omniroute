@@ -234,7 +234,11 @@ function trackUsageFromChunk(chunk, state) {
 
 // Convert OpenAI stream chunk to Claude format
 export function openaiToClaudeResponse(chunk, state) {
-  if (!chunk) return null;
+  if (!chunk && !state.pendingClaudeFinishChoice) return null;
+
+  const results = [];
+  const chunkUsage = chunk?.usage;
+  const hasChunkUsage = chunkUsage && typeof chunkUsage === "object";
 
   // Usage must be harvested BEFORE the choices guard: many OpenAI-compatible
   // upstreams (Fireworks, vLLM, Together, …) deliver the authoritative usage
@@ -242,14 +246,23 @@ export function openaiToClaudeResponse(chunk, state) {
   // usage-only chunk shaped `{"choices":[],"usage":{...}}`. Returning early on
   // that chunk discarded the real numbers and left downstream accounting on
   // OmniRoute's own tokenizer estimate (#11817).
-  trackUsageFromChunk(chunk, state);
+  //
+  // Harvesting alone is not enough: if the finish_reason chunk arrives BEFORE
+  // this trailing usage chunk (the normal order for these upstreams), the
+  // finish block below fires immediately and emits message_delta with
+  // whatever state.usage held at that moment — zero/stale, since the real
+  // trailing chunk hasn't been seen yet. The finish deferral below
+  // (pendingClaudeFinishChoice) holds the terminal emission open until either
+  // real usage has arrived or a genuine flush forces it, so the message_delta
+  // actually sent to the client carries the correct numbers (#11817 follow-up).
+  if (chunk) trackUsageFromChunk(chunk, state);
 
-  if (!chunk.choices?.[0]) return null;
-
-  const results = [];
-  const choice = chunk.choices[0];
+  const chunkChoice = chunk?.choices?.[0];
+  const flushingPendingFinish = !chunkChoice && Boolean(state.pendingClaudeFinishChoice);
+  const choice = chunkChoice || state.pendingClaudeFinishChoice;
+  if (!choice) return null;
+  if (flushingPendingFinish) state.pendingClaudeFinishChoice = null;
   const delta = choice.delta;
-
   // First chunk - ALWAYS send message_start first
   if (!state.messageStartSent) {
     state.messageStartSent = true;
@@ -501,6 +514,11 @@ export function openaiToClaudeResponse(chunk, state) {
   // guard therefore misfired and silently dropped the terminal message_delta/message_stop
   // for Responses→Claude streams (#5828 regression).
   if (choice.finish_reason && !state.claudeFinishEmitted) {
+    if (!hasChunkUsage && !flushingPendingFinish) {
+      state.pendingClaudeFinishChoice = choice;
+      return results.length > 0 ? results : null;
+    }
+
     state.claudeFinishEmitted = true;
     stopThinkingBlock(state, results);
     stopTextBlock(state, results);

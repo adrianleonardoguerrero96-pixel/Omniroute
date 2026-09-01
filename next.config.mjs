@@ -74,12 +74,43 @@ function isNextIntlExtractorDynamicImportWarning(warning) {
   );
 }
 
+const IGNORED_INFRASTRUCTURE_BUILD_DEPENDENCY_MODULES = [
+  "/node_modules/fumadocs-mdx/dist/load-from-file-",
+  "/node_modules/next-intl/dist/esm/production/extractor/format/index.js",
+];
+
+function isKnownInfrastructureBuildDependencyWarning(args) {
+  const message = args
+    .filter((value) => typeof value === "string")
+    .join(" ")
+    .replaceAll("\\", "/");
+  return (
+    message.includes("webpack.FileSystemInfo") &&
+    message.includes("for build dependencies failed at 'import(") &&
+    message.includes("incorrect cache invalidation") &&
+    IGNORED_INFRASTRUCTURE_BUILD_DEPENDENCY_MODULES.some((modulePath) =>
+      message.includes(modulePath)
+    )
+  );
+}
+
+function filterKnownInfrastructureWarnings(baseConsole) {
+  const filteredConsole = Object.create(baseConsole);
+  filteredConsole.warn = (...args) => {
+    if (isKnownInfrastructureBuildDependencyWarning(args)) return;
+    Reflect.apply(baseConsole.warn, baseConsole, args);
+  };
+  return filteredConsole;
+}
+
 // OMNIROUTE_BUILD_PROFILE=minimal physically removes four optional privileged
 // modules (MITM cert install, Zed keychain import, Cloud Sync, 9router
 // installer) from the built bundle by aliasing them to feature-disabled stubs.
 // The resulting artifact is intended to be published as `omniroute-secure`
 // for security-sensitive environments. See docs/security/SOCKET_DEV_FINDINGS.md.
 const isMinimalBuild = process.env.OMNIROUTE_BUILD_PROFILE === "minimal";
+// Contributor builds validate compilation only and do not need a shippable standalone bundle.
+const isContributorBuild = process.env.OMNIROUTE_BUILD_PROFILE === "contributor";
 
 // #10273: `null` unless the operator opts in with DASHBOARD_ALLOW_EMBED=vscode. Read at build
 // time like every other knob in this file (OMNIROUTE_BASE_PATH, OMNIROUTE_BUILD_PROFILE, …),
@@ -132,9 +163,7 @@ const nextConfig = {
     // instead of keeping the old generation in control. Falls back to a
     // value that is unique per build run when git is absent (CI tarball).
     NEXT_PUBLIC_SW_BUILD_ID:
-      process.env.OMNIROUTE_SW_BUILD_ID ||
-      process.env.SOURCE_VERSION ||
-      `${Date.now()}`,
+      process.env.OMNIROUTE_SW_BUILD_ID || process.env.SOURCE_VERSION || `${Date.now()}`,
   },
   distDir,
   // Turbopack config: redirect native modules to stubs at build time
@@ -191,7 +220,7 @@ const nextConfig = {
       },
     ],
   },
-  output: "standalone",
+  ...(isContributorBuild ? {} : { output: "standalone" }),
   compress: true,
   productionBrowserSourceMaps: false,
   // OmniRoute is a proxy for AI APIs — request bodies routinely include
@@ -262,20 +291,30 @@ const nextConfig = {
     ],
   },
   outputFileTracingExcludes: {
-    // Planning/task docs are not runtime assets and can break standalone copies
-    // when broad fs/path tracing pulls the whole repository into the NFT graph.
-    "/*": [
-      "./.git/**/*",
-      "./_tasks/**/*",
-      "./_references/**/*",
-      "./_ideia/**/*",
-      "./_mono_repo/**/*",
-      "./coverage/**/*",
-      "./test-results/**/*",
-      "./playwright-report/**/*",
-      "./app.__qa_backup/**/*",
-      "./tests/**/*",
-      "./logs/**/*",
+    // Planning/task docs, tests, and non-production worktrees are not runtime assets
+    // and break standalone copies when broad NFT tracing pulls the whole repository into memory.
+    // Using "**/*" ensures the exclusion applies across all app and API routes, not just "/".
+    "**/*": [
+      "**/.git/**",
+      "**/_tasks/**",
+      "**/_references/**",
+      "**/_ideia/**",
+      "**/_mono_repo/**",
+      "**/coverage/**",
+      "**/test-results/**",
+      "**/playwright-report/**",
+      "**/app.__qa_backup/**",
+      "**/tests/**",
+      "**/logs/**",
+      "**/.claude/**",
+      "**/.opencode/**",
+      "**/.scratch/**",
+      "**/.agents/**",
+      "**/.slim/**",
+      "**/packages/**",
+      "**/.tmp/**",
+      "**/electron/**",
+      "**/docs/**",
     ],
   },
   serverExternalPackages: [
@@ -329,11 +368,17 @@ const nextConfig = {
     // TODO: Re-enable after fixing all sub-component useTranslations scope issues
     ignoreBuildErrors: true,
   },
-  webpack(config, { webpack }) {
+  webpack(config, { dev, webpack }) {
     config.ignoreWarnings = [
       ...(config.ignoreWarnings || []),
       isNextIntlExtractorDynamicImportWarning,
     ];
+    const infrastructureLogging = config.infrastructureLogging || {};
+    config.infrastructureLogging = {
+      ...infrastructureLogging,
+      console: filterKnownInfrastructureWarnings(infrastructureLogging.console || console),
+    };
+    const nextDefaultSplitChunks = config.optimization?.splitChunks;
     config.optimization = config.optimization || {};
     config.optimization.splitChunks = {
       ...config.optimization.splitChunks,
@@ -392,6 +437,9 @@ const nextConfig = {
         },
       },
     };
+    // Next's development defaults are tuned for incremental route compilation.
+    // Retain the custom vendor topology for production without imposing it on dev.
+    if (dev) config.optimization.splitChunks = nextDefaultSplitChunks;
 
     if (isMinimalBuild) {
       // Mirror the turbopack.resolveAlias entries for webpack-built artifacts.
