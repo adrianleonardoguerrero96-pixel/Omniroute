@@ -11,6 +11,13 @@ export type FreeModelFreeType =
   | "keyless"
   | "discontinued";
 
+/**
+ * A real, recurring quota that only opens after an identity check tied to a
+ * region (e.g. 实名认证 with a mainland-China ID). One member today; extend the
+ * union when a second kind of gate is catalogued.
+ */
+export type FreeEligibilityGate = "regional-identity";
+
 export interface FreeModelBudget {
   provider: string;
   modelId: string;
@@ -40,6 +47,14 @@ export interface FreeModelBudget {
    * `open-sse/services/autoCombo/strictZeroCostFilter.ts`.
    */
   hardStopGuaranteed?: boolean;
+  /**
+   * Set when the quota is real and recurring but only reachable after a
+   * region-bound identity verification. Affects COUNTING only: the row
+   * leaves the steady headline and lands in `gatedRecurringTokens`.
+   * Routing, `isFreeModel` and STRICT_ZERO_COST read `freeType` alone.
+   * Put the gate's source in a comment next to the entry.
+   */
+  eligibilityGate?: FreeEligibilityGate;
 }
 
 export interface FreeModelTotals {
@@ -61,6 +76,13 @@ export interface FreeModelTotals {
    * never summed into the headline (avoids the rate-limit×24/7 inflation).
    */
   uncappedProviders: string[];
+  /**
+   * Pool-deduped tokens/month behind an eligibility gate (same rule as the
+   * headline). Never summed into `steadyRecurringTokens`.
+   */
+  gatedRecurringTokens: number;
+  /** Providers (sorted) contributing to `gatedRecurringTokens`. */
+  gatedProviders: string[];
   modelCount: number;
   poolCount: number;
   perModel: FreeModelBudget[];
@@ -224,11 +246,23 @@ export function computeFreeModelTotals(
     (m) => !(opts.excludeTosAvoid && m.tos === "avoid") && m.enabled !== false
   );
 
+  const isGated = (m: FreeModelBudget) => m.eligibilityGate !== undefined;
+
   const steadyRecurringTokens = dedupedSum(
     models,
     (m) => m.monthlyTokens,
-    (m) => STEADY_MONTHLY.has(m.freeType)
+    (m) => STEADY_MONTHLY.has(m.freeType) && !isGated(m)
   );
+  const gatedRecurringTokens = dedupedSum(
+    models,
+    (m) => m.monthlyTokens,
+    (m) => STEADY_MONTHLY.has(m.freeType) && isGated(m)
+  );
+  const gatedProviders = [
+    ...new Set(
+      models.filter((m) => STEADY_MONTHLY.has(m.freeType) && isGated(m)).map((m) => m.provider)
+    ),
+  ].sort();
   const recurringCredits = dedupedSum(
     models,
     (m) => m.creditTokens,
@@ -244,13 +278,17 @@ export function computeFreeModelTotals(
   const firstMonthRealisticTokens = steadyWithRecurringCreditsTokens + oneTimeCredits;
 
   const poolCount = new Set(
-    models.filter((m) => STEADY_MONTHLY.has(m.freeType) && m.poolKey).map((m) => m.poolKey)
+    models
+      .filter((m) => STEADY_MONTHLY.has(m.freeType) && m.poolKey && !isGated(m))
+      .map((m) => m.poolKey)
   ).size;
 
   // Deposit-unlock boost: sum the FREE_TIER_BOOSTS whose pool still has a live
   // recurring model in the (optionally ToS-filtered) set.
   const livePools = new Set(
-    models.filter((m) => STEADY_MONTHLY.has(m.freeType) && m.poolKey).map((m) => m.poolKey)
+    models
+      .filter((m) => STEADY_MONTHLY.has(m.freeType) && m.poolKey && !isGated(m))
+      .map((m) => m.poolKey)
   );
   const boostMonthlyTokens = Object.entries(FREE_TIER_BOOSTS)
     .filter(([pool]) => livePools.has(pool))
@@ -267,6 +305,8 @@ export function computeFreeModelTotals(
     firstMonthRealisticTokens,
     boostMonthlyTokens,
     uncappedProviders,
+    gatedRecurringTokens,
+    gatedProviders,
     modelCount: models.length,
     poolCount,
     perModel: models.slice().sort((a, b) => b.monthlyTokens - a.monthlyTokens),
