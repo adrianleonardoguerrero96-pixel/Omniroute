@@ -7,7 +7,7 @@ import {
 } from "../../open-sse/config/freeTierCatalog.ts";
 
 test("FREE_TIER_BUDGETS holds positive integer monthly-token budgets", () => {
-  assert.ok(Object.keys(FREE_TIER_BUDGETS).length >= 19);
+  assert.ok(Object.keys(FREE_TIER_BUDGETS).length >= 18); // 2026-09-02: gemini + ollama-cloud left (no published cap), nara joined
   for (const [id, tokens] of Object.entries(FREE_TIER_BUDGETS)) {
     assert.ok(Number.isInteger(tokens) && tokens > 0, `${id} must be a positive integer`);
   }
@@ -27,16 +27,20 @@ test("FREE_TIER_TOS marks proxy-prohibited providers as avoid", () => {
 
 test("computeFreeTierTotals sums the documented budgets", () => {
   const t = computeFreeTierTotals();
-  assert.equal(t.providerCount, 19);
-  assert.ok(t.documentedMonthlyTokens >= 1_350_000_000);
-  assert.ok(t.documentedMonthlyTokens <= 1_450_000_000);
+  // 2026-09-02 re-audit: gemini + ollama-cloud left the legacy map (no published cap), nara joined; groq → 30M
+  assert.equal(t.providerCount, 18);
+  // 2026-09-02 re-audit: gemini + ollama-cloud left the legacy map (no published cap), nara joined; groq → 30M (legacy sum 1,505,025,000)
+  assert.ok(t.documentedMonthlyTokens >= 1_450_000_000);
+  assert.ok(t.documentedMonthlyTokens <= 1_550_000_000);
   assert.equal(typeof t.headline, "string");
-  assert.match(t.headline, /1\.3/);
+  // 2026-09-02 re-audit: gemini + ollama-cloud left the legacy map (no published cap), nara joined; groq → 30M ("over 1.51B …")
+  assert.match(t.headline, /1\.5/);
 });
 
 test("computeFreeTierTotals can exclude ToS-avoid providers", () => {
   const all = computeFreeTierTotals();
   const clean = computeFreeTierTotals({ excludeTosAvoid: true });
   assert.equal(all.documentedMonthlyTokens - clean.documentedMonthlyTokens, 25_000);
-  assert.equal(clean.providerCount, 18);
+  // 2026-09-02 re-audit: gemini + ollama-cloud left the legacy map (no published cap), nara joined; groq → 30M
+  assert.equal(clean.providerCount, 17);
 });
