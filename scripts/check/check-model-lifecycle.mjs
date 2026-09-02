@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 // scripts/check/check-model-lifecycle.mjs
-// Gate anti-drift (#11503): as duas tabelas mantidas à mão que decidem roteamento —
+// Gate anti-drift (#11503): as três tabelas mantidas à mão que decidem roteamento —
 // FITNESS_TABLE (open-sse/services/autoCombo/taskFitness.ts, camada 4 do task fitness) e
 // BUILT_IN_ALIASES (open-sse/services/modelDeprecation.ts, reescreve `body.model` em toda
-// request) — apodrecem em silêncio quando o fornecedor aposenta um modelo. Em
+// request), além de DEFAULT_DEGRADATION_MAP (backgroundTaskDetector.ts) — apodrecem em
+// silêncio quando o fornecedor aposenta um modelo. Em
 // release/v3.8.51 o resultado foi uma inversão de ranking (modelo morto 0.98 vs flagship
-// vivo 0.50) e aliases que garantiam 404. Este gate compara as duas contra o snapshot de
+// vivo 0.50) e aliases apontando para ids obsoletos. Este gate compara as três contra o snapshot de
 // ciclo de vida em config/quality/model-lifecycle.json (sem rede; regenerar com
 // `npm run quality:refresh-model-lifecycle`).
 //
@@ -17,7 +18,8 @@
 //   (d) nenhuma linha de DEFAULT_DEGRADATION_MAP (open-sse/services/backgroundTaskDetector.ts)
 //       tem origem ou destino aposentado. A origem aposentada é linha morta: checkLifecycle
 //       devolve 410 antes de resolveBackgroundTaskRedirect rodar. O destino aposentado é o
-//       mesmo 404 garantido de (b), só que disparado pelo redirecionamento de tarefa de fundo.
+//       normalmente rejeitado com 410 quando o ciclo de vida é validado novamente após o
+//       redirecionamento; a resolução de alias ainda pode convertê-lo em um id aceito.
 //
 // (a) é deliberadamente restrita aos ids ROTEÁVEIS: linhas versionadas legítimas como
 // `gpt-4o` também casam com ids aposentados que o catálogo nunca serviu
@@ -166,7 +168,7 @@ async function main() {
     "drop the row from FITNESS_TABLE in open-sse/services/autoCombo/taskFitness.ts, or replace it with the versioned id of the live successor."
   );
   failures += report(
-    `all ${Object.keys(aliases).length} BUILT_IN_ALIASES targets are live catalog models`,
+    `all ${Object.keys(aliases).length} BUILT_IN_ALIASES targets are present in REGISTRY and absent from the retired-id snapshot`,
     findBadAliasTargets(aliases, catalogIds, retiredIds),
     "point the alias at the replacement the vendor publishes (see `sources` in config/quality/model-lifecycle.json). Never invent a target."
   );

@@ -3,9 +3,10 @@
  * third hand-maintained routing table that names model ids, and it was outside the
  * retired-model gate. A retired *source* is a dead row — `checkLifecycle` answers 410
  * `model_shutdown` before `resolveBackgroundTaskRedirect` runs — and a retired *target*
- * is the same guaranteed 404 the alias check already refuses.
+ * is normally rejected with 410 when lifecycle validation runs again after the redirect,
+ * unless alias resolution maps it to an accepted id.
  *
- * Table-driven over the live default map and the vendor lifecycle snapshot, mirroring
+ * Table-driven over the production default map and the checked-in lifecycle snapshot, mirroring
  * `model-deprecation-aliases-11503.test.ts`, so a new dead row fails by name.
  */
 import { describe, it } from "node:test";

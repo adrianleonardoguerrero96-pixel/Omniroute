@@ -45,10 +45,11 @@ const DEFAULT_DETECTION_PATTERNS = [
   "label this",
 ];
 
-// Every source and target must be a model the vendor still serves: a retired source is a
-// dead row (checkLifecycle answers 410 before the redirect runs) and a retired target is a
-// guaranteed 404. `npm run check:model-lifecycle` diffs this map against
-// config/quality/model-lifecycle.json.
+// Every source and target must be absent from the retired-id snapshot: a retired source is
+// a dead row (checkLifecycle answers 410 before the redirect runs), while a retired target
+// is normally rejected with 410 when lifecycle validation runs again after the redirect
+// (unless alias resolution maps it to an accepted id). `npm run check:model-lifecycle`
+// diffs this map against config/quality/model-lifecycle.json.
 const DEFAULT_DEGRADATION_MAP: Record<string, string> = {
   // Premium → Cheap alternatives
   "claude-opus-4-6": "gemini-3-flash",
