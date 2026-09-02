@@ -770,6 +770,7 @@
     "batchListDeleteAllCompletedTitle": "Видалити всі завершені пакети",
     "batchListBatchesTable": "Партії",
     "changelogViewerLoading": "Завантаження журналу змін із GitHub...",
+    "profile": "__MISSING__:Profile",
     "profileLoading": "Завантаження профілю...",
     "profileHowToEarn": "Як заробити",
     "bootstrapBannerDismiss": "Відхилити",
@@ -805,6 +806,13 @@
     "batchConceptBenefit50pct": "50% discount on input + output tokens",
     "batchConceptAsync24h": "Async with a 24h completion window",
     "batchConceptUseCases": "Best for bulk classification, evaluations, and embeddings",
+    "batchHeaderSubtitle": "Run many requests as one job",
+    "batchStep1": "1 · Upload JSONL",
+    "batchStep1Desc": "Add requests",
+    "batchStep2": "2 · Create batch",
+    "batchStep2Desc": "Run job",
+    "batchStep3": "3 · Get results",
+    "batchStep3Desc": "Download output",
     "filesConceptTitle": "Batch files",
     "filesConceptSubtitle": "JSONL files used by batches: input requests, results, and errors.",
     "filesConceptInput": "Input — your JSONL with one request per line",
@@ -974,19 +982,13 @@
     "batchFileUsedByCount": "Використано {count, plural, one {# партія} other {# партій}}",
     "batchFilePreview": "Попередній перегляд",
     "batchFilePreviewTruncated": "Показано перші {shown} рядків ({total} всього рядків)",
-    "batchFileDownloadFull": "Завантажити повний файл",
-    "batchHeaderSubtitle": "Run many requests as one job",
-    "batchStep1": "1 · Upload JSONL",
-    "batchStep1Desc": "Add requests",
-    "batchStep2": "2 · Create batch",
-    "batchStep2Desc": "Run job",
-    "batchStep3": "3 · Get results",
-    "batchStep3Desc": "Download output"
+    "batchFileDownloadFull": "Завантажити повний файл"
   },
   "disabled": "Вимкнено",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Перенаправляти запити з вичерпаним бюджетом на резервного безкоштовного провайдера/модель.",
   "featureFlagArenaEloSyncEnabledDescription": "Увімкнути періодичну синхронізацію ELO з таблиці лідерів Arena AI для рейтингу інтелекту моделей.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Рекламуйте claude/&lt;provider&gt;/&lt;model&gt; mirror ids на /v1/models, щоб модель виявлення Claude Code gateway перераховувала не Claude моделі. Увага: подвоює записи каталогу для всіх клієнтів, коли увімкнено глобально.",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "Увімкніть адаптивні віртуальні смуги допуску для кожного тенанта під час надсилання провайдерам (#9654): сплеск навантаження одного тенанта більше не викликає 503 в іншого. Змінна середовища OMNIROUTE_CHAT_VIRTUAL_LANES має пріоритет над цим налаштуванням у панелі; зміни набувають чинності після перезапуску сервера.",
   "sidebar": {
     "home": "додому",
@@ -1023,6 +1025,8 @@
     "logs": "Журнали",
     "webhooks": "Веб-хуки",
     "webhooksSubtitle": "Отримуйте сповіщення про події",
+    "logExport": "Експорт журналів",
+    "logExportSubtitle": "Надсилання журналів викликів назовні",
     "combosSubtitle": "Групуйте постачальників для відновлення після відмови",
     "batchSubtitle": "Обробка кількох запитів",
     "contextCavemanSubtitle": "Швидке стиснення",
@@ -1267,6 +1271,7 @@
     "agentBridgeSubtitle": "Перехоплення трафіку агента IDE",
     "trafficInspector": "Інспектор трафіку",
     "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
+    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client.",
     "cliCode": "Код CLI",
     "cliCodeSubtitle": "Інструменти коду, що вказують на OmniRoute",
     "cliAgents": "Агенти CLI",
@@ -1287,6 +1292,8 @@
     "discoverySubtitle": "Сканувати провайдерів на наявність безкоштовного доступу",
     "conductor": "Кондуктор",
     "conductorSubtitle": "CLI-агент флот",
+    "orchestration": "Оркестрація",
+    "orchestrationSubtitle": "Живий огляд усього, що виконується",
     "resilienceConnections": "Стійкість З'єднання",
     "resilienceConnectionsSubtitle": "Охолодження, автомат, стан блокування",
     "settingsModalityBridge": "Міст Модальності",
@@ -1300,8 +1307,7 @@
       "open": "відкрити",
       "close": "закрити"
     },
-    "noResults": "Немає результатів",
-    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client."
+    "noResults": "Немає результатів"
   },
   "webhooks": {
     "title": "Веб-хуки",
@@ -1766,7 +1772,8 @@
     "tools": "Інструменти",
     "agentBridge": "Agent Bridge",
     "trafficInspector": "Інспектор трафіку",
-    "usage": "Використання"
+    "usage": "Використання",
+    "orchestration": "Оркестрація"
   },
   "home": {
     "quickStart": "Швидкий старт",
@@ -1808,6 +1815,11 @@
     "updateStarted": "Оновлення розпочато...",
     "reloadingPageAutomatically": "Автоматичне перезавантаження сторінки...",
     "providerTopology": "Топологія провайдера",
+    "recentRequests": "Recent Requests",
+    "recentRequestsEmpty": "No requests yet.",
+    "recentRequestsModel": "Model",
+    "recentRequestsTokens": "In / Out",
+    "recentRequestsWhen": "When",
     "downloadDmg": "Завантажити DMG (macOS)",
     "downloadDmgDescription": "Доступна нова версія настільного додатку OmniRoute. Будь ласка, завантажте та встановіть установник DMG для macOS, щоб оновити (поточна: v{version}).",
     "downloadExe": "Завантажити EXE (Windows)",
@@ -1865,11 +1877,6 @@
     "releaseNotes": "Примітки до випуску",
     "readMore": "Читати далі",
     "noAuthLabel": "Без автентифікації",
-    "recentRequests": "Recent Requests",
-    "recentRequestsEmpty": "No requests yet.",
-    "recentRequestsModel": "Model",
-    "recentRequestsTokens": "In / Out",
-    "recentRequestsWhen": "When",
     "readinessEyebrow": "Get ready to route",
     "readinessTitle": "Send your first request",
     "readinessSubtitle": "Four small steps. OmniRoute checks readiness as you go.",
@@ -2399,7 +2406,15 @@
     "bypassProviderQuota": "Обходити ліміти квот провайдера",
     "bypassProviderQuotaDescription": "Дозволяє цьому ключу ігнорувати політику обмежень висхідного провайдера/акаунта під час маршрутизації. Квоти API-ключа в USD все одно застосовуються.",
     "quotaPill": "КВОТА",
-    "quotaModeOnly": "Лише qtSd"
+    "quotaModeOnly": "Лише qtSd",
+    "exclusiveLease": "__MISSING__:Exclusive Lease",
+    "exclusiveLeaseNoticeTitle": "__MISSING__:Exclusive Lease",
+    "exclusiveLeaseNoticeDesc": "__MISSING__:This API key has exclusive lease permissions for dedicated connection routing.",
+    "allConnections": "__MISSING__:All connections",
+    "onlySelectedConnections": "__MISSING__:Only selected connections",
+    "selectAtLeastOneConnection": "__MISSING__:Select at least one connection or choose All connections.",
+    "allConnectionsDesc": "__MISSING__:This key can use any active connection.",
+    "restrictedToConnections": "__MISSING__:Restricted to {count, plural, one {# connection} other {# connections}}."
   },
   "auditLog": {
     "title": "Журнал аудиту",
@@ -2922,9 +2937,10 @@
       "interpreter": "CLI автономного агента для кодування Open Interpreter",
       "omp": "Термінальний агент для кодування Oh My Pi",
       "letta": "CLI-агент Letta з постійною пам'яттю та використанням інструментів",
+      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
       "warp": "ШІ-термінал Warp із підтримкою користувацьких провайдерів",
       "agent-deck": "Мультиагентний оркестратор Agent Deck",
-      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
+      "5dive": "5dive — самостійно розміщений флот агентів для коду; один auth-профіль спрямовує їх усіх на OmniRoute"
     },
     "guides": {
       "cursor": {
@@ -3849,6 +3865,9 @@
   },
   "endpoint": {
     "title": "Кінцева точка API",
+    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
+    "testEndpoint": "Test endpoint →",
+    "advancedProtocols": "Advanced protocols",
     "available": "Доступні кінцеві точки",
     "cloudProxy": "Хмарний проксі",
     "disableConfirm": "Ви впевнені, що бажаєте вимкнути хмарний проксі?",
@@ -4156,10 +4175,7 @@
     "notionIntegrationHelp": "Створити внутрішню інтеграцію на",
     "notionIntegrationToken": "Токен внутрішньої інтеграції Notion",
     "notionNotConnected": "Не підключено",
-    "notionTokenConfigured": "Токен налаштовано. Інструменти Notion доступні через MCP.",
-    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
-    "testEndpoint": "Test endpoint →",
-    "advancedProtocols": "Advanced protocols"
+    "notionTokenConfigured": "Токен налаштовано. Інструменти Notion доступні через MCP."
   },
   "endpoints": {
     "tabProxy": "Endpoint Proxy",
@@ -4632,6 +4648,13 @@
     "retry": "Повторіть спробу",
     "allOperational": "Всі системи в робочому стані",
     "issuesDetected": "Виявлено системні проблеми",
+    "healthVerdictReady": "OmniRoute is ready",
+    "healthVerdictActionRequired": "Action required to restore full operation",
+    "healthVerdictCoolingDown": "Cooling down after recent changes",
+    "healthSubtitle": "System health check",
+    "advancedDiagnosticsTitle": "Advanced diagnostics",
+    "hide": "Hide",
+    "show": "Show",
     "updatedAt": "Оновлено {time}",
     "latency": "Затримка",
     "latencyP50": "стор.50",
@@ -4742,14 +4765,7 @@
     "issueCount": "{count} проблем",
     "score": "Оцінка",
     "lastRequest": "Останній запит",
-    "lastError": "Остання помилка",
-    "healthVerdictReady": "OmniRoute is ready",
-    "healthVerdictActionRequired": "Action required to restore full operation",
-    "healthVerdictCoolingDown": "Cooling down after recent changes",
-    "healthSubtitle": "System health check",
-    "advancedDiagnosticsTitle": "Advanced diagnostics",
-    "hide": "Hide",
-    "show": "Show"
+    "lastError": "Остання помилка"
   },
   "telemetry": {
     "title": "Системна телеметрія",
@@ -4954,7 +4970,9 @@
     "multiProvider": "Багатопровайдер",
     "usageTracking": "Відстеження використання",
     "securityDesc": "Встановіть пароль, щоб захистити свою інформаційну панель, або пропустіть наразі.",
+    "securityDescSkipWarning": "⚠️ Without a password, you won't be able to add providers during setup. You can add them later from the dashboard after setting a password.",
     "providerDesc": "Підключіть свого першого постачальника AI. Ви можете додати більше пізніше.",
+    "providerRequiresPassword": "You need to set a password first to add providers. Please go back to the security step and set a password, or add providers later from the dashboard.",
     "apiKeyRequired": "Ключ API (обов'язково)",
     "customUrlOptional": "Спеціальна URL-адреса (необов'язково)",
     "testDesc": "Давайте перевіримо, чи працює підключення до вашого провайдера.",
@@ -5011,9 +5029,7 @@
         "skipped": "вже налаштовано",
         "failed": "не вдалося"
       }
-    },
-    "securityDescSkipWarning": "⚠️ Without a password, you won't be able to add providers during setup. You can add them later from the dashboard after setting a password.",
-    "providerRequiresPassword": "You need to set a password first to add providers. Please go back to the security step and set a password, or add providers later from the dashboard."
+    }
   },
   "providers": {
     "title": "Провайдери",
@@ -5871,6 +5887,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Мінімальний час (мс) між запитами. Перевизначає стандартну затримку обмежувача частоти запитів.",
     "rateLimitOverridesMinTimeLabel": "Мін. інтервал (мс)",
+    "rateLimitOverridesRpdHint": "Максимальна кількість запитів на день для цього з’єднання. Перевизначає стандартне значення постачальника.",
+    "rateLimitOverridesRpdLabel": "RPD (Запитів/день)",
     "rateLimitOverridesRpmHint": "Максимальна кількість запитів на хвилину для цього підключення. Перевизначає значення за замовчуванням для провайдера.",
     "rateLimitOverridesRpmLabel": "RPM (запитів/хв)",
     "rateLimitOverridesTpdHint": "Максимальна кількість токенів на день для цього підключення. Перевизначає значення за замовчуванням для провайдера.",
@@ -6254,7 +6272,7 @@
       "galadriel": "Connect Galadriel with an API key.",
       "predibase": "$25 free trial credits (30-day validity)",
       "chenzk": "OpenAI-compatible gateway with a live model catalog at chenzk.top.",
-      "magnific": "Generate images with Freepik's Mystic API.",
+      "magnific": "Generate images with Magnific's Mystic API.",
       "freetheai": "Free OpenAI-compatible gateway with passthrough model support.",
       "g4f-gemini": "Віддалений шлюз g4f.space до Gemini. Для анонімного доступу потрібні proof-of-work-кредити з g4f.dev/chat або API-ключ учасника з g4f.dev/members.html; ліміти змінюються.",
       "g4f-groq": "Віддалений шлюз g4f.space до Groq. Для анонімного доступу потрібні proof-of-work-кредити з g4f.dev/chat або API-ключ учасника з g4f.dev/members.html; ліміти змінюються.",
@@ -6302,6 +6320,20 @@
     "webSessionGuideStep3": "Скопіюйте необхідні облікові дані з власного домену постачальника. Для файлів cookie скопіюйте лише значення заголовка Cookie і пропустіть Cookie:.",
     "webSessionGuideStep3Manual": "Ручний шлях: відкрийте інструменти розробника браузера (F12 → Мережа), оновіть сторінку, відкрийте автентифікований запит і скопіюйте значення заголовка Cookie з заголовків запиту — пропустіть префікс Cookie:.",
     "webSessionGuideStep4": "Вставте його сюди та перевірте з’єднання. Якщо він перестане працювати, увійдіть ще раз і замініть його новим значенням.",
+    "harImportButtonLabel": "Import .har file",
+    "harImportButtonBusy": "Importing…",
+    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
+    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
+    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
+    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
+    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
+    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
+    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
+    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
+    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
+    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
+    "harImportErrorReadFailed": "Couldn't read that file.",
+    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file.",
     "webSessionSecurityHint": "Розглядайте це як пароль: він може отримати доступ до вашого веб-облікового запису, у який ви ввійшли, доки його термін дії не закінчиться або його не буде відкликано.",
     "webNoAuthGuideTitle": "Облікові дані не потрібні",
     "webNoAuthGuideBody": "{provider} не потребує ключа API або файлу cookie. Збережіть підключення, щоб використовувати його безкоштовну веб-кінцеву точку.",
@@ -6417,20 +6449,11 @@
     "searchByModelAria": "Пошук за моделлю",
     "selectSupportedEndpoint": "Виберіть принаймні одну підтримувану точку доступу",
     "antigravityClientProfileHarness": "Harness / CLI",
-    "harImportButtonLabel": "Import .har file",
-    "harImportButtonBusy": "Importing…",
-    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
-    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
-    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
-    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
-    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
-    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
-    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
-    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
-    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
-    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
-    "harImportErrorReadFailed": "Couldn't read that file.",
-    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file."
+    "clearConnectionCooldown": "Clear cooldown",
+    "clearConnectionCooldownInProgress": "Clearing…",
+    "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
+    "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
+    "failedClearConnectionCooldown": "Failed to clear cooldown"
   },
   "settings": {
     "title": "Налаштування",
@@ -6710,6 +6733,18 @@
     "sidebarVisibility": "Hide sidebar items",
     "sidebarVisibilityDesc": "Hide any sidebar navigation entry to reduce visual clutter.",
     "sidebarVisibilityHint": "Any sidebar section is hidden automatically when a...",
+    "presetAll": "All",
+    "presetAllDesc": "Show everything",
+    "presetEssentials": "Essentials",
+    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
+    "presetMinimal": "Minimal",
+    "presetMinimalDesc": "Core pages only",
+    "presetDeveloper": "Developer",
+    "presetDeveloperDesc": "Dev & proxy tools",
+    "presetAdmin": "Admin",
+    "presetAdminDesc": "Monitoring & audit",
+    "settingsSidebarTitle": "Sidebar Customization",
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
     "hideHealthLogs": "Приховати журнали перевірки справності",
     "hideHealthLogsDesc": "Коли ввімкнено, блокувати повідомлення [HealthCheck] на консолі сервера",
     "themeAccent": "Колір теми",
@@ -7030,6 +7065,14 @@
     "providerAccountRoutingDesc": "Перевизначити глобальну стратегію акаунтів для цього провайдера (паритет 9router).",
     "providerRoutingStrategy": "Стратегія акаунтів",
     "providerRoutingInheritGlobal": "Успадкувати глобальне значення за замовчуванням",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings.",
     "modelAliases": "Псевдоніми моделі",
     "modelAliasesTitle": "Псевдоніми моделей",
     "modelAliasesDesc": "Remap model names using exact matches or wildcard patterns.",
@@ -7538,6 +7581,8 @@
     "resilienceRequestsPerMinute": "Requests per minute",
     "resilienceMinTimeBetweenRequests": "Minimum time between requests",
     "resilienceConcurrentRequests": "Concurrent requests",
+    "resilienceConnectionScopeConcurrentRequests": "__MISSING__:Concurrent requests per connection/quota scope",
+    "resilienceGlobalConcurrentRequests": "__MISSING__:Global concurrent upstream requests (0 = disabled)",
     "resilienceMaxQueueWaitTime": "Максимальний час очікування в черзі",
     "resilienceBaseCooldown": "Base cooldown",
     "resilienceUseUpstreamRetryHints": "Use upstream retry hints",
@@ -8004,6 +8049,7 @@
     "resilienceRequestQueueDesc": "Цей рівень контролює лише чергування та темп. Він не зберігає перезарядки або розімкнуті вимикачі.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Вмикає захист черги за замовчуванням для активних підключень ключа API.",
     "resilienceMaxQueueWait": "Максимальний час очікування в черзі",
+    "resilienceMaxExecutionWait": "Тайм-аут виконання (аварійний ліміт частоти запитів)",
     "resilienceConnectionCooldownScope": "Індивідуальне підключення",
     "resilienceConnectionCooldownTrigger": "Коли підключення повертає тимчасову помилку висхідного потоку",
     "resilienceConnectionCooldownEffect": "Тимчасово пропускає це з’єднання та збільшує час відстрочки у разі повторних збоїв",
@@ -8043,6 +8089,14 @@
     "resilienceProviderCooldownEnabledDesc": "Якщо ввімкнено, провайдери зі збоями відстежуються глобально та пропускаються на період кулдауну.",
     "resilienceProviderCooldownMin": "Мінімальний кулдаун",
     "resilienceProviderCooldownMax": "Максимальний кулдаун",
+    "resilienceCredentialHealthTitle": "__MISSING__:Credential Health Check",
+    "resilienceCredentialHealthScope": "__MISSING__:All active API-key and OAuth connections",
+    "resilienceCredentialHealthTrigger": "__MISSING__:Periodically, on a fixed cadence",
+    "resilienceCredentialHealthEffect": "__MISSING__:Probes each connection's credential and marks it active/error; failed connections back off exponentially",
+    "resilienceCredentialHealthDesc": "__MISSING__:Background sweep that validates every active connection's credential by calling its provider. Set 0 to disable the sweep entirely. Per-connection Health Check values (on each connection's edit dialog) always override this global default.",
+    "resilienceCredentialHealthInterval": "__MISSING__:Global check interval",
+    "resilienceCredentialHealthEveryMinutes": "__MISSING__:Every {minutes} min",
+    "resilienceCredentialHealthHint": "__MISSING__:0 disables the background sweep (max 1440 min = 24 h). Connections with their own Health Check value ignore this global default; a per-connection 0 opts that connection out even when the global sweep is on.",
     "forcedFingerprintTitle": "Always enabled for {provider} — required for OAuth account safety; cannot be turned off.",
     "forcedFingerprintBadge": "Required",
     "sessionAffinityTitle": "Прив'язка сесії",
@@ -8186,6 +8240,7 @@
     "modalityBridgeVideoTitle": "Відеоміст",
     "modalityBridgeVideoDesc": "Виберіть зразки кадрів відео, опишіть їх за допомогою моделі комп’ютерного зору та продовжте з вибраною текстовою моделлю.",
     "modalityBridgeVideoRuntimeReady": "Середовище виконання готове",
+    "modalityBridgeVideoRuntimeChecking": "Перевірка середовища виконання…",
     "modalityBridgeVideoRuntimeUnavailable": "Середовище виконання недоступне",
     "modalityBridgeVideoRuntimeInstall": "Встановіть FFmpeg і ffprobe у PATH сервера, щоб увімкнути видобування відео.",
     "modalityBridgeVideoEnabled": "Увімкнути Відеоміст",
@@ -8277,19 +8332,7 @@
     "cliproxyapiHealth": "Здоров'я",
     "cliproxyapiPort": "Порт",
     "qdrantHost": "Хост",
-    "qdrantCollection": "Колекція",
-    "presetAll": "All",
-    "presetAllDesc": "Show everything",
-    "presetEssentials": "Essentials",
-    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
-    "presetMinimal": "Minimal",
-    "presetMinimalDesc": "Core pages only",
-    "presetDeveloper": "Developer",
-    "presetDeveloperDesc": "Dev & proxy tools",
-    "presetAdmin": "Admin",
-    "presetAdminDesc": "Monitoring & audit",
-    "settingsSidebarTitle": "Sidebar Customization",
-    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable."
+    "qdrantCollection": "Колекція"
   },
   "contextRtk": {
     "title": "Двигун RTK",
@@ -11214,7 +11257,8 @@
       "tps": "TPS",
       "duration": "Duration",
       "time": "Time",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",
@@ -11254,6 +11298,11 @@
       "copy": "Копіювати",
       "autoscrollOn": "Автопрокрутка: увімкнено",
       "autoscrollOff": "Автопрокрутка: вимкнено",
+      "collapseAllLevels": "__MISSING__:Collapse all",
+      "collapseOneLevel": "__MISSING__:Collapse one level",
+      "currentExpandLevel": "__MISSING__:Current expand level",
+      "expandOneLevel": "__MISSING__:Expand one level",
+      "expandAllLevels": "__MISSING__:Expand all",
       "payload": {
         "clientRawRequest": "Сирий запит клієнта",
         "clientRequest": "Запит клієнта",
@@ -12077,9 +12126,9 @@
       "acp": {
         "title": "ACP Agents",
         "phrase": "CLI, які OmniRoute запускає як бекенд виконання (зворотний потік)",
+        "warning": "Most users can ignore this — use only when an integration requires it.",
         "flow": "Клієнт → OmniRoute → запуск CLI (stdio/ACP) → відповідь",
-        "seeOther": "Див. →",
-        "warning": "Most users can ignore this — use only when an integration requires it."
+        "seeOther": "Див. →"
       }
     },
     "comparison": {
@@ -12273,7 +12322,7 @@
       },
       "omni-mcp": {
         "name": "Сервер MCP",
-        "description": "Підключайтеся до MCP-сервера OmniRoute (37 інструментів, 3 транспорти: SSE/stdio/HTTP). Охоплює інструменти маршрутизації, кешування, стиснення, пам'яті, навичок, провайдерів та аудиту в межах 16 областей дозволів."
+        "description": "Підключайтеся до MCP-сервера OmniRoute (110 інструментів, 3 транспорти: SSE/stdio/HTTP). Охоплює інструменти маршрутизації, кешування, стиснення, пам'яті, навичок, провайдерів та аудиту в межах 33 областей дозволів."
       },
       "omni-agents-a2a": {
         "name": "Агенти та протокол A2A",
@@ -12487,6 +12536,8 @@
     "typeApikey": "Ключ API",
     "sortTypeFirst": "Спочатку найпростіші",
     "sortTypeFirstHelp": "Групувати за зусиллями для реєстрації (Без реєстрації → Вхід через OAuth → Ключ API), зберігаючи порядок якості всередині кожної групи",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "Без реєстрації = нульове налаштування · Вхід через OAuth = увійдіть за допомогою власного облікового запису · Ключ API = використовуйте власний ключ або безкоштовний тарифний план цього провайдера",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
@@ -12843,6 +12894,10 @@
       "ALLOW_MULTI_CONNECTIONS_PER_COMPAT_NODE": {
         "description": "Дозволити кілька з'єднань для кожного вузла сумісності."
       },
+      "DISABLE_CONTEXT_WINDOW_CHECKS": {
+        "label": "Disable Context Window Checks",
+        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
+      },
       "RESPONSES_PASSTHROUGH_DROP_COMMENTARY": {
         "description": "Вилучати внутрішні елементи виводу фази коментарів із наскрізних потоків Responses API перед їх пересиланням клієнтам. Вимкніть цей прапорець, щоб отримувати необроблені коментарі з вихідного сервера."
       },
@@ -12908,11 +12963,19 @@
       },
       "SKILLS_SANDBOX_NETWORK_ENABLED": {
         "description": "Увімкнути доступ до мережі в пісочниці навичок."
-      },
-      "DISABLE_CONTEXT_WINDOW_CHECKS": {
-        "label": "Disable Context Window Checks",
-        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
       }
+    }
+  },
+  "combo": {
+    "sort": {
+      "label": "__MISSING__:Sort by",
+      "method": {
+        "manual": "__MISSING__:Manual",
+        "provider": "__MISSING__:Provider",
+        "score": "__MISSING__:Score (free models)",
+        "name": "__MISSING__:Name"
+      },
+      "scoreHint": "__MISSING__:Score ranking applies to free providers only; others stay in place."
     }
   },
   "comboControl": {
@@ -13294,9 +13357,6 @@
     "tierCommunity": "Спільнота (з затримкою 30 днів)",
     "activateTitle": "Активувати Радар",
     "activateDescription": "Радар збагачує безкоштовний каталог моделей інтелектом, отриманим від спільноти — оновлена доступність моделей, квоти та посібники з налаштування.",
-    "privacyNoUpload": "Нічого не завантажено — ваші дані залишаються локальними",
-    "privacyOnlySigned": "Завантажується лише криптографічно підписана метадані",
-    "privacyLocalOnly": "Усе оброблення відбувається на вашій інстанції OmniRoute",
     "activateButton": "Активувати",
     "activating": "Активація...",
     "keySectionTitle": "Already have a supporter key?",
@@ -13305,7 +13365,7 @@
     "changeKeyButton": "Change key",
     "claimSectionTitle": "Don't have a supporter key yet?",
     "contributorButton": "I'm a contributor",
-    "contributorHint": "Verify your GitHub account — 5+ merged pull requests or a top-100 contributor spot unlocks a free supporter key.",
+    "contributorHint": "__MISSING__:GitHub OAuth checks the current weekly ranking: Top 10 get 365 days and ranks 11–100 get 90 days. PR count alone never grants access outside the Top 100.",
     "supporterButton": "Support the project",
     "supporterHint": "Support OmniRoute to get a supporter key with the live catalog and extra perks.",
     "colProvider": "Постачальник",
@@ -13314,6 +13374,9 @@
     "colContext": "Контекст",
     "colCapabilities": "Можливості",
     "colTos": "Ризик ToS",
+    "colLimits": "__MISSING__:Rate limits",
+    "trainsOnPrompts": "__MISSING__:Trains on prompts",
+    "trainsOnPromptsHelp": "__MISSING__:This provider's terms state it may train on the prompts you send. Models without this badge either state they do not, or do not document it — an absent statement is not a guarantee.",
     "newBadge": "новий",
     "setupGuide": "Посібник з налаштування",
     "disabledByFeed": "Вимкнено через фід Радар",
@@ -13344,7 +13407,21 @@
     "localStateSaveFailed": "Failed to save local Radar settings",
     "guidedCombos": "Guided combos",
     "offers": "Offers",
-    "intel": "Intel"
+    "intel": "Intel",
+    "accessScaleTitle": "__MISSING__:Understand Radar access before activating",
+    "accessScaleIntro": "__MISSING__:Radar stays network-inert until you opt in. Choose Community access or activate a personal supporter key after reviewing these rules.",
+    "accessCommunityRule": "__MISSING__:Community — no key required: the complete catalog with a 30-day delay.",
+    "accessSingleUseRule": "__MISSING__:Star + follow — after GitHub OAuth verifies both, your GitHub account receives one live catalog read; then access returns to Community. This one-time access cannot be reissued for that account.",
+    "accessContributorRule": "__MISSING__:Contributors — merged PRs, commits, and lines only order the weekly ranking. Top 10 receive 365 days; ranks 11–100 receive 90 days; contributors outside the Top 100 receive no grant regardless of PR count. Leaving the ranking never shortens time already granted.",
+    "accessSupporterRule": "__MISSING__:Supporters — one-time purchases grant 6 months, 1 year, or lifetime with no automatic renewal. Purchases, donations, contributor periods, and manual grants accumulate; lifetime always prevails.",
+    "accessUseTitle": "__MISSING__:Personal use, recovery, and review",
+    "accessInstallationRule": "__MISSING__:Personal license — use the key on one active installation at a time. OmniRoute does not fingerprint hardware. Recovery revokes and replaces a lost key without resetting its expiration.",
+    "accessAbuseRule": "__MISSING__:Abuse review — the 4th distinct IP in 24 hours creates a manual review flag only; it never blocks or revokes a key automatically.",
+    "accessOffersRule": "__MISSING__:Live offers are manually curated and may change or expire.",
+    "privacyTitle": "__MISSING__:What Radar exchanges",
+    "privacyDownloadsRule": "__MISSING__:Downloads — your installation receives cryptographically signed catalog and referral metadata; a valid live key also unlocks signed offers and Intel.",
+    "privacySendsRule": "__MISSING__:Sends — server-side sync sends the supporter key as a Bearer token, and the HTTPS infrastructure receives the connection IP. Feed-request accounting stores neither value raw: it keeps key hashes, aggregate usage, and a daily rotating truncated IP HMAC for abuse review.",
+    "privacyNeverRule": "__MISSING__:Never collected — prompts, responses, conversations, provider credentials, model traffic, uptime, latency, and local provider configuration are never sent to Radar."
   },
   "radarCombosPage": {
     "title": "Radar guided combos",
@@ -13390,6 +13467,13 @@
   },
   "resilienceConnections": {
     "title": "Стійкість З'єднання",
+    "reassuranceTitle": "Your connections recover automatically",
+    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
+    "plainStates": {
+      "healthy": "Requests can be sent",
+      "coolingDown": "Trying again soon",
+      "lockedOut": "Needs your attention"
+    },
     "table": {
       "status": "Статус",
       "provider": "Постачальник",
@@ -13484,16 +13568,10 @@
         "modelLockouts": "Блокування Моделі",
         "count": "Кількість З'єднань"
       }
-    },
-    "reassuranceTitle": "Your connections recover automatically",
-    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
-    "plainStates": {
-      "healthy": "Requests can be sent",
-      "coolingDown": "Trying again soon",
-      "lockedOut": "Needs your attention"
     }
   },
   "featureFlagCapabilityFilterEnabledDescription": "Відхиляйте запити перед відправкою, коли цільова модель не має необхідних можливостей (зір, інструменти, структурований вихід, контекстне вікно). Захищає прямі запити від одного постачальника, які обходять фільтр сумісності комбінаційного шару.",
+  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
   "publicSystem": {
     "notFound": {
       "title": "Сторінку не знайдено",
@@ -13861,6 +13939,41 @@
     "ttsFailed": "Не вдалося синтезувати мову (перевірте модель/постачальника TTS)",
     "micDenied": "Мікрофон недоступний або доступ заборонено"
   },
+  "orchestration": {
+    "title": "Оркестрація",
+    "description": "Усе, що зараз виконує OmniRoute — агенти, флот і маршрутизація",
+    "tabAgents": "Агенти",
+    "tabRouting": "Маршрутизація",
+    "tabOverview": "Огляд",
+    "showCompleted": "Показати завершені",
+    "sourceCloudAgent": "Хмарний агент",
+    "sourceA2A": "A2A",
+    "sourceConductor": "Кондуктор",
+    "sourceStale": "Немає оновлень з {since}",
+    "sourceOffline": "Офлайн",
+    "stateQueued": "У черзі",
+    "stateRunning": "Виконується",
+    "stateWaitingApproval": "Очікує затвердження",
+    "stateSucceeded": "Успішно",
+    "stateFailed": "Помилка",
+    "stateCancelled": "Скасовано",
+    "overflowMore": "ще {count}",
+    "emptyTitle": "Поки що нічого не виконується",
+    "emptyCloudAgentCta": "Налаштувати хмарні агенти",
+    "emptyA2ACta": "Відкрити A2A",
+    "emptyConductorCta": "Відкрити Кондуктор",
+    "drawerObjective": "Мета",
+    "drawerTimeline": "Хронологія",
+    "drawerMetrics": "Метрики",
+    "drawerResult": "Результат",
+    "drawerActions": "Дії",
+    "actionApprove": "Затвердити план",
+    "actionCancel": "Скасувати",
+    "actionSeeInGraph": "Переглянути на графі",
+    "actionDone": "Дію виконано",
+    "actionFailed": "Дія не виконана: {error}",
+    "mirroredInA2A": "Відображено в A2A"
+  },
   "cliproxyProviderExposure": {
     "title": "Виток Постачальника",
     "description": "Експонуйте моделі CLIProxyAPI як ціль маршрутизації під префіксом <prefix>cliproxyapi/</prefix>.",
@@ -13929,12 +14042,12 @@
     "structuredOutputMismatch": "Постачальник не підтримує структурований вивід",
     "contextWindowMismatch": "Запит перевищує контекстне вікно постачальника"
   },
-  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
   "cheaperInferenceSponsorBanner": {
     "title": "Cheaper Inference is an OmniRoute Open Source Friend",
     "description": "A cost-ranked gateway reselling dozens of frontier models behind one OpenAI-compatible endpoint — routing each request to the cheapest eligible provider, never above list price.",
     "cta": "Get an API Key",
     "partnerLinkNote": "Partner link",
     "dismissAriaLabel": "Dismiss"
-  }
+  },
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }

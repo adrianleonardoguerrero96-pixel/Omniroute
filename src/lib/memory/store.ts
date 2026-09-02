@@ -10,7 +10,7 @@ import { sanitizeErrorMessage } from "../../../open-sse/utils/error.ts";
 import { resolveEmbeddingSource, embed } from "./embedding";
 import { getVectorStore } from "./vectorStore";
 import { getMemorySettings } from "./settings";
-import { markMemoryNeedsReindex } from "@/lib/localDb";
+import { markMemoryNeedsReindex } from "@/lib/db/memoryVec";
 
 const log = logger("MEMORY_STORE");
 
@@ -195,6 +195,13 @@ export async function createMemory(
       existing.id
     );
 
+    // Self-heal rows created before the insert-time memory_id sync (see the
+    // INSERT branch below): set memory_id from the rowid when still NULL so the
+    // FTS JOIN keeps working for legacy rows. No-op for rows already synced.
+    db.prepare("UPDATE memories SET memory_id = rowid WHERE id = ? AND memory_id IS NULL").run(
+      existing.id
+    );
+
     const updatedMemory: Memory = {
       id: String(existing.id),
       apiKeyId: memory.apiKeyId,
@@ -268,6 +275,14 @@ export async function createMemory(
     now,
     memory.expiresAt?.toISOString() ?? null
   );
+
+  // Keep memory_id in sync with the SQLite rowid. Migration 023 made the FTS5
+  // external-content trigger key off `memory_id` (JOIN memories.memory_id =
+  // memory_fts.rowid in retrieval.ts), but a plain INSERT leaves it NULL — the
+  // trigger then stores an auto-assigned FTS5 rowid and every keyword/hybrid
+  // search silently returns 0 results. The AFTER UPDATE trigger re-syncs FTS
+  // when memory_id is set here.
+  db.prepare("UPDATE memories SET memory_id = rowid WHERE id = ?").run(id);
 
   const createdMemory: Memory = {
     id,
@@ -468,6 +483,7 @@ export async function listMemories(filters: {
   apiKeyId?: string;
   type?: MemoryType;
   sessionId?: string;
+  category?: string;
   query?: string;
   limit?: number;
   offset?: number;
@@ -492,6 +508,13 @@ export async function listMemories(filters: {
   if (filters.sessionId) {
     whereClauses.push("session_id = ?");
     whereParams.push(filters.sessionId);
+  }
+
+  if (typeof filters.category === "string" && filters.category.trim().length > 0) {
+    whereClauses.push(
+      "json_extract(CASE WHEN json_valid(metadata) THEN metadata ELSE '{}' END, '$.category') = ?"
+    );
+    whereParams.push(filters.category.trim());
   }
 
   if (typeof filters.query === "string" && filters.query.trim().length > 0) {
