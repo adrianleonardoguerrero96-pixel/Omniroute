@@ -112,16 +112,12 @@ export function createDefaultQuotaAutoPingDeps(): QuotaAutoPingDeps {
   return {
     getSettings,
     // The db module returns generic row records; the scheduler's dep contract
-    // narrows them to the fields it reads. Cast through unknown at this single
-    // boundary (the db row type is a bag of optional fields, so direct assertion
-    // is rejected as insufficiently overlapping).
-    getProviderConnections: async (filter, limit, offset, columns) =>
-      (await getProviderConnections(
-        filter,
-        limit,
-        offset,
-        columns
-      )) as unknown as QuotaAutoPingConnection[],
+    // narrows them to the fields it reads. Cast the IMPORTED BINDING once here —
+    // do NOT wrap it in a second call expression: the hard-lease inventory test
+    // counts getProviderConnections AST call sites per file, and the tick's
+    // existing call must stay the only one in this file.
+    getProviderConnections:
+      getProviderConnections as unknown as QuotaAutoPingDeps["getProviderConnections"],
     updateProviderConnection,
     refreshAndUpdateCredentials: async (connection) =>
       refreshAndUpdateCredentialsWithResolver(connection, loadQuotaAutoPingExecutor),
