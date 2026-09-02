@@ -9,7 +9,8 @@
  *     🌐 **Languages:** 🇺🇸 [English](../../../README.md) · 🇸🇦 [ar](../ar/README.md) · …
  *   buildSourceBar(rel, config)          →  English source format:
  *     🌐 **Languages:** 🇺🇸 [English](./USER_GUIDE.md) | 🇧🇷 [Português (Brasil)](../i18n/pt-BR/docs/guides/USER_GUIDE.md) | …
- *   replaceLanguageBar(markdown, bar)    →  swaps the first bar line, `null` when there is none.
+ *   replaceLanguageBar(markdown, bar)    →  swaps EVERY bar line (any `🌐 **<label>:**`,
+ *                                          translated labels included), `null` when there is none.
  */
 import path from "node:path";
 
@@ -41,10 +42,27 @@ export function buildSourceBar(relSource, config) {
   return `🌐 **Languages:** ${parts.join(" | ")}`;
 }
 
+/**
+ * A language-bar line: `🌐 **<label>:**  …`. The label is NOT pinned to the
+ * canonical English "Languages" — older mirrors carry the label the translation
+ * backend produced (`🌐 **Idiomas:**`, `🌐 **語言:**`, `🌐 **Available in:**`, …)
+ * and those bars are exactly the ones that still list retired locales. Matching
+ * them by prefix (no regex, no backtracking on ~6 KB lines) is what lets
+ * syncLanguageBars normalize every bar in the repo instead of only the ones
+ * already in canonical form.
+ */
+const isLanguageBar = (line) => line.startsWith("🌐 **") && line.indexOf("**", 4) !== -1;
+
 export function replaceLanguageBar(markdown, bar) {
   const lines = markdown.split("\n");
-  const index = lines.findIndex((line) => line.startsWith("🌐 **Languages:**"));
-  if (index === -1) return null;
-  lines[index] = bar;
-  return lines.join("\n");
+  let found = false;
+  for (let index = 0; index < lines.length; index += 1) {
+    if (!isLanguageBar(lines[index])) continue;
+    lines[index] = bar;
+    found = true;
+  }
+  // Every bar in the file describes the same file, so they all get the same
+  // (correct) list: a stale second bar left in a translated body would otherwise
+  // keep pointing at locales that no longer exist.
+  return found ? lines.join("\n") : null;
 }

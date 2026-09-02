@@ -48,6 +48,50 @@ test("replaceLanguageBar swaps only the bar line and returns null when there is 
   assert.equal(replaceLanguageBar("# T\n\nbody\n", "x"), null);
 });
 
+// A mirror produced before the bars were generated carries the label the
+// translation backend invented ("Idiomas", "語言", "Available in"), and those are
+// precisely the bars still listing retired locales — matching only the canonical
+// English label left them (and their dead links) untouched.
+test("replaceLanguageBar rewrites a translated bar label, not just the canonical English one", () => {
+  const md =
+    "# T\n\n🌐 **Idiomas:** 🇺🇸 [English](x.md) | 🇮🇳 [हिन्दी](docs/i18n/in/x.md)\n\n---\nbody\n";
+  assert.equal(
+    replaceLanguageBar(md, "🌐 **Languages:** new"),
+    "# T\n\n🌐 **Languages:** new\n\n---\nbody\n"
+  );
+  // A `🌐` line that is not a bold-labelled bar stays untouched (→ null: no bar).
+  assert.equal(replaceLanguageBar("# T\n\n🌐 [Website](https://x)\n", "x"), null);
+});
+
+test("replaceLanguageBar rewrites EVERY bar in the file, including a stale one left in the body", () => {
+  const md = [
+    "# T",
+    "",
+    "🌐 **Languages:** header",
+    "",
+    "---",
+    "",
+    "<div>hero</div>",
+    "",
+    "🌐 **Available in:** 🇮🇳 [हिन्दी](docs/i18n/in/README.md)",
+    "",
+    "body",
+    "",
+  ].join("\n");
+  const out = replaceLanguageBar(md, "🌐 **Languages:** new") as string;
+  assert.equal(out.split("\n").filter((line) => line.startsWith("🌐")).length, 2);
+  assert.ok(!out.includes("docs/i18n/in/"), "no retired locale survives in any bar");
+  assert.deepEqual(
+    out.split("\n").filter((line) => line.startsWith("🌐")),
+    ["🌐 **Languages:** new", "🌐 **Languages:** new"]
+  );
+  // Nothing but the bar lines moved.
+  assert.deepEqual(
+    out.split("\n").filter((line) => !line.startsWith("🌐")),
+    md.split("\n").filter((line) => !line.startsWith("🌐"))
+  );
+});
+
 test("syncLanguageBars rewrites stale bars from config, lists them in dry-run and leaves bar-less files alone", async () => {
   const root = mkdtempSync(path.join(os.tmpdir(), "i18n-language-bar-"));
   try {
