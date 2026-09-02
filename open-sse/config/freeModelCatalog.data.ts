@@ -1,12 +1,18 @@
-// AUTO-GENERATED — refreshed by the 2026-06-17 per-provider free-tier research pass.
-// 2026-07-20: added the free tiers of providers we could already route but had
-// never mapped (requesty, ovhcloud, agnes, glm), plus two new providers (navy,
-// aihorde), and reconciled kilo-gateway against its live /models list.
-// Source: _tasks/features-v3.8.28/free-tier-research-2026-06-17.raw.json (50-agent web research + adversarial verification).
+// HAND-CURATED free-tier catalog — there is no generator; edit the entries below directly.
+// Provenance: seeded by the 2026-06-17 per-provider free-tier research pass (50-agent web research +
+// adversarial verification); 2026-07-20 added the free tiers of providers we could already route but had
+// never mapped (requesty, ovhcloud, agnes, glm), plus two new providers (navy, aihorde), and reconciled
+// kilo-gateway against its live /models list; 2026-09-02 re-audited gemini, ollama-cloud, groq, nara and
+// mistral against the providers' own pages.
+// Evidence: every numeric block MUST carry an `// evidence:` comment naming its source class —
+//   public-page (a provider page anyone can read), api-public (an unauthenticated provider endpoint), or
+//   console-verified <date> por <who> (visible only inside an account console). No evidence ⇒ no number
+//   (the entry stays recurring-uncapped, monthlyTokens 0). Blocks that predate 2026-09-02 and still lack
+//   the comment inherit the 2026-06-17 research pass; add the comment whenever such a block is touched.
 // Methodology: honest pool-deduped recurring tokens. "recurring-uncapped" = permanently free but no
 // published token cap (rate/concurrency-limited) — NOT summed into the steady headline (see freeModelCatalog.ts).
 // Deposit-unlock boosts (e.g. OpenRouter $10 -> 1000 RPD) live in FREE_TIER_BOOSTS, not per-record.
-// Do not edit by hand — re-run the patch generator to refresh.
+// Bump FREE_CATALOG_CURATED_AT on every change to the entries below.
 import type { FreeModelBudget } from "./freeModelCatalog.ts";
 
 /**

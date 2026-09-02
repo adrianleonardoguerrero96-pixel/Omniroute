@@ -92,7 +92,8 @@ export const APIKEY_PROVIDERS_FRONTIER = {
     textIcon: "GQ",
     website: "https://groq.com",
     hasFree: true,
-    freeNote: "Free tier: 30 RPM / 14.4K RPD — no credit card",
+    freeNote:
+      "Free plan: per-model caps (30 RPM · 1K RPD · 200K tokens/day per chat model, console.groq.com/docs/rate-limits) — no payment method on file.",
     serviceKinds: ["llm", "imageToText"],
   },
   blackbox: {

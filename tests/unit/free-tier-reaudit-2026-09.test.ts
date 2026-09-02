@@ -10,10 +10,10 @@ import { FREE_TIER_BUDGETS } from "@omniroute/open-sse/config/freeTierCatalog.ts
 import { REGISTRY } from "@omniroute/open-sse/config/providerRegistry.ts";
 
 /**
- * 2026-09-02 re-audit against the providers' own pages
- * (_tasks/research/2026-09-02-freellmapi-7b4-claim/quotas-fonte-primaria.md).
- * Each test pins one verified fact so the catalog cannot drift back to an
- * invented number.
+ * 2026-09-02 re-audit against the providers' own pages — the official pages
+ * cited in the `// evidence:` comments next to each entry in
+ * `open-sse/config/freeModelCatalog.data.ts`. Each test pins one verified
+ * fact so the catalog cannot drift back to an invented number.
  */
 const rows = (id: string) => FREE_MODEL_BUDGETS.filter((m) => m.provider === id);
 const ids = (id: string) =>
