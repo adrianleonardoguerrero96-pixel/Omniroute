@@ -39,6 +39,10 @@ import { ensureToolCallIds } from "../../open-sse/translator/helpers/toolCallHel
 import { translateNonStreamingResponse } from "../../open-sse/handlers/responseTranslator.ts";
 import { getDbInstance } from "../../src/lib/db/core.ts";
 import { getReasoningCache, setReasoningCache } from "../../src/lib/db/reasoningCache.ts";
+import {
+  removeFeatureFlagOverride,
+  setFeatureFlagOverride,
+} from "../../src/lib/db/featureFlags.ts";
 import { DELETE, GET } from "../../src/app/api/cache/reasoning/route.ts";
 import { createApiKey } from "../../src/lib/db/apiKeys.ts";
 import { updateSettings } from "../../src/lib/db/settings";
@@ -98,6 +102,21 @@ describe("Reasoning Replay Cache — Service Layer", () => {
     const result = lookupReasoning("call_test_1");
     assert.equal(result, "The user wants to read the file...");
     assert.equal(getReasoningCache("call_test_1")?.reasoning, "The user wants to read the file...");
+  });
+
+  it("should stop storing and replaying reasoning when disabled", () => {
+    clearReasoningCacheAll();
+    setFeatureFlagOverride("REASONING_REPLAY_ENABLED", "false");
+    try {
+      cacheReasoning("call_disabled_write", "deepseek", "deepseek-chat", "Do not store");
+      assert.equal(getReasoningCache("call_disabled_write"), null);
+
+      setReasoningCache("call_disabled_read", "deepseek", "deepseek-chat", "Do not replay");
+      assert.equal(lookupReasoning("call_disabled_read"), null);
+    } finally {
+      removeFeatureFlagOverride("REASONING_REPLAY_ENABLED");
+      clearReasoningCacheAll();
+    }
   });
 
   it("should fall back to SQLite when memory misses", () => {

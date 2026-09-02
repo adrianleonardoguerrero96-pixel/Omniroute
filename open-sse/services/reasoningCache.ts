@@ -23,6 +23,7 @@ import {
   getReasoningCacheStats,
   setReasoningCache,
 } from "../../src/lib/db/reasoningCache.ts";
+import { isFeatureFlagEnabled } from "../../src/shared/utils/featureFlags.ts";
 import { isInternalReasoningPlaceholder } from "../utils/reasoningPlaceholder.ts";
 
 // ──────────────── Provider/Model Detection ────────────────
@@ -205,6 +206,7 @@ export function cacheReasoningByKey(
   model: string,
   reasoning: string
 ): void {
+  if (!isFeatureFlagEnabled("REASONING_REPLAY_ENABLED")) return;
   if (!key || !reasoning) return;
   // ponytail: never store the internal replay placeholder — models echo it
   // and it poisons the cache (upstream echo loop, OmniRoute #9573).
@@ -375,6 +377,7 @@ export function cacheReasoningFromAssistantMessage(
  * Memory first → DB fallback → null (miss).
  */
 export function lookupReasoning(toolCallId: string): string | null {
+  if (!isFeatureFlagEnabled("REASONING_REPLAY_ENABLED")) return null;
   if (!toolCallId) {
     misses++;
     return null;
