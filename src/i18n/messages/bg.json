@@ -13988,6 +13988,7 @@
     "drawerTimeline": "Хронология",
     "drawerMetrics": "Метрики",
     "drawerResult": "Резултат",
+    "drawerMemory": "Използвана памет",
     "drawerActions": "Действия",
     "drawerClose": "Затваряне",
     "copyTrace": "Копиране на трасето (JSON)",
@@ -13997,7 +13998,11 @@
     "actionDone": "Действието е приложено",
     "actionFailed": "Действието се провали: {error}",
     "detailFailed": "Неуспешно зареждане на детайлите: {error}",
-    "mirroredInA2A": "Отразено в A2A"
+    "mirroredInA2A": "Отразено в A2A",
+    "actionRepeat": "Повторение",
+    "repeatConfirm": "Кликнете отново, за да потвърдите",
+    "repeatDone": "Създадено е ново изпълнение",
+    "repeatUnavailable": "Оригиналният вход не е наличен"
   },
   "cliproxyProviderExposure": {
     "title": "Излагане на доставчика",

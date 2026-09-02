@@ -13995,6 +13995,7 @@
     "drawerTimeline": "Timeline",
     "drawerMetrics": "Metrics",
     "drawerResult": "Result",
+    "drawerMemory": "Memory used",
     "drawerActions": "Actions",
     "drawerClose": "Close",
     "copyTrace": "Copy trace JSON",

@@ -166,6 +166,107 @@ describe("OrchestrationDrawer", () => {
     cleanup();
   });
 
+  it("renders the memory-used section (type/key/snippet) when an a2a task carries metadata.memoryHits", async () => {
+    const a2aTask = {
+      id: "1",
+      skill: "smart-routing",
+      state: "working",
+      input: { skill: "smart-routing", messages: [{ role: "user", content: "route this please" }] },
+      artifacts: [],
+      events: [],
+      metadata: {
+        memoryHits: [
+          { id: "m1", key: "user-pref-model", type: "preference", snippet: "prefers claude" },
+        ],
+      },
+      createdAt: "x",
+      updatedAt: "y",
+      expiresAt: "z",
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ task: a2aTask }) }))
+    );
+    const node = { id: "a2a:1", kind: "work", source: "a2a", state: "running", label: "x" };
+    const { c, cleanup } = render(
+      <OrchestrationDrawer node={node as never} onClose={() => {}} onActionDone={() => {}} />
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(c.textContent).toContain("drawerMemory");
+    expect(c.textContent).toContain("preference");
+    expect(c.textContent).toContain("user-pref-model");
+    expect(c.textContent).toContain("prefers claude");
+    cleanup();
+  });
+
+  it("omits the memory-used section when an a2a task has no memoryHits", async () => {
+    const a2aTask = {
+      id: "1",
+      skill: "smart-routing",
+      state: "working",
+      input: { skill: "smart-routing", messages: [{ role: "user", content: "route this please" }] },
+      artifacts: [],
+      events: [],
+      metadata: {},
+      createdAt: "x",
+      updatedAt: "y",
+      expiresAt: "z",
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ task: a2aTask }) }))
+    );
+    const node = { id: "a2a:1", kind: "work", source: "a2a", state: "running", label: "x" };
+    const { c, cleanup } = render(
+      <OrchestrationDrawer node={node as never} onClose={() => {}} onActionDone={() => {}} />
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(c.textContent).not.toContain("drawerMemory");
+    cleanup();
+  });
+
+  it("never shows the memory-used section for non-a2a sources, even with attacker-shaped raw data", async () => {
+    const detail = {
+      data: {
+        id: "t1",
+        providerId: "devin",
+        status: "succeeded",
+        prompt: "x",
+        source: { repoName: "r", repoUrl: "https://x" },
+        options: {},
+        activities: [],
+        metadata: {
+          memoryHits: [{ id: "m1", key: "k", type: "t", snippet: "s" }],
+        },
+        createdAt: "x",
+        updatedAt: "y",
+      },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve(detail) }))
+    );
+    const node = {
+      id: "cloud-agent:t1",
+      kind: "work",
+      source: "cloud-agent",
+      state: "succeeded",
+      label: "x",
+    };
+    const { c, cleanup } = render(
+      <OrchestrationDrawer node={node as never} onClose={() => {}} onActionDone={() => {}} />
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(c.textContent).not.toContain("drawerMemory");
+    cleanup();
+  });
+
   it("only renders prUrl as a link when it is http(s); a javascript: URI renders as plain text", async () => {
     const detail = {
       data: {

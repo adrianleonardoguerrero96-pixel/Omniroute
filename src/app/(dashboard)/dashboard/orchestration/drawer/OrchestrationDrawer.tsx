@@ -258,6 +258,34 @@ function DrawerResult({
 }
 
 /**
+ * "Memory used" section (Task D4, PR-C): lists the memories consulted for an a2a task's
+ * last user message (`task.metadata.memoryHits`, written by `collectMemoryHits` in
+ * `src/lib/a2a/taskExecution.ts` — observability only, never injected into a skill's
+ * behavior). `metadata` comes back from JSON, so the hits array is narrowed defensively
+ * instead of trusted at the `A2ATask` type. Only the a2a source ever populates it; other
+ * sources render nothing, even if their raw payload happens to carry a same-shaped field.
+ */
+function DrawerMemory({ a2a, t }: { a2a: A2ATask | null; t: Translate }) {
+  const hits = (a2a?.metadata?.memoryHits ?? null) as
+    | Array<{ id: string; key: string; type: string; snippet: string }>
+    | null;
+  if (!hits || hits.length === 0) return null;
+  return (
+    <Section title={t("drawerMemory")}>
+      <ul className="text-xs flex flex-col gap-1.5">
+        {hits.map((h) => (
+          <li key={h.id}>
+            <code className="text-[9px] text-muted mr-1">{h.type}</code>
+            <span className="font-medium">{h.key}</span>
+            <div className="text-[10px] text-muted break-words">{h.snippet}</div>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
+/**
  * Two-click confirm for a single non-idempotent action — deliberately NOT
  * `window.confirm`, since modal dialogs block browser automation. The first click
  * arms `confirming` for `REPEAT_CONFIRM_MS`; a second click within that window runs
@@ -502,6 +530,7 @@ export function OrchestrationDrawer({
         </Section>
         <DrawerMetrics node={node} ca={ca} t={t} />
         <DrawerResult ca={ca} a2a={a2a} t={t} />
+        <DrawerMemory a2a={a2a} t={t} />
         <DrawerActions
           canApprove={canApprove}
           canCancel={canCancel}
