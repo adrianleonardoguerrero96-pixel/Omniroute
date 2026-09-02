@@ -1277,13 +1277,12 @@ export function getDbInstance(): SqliteDatabase {
   // selected on the server's primary DB path too, not only the backup-import
   // route.
   console.log(`[DB] Driver: ${db.driver} | file: ${sqliteFile}`);
-  db.pragma("journal_mode = WAL");
-  // better-sqlite3 is synchronous, so a contended write parks the Node event loop for up to
-  // busy_timeout ms (a 0-CPU freeze that stacks under load → /health stops responding). The
-  // hot-path writers here (usage_history, call_logs) are best-effort and the WinUI host opens
-  // the same DB, so cap the block at 2s instead of 5s: normal writes complete in <1ms, and a
-  // contended op can no longer freeze the loop past the host watchdog's 6s liveness probe.
+  // better-sqlite3 is synchronous, so lock waits park Node and can freeze /health.
+  // Hot-path writers are best-effort and WinUI shares this DB, so cap waits at 2s:
+  // normal writes finish under 1ms, while contention stays below the 6s host watchdog.
+  // Set it before journal_mode because concurrent startup can contend on that first pragma.
   db.pragma("busy_timeout = 2000");
+  db.pragma("journal_mode = WAL");
   db.pragma("synchronous = NORMAL");
   db.pragma(`cache_size = -${DEFAULT_DATABASE_SETTINGS.optimization.cacheSize}`);
   db.pragma("temp_store = MEMORY");

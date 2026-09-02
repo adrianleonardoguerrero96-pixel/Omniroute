@@ -5,9 +5,6 @@
  * should be retried with backoff instead of immediately renaming the DB away
  * and creating an empty one (data loss under concurrent load, #9541).
  */
-import fs from "node:fs";
-import path from "node:path";
-
 /**
  * Identifies transient SQLite/OS probe errors that should be retried instead of
  * triggering the corruption-rename path.
@@ -22,7 +19,9 @@ import path from "node:path";
  */
 export function isTransientProbeError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
-  return /SQLITE_BUSY|SQLITE_PROTOCOL|SQLITE_IOERR|ENOENT/i.test(message);
+  return /SQLITE_BUSY|SQLITE_PROTOCOL|SQLITE_IOERR|ENOENT|database(?: table| schema)? is (?:locked|busy)/i.test(
+    message
+  );
 }
 
 /**
@@ -66,8 +65,10 @@ type OpenDbFn = (
  * @param sqliteFile - Path to the SQLite database file
  * @param openDb - Function to open the database (normally openSqliteDatabase)
  * @param closeDb - Function to safely close the probe adapter
- * @returns true if the retry succeeded (transient condition resolved)
- *          false if all retries were exhausted or error is non-transient
+ * @returns true if the retry succeeded (transient condition resolved), or false
+ *          when the original error is non-transient.
+ * @throws when a transient condition remains after every retry, so the caller
+ *         cannot mistake an ordinary lock for database corruption.
  */
 export function retryProbeIfTransient(
   sqliteFile: string,
@@ -90,7 +91,12 @@ export function retryProbeIfTransient(
   }
 
   console.warn(
-    `[DB] All ${retryDelays.length} transient probe retries exhausted — declaring corruption`
+    `[DB] All ${retryDelays.length} transient probe retries exhausted — leaving database in place`
   );
-  return false;
+  const message = probeError instanceof Error ? probeError.message : String(probeError);
+  throw new Error(
+    `[DB] Existing database remained busy after transient probe retries. ` +
+      `No database files were moved. Restart once the competing process releases its lock. ` +
+      `Original probe error: ${message}`
+  );
 }
