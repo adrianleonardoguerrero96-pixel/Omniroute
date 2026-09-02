@@ -6162,7 +6162,7 @@
       "freeaiapikey": "GPT-5, Claude Opus 4.6, Claude Sonnet 4.6, Qwen 3.5 dahil 40'tan fazla model için indirimli API proxy'si. API anahtarınızı https://freeaiapikey.com/dashboard adresinden alın. Temel URL: https://freeaiapikey.com/v1.",
       "freemodel-dev": "https://freemodel.dev adresinden 300$ ücretsiz API kredisi alın — ödeme bilgisi gerekmez. OpenAI uyumlu uç nokta. GPT-5.4 ve GPT-5.5 modelleri mevcuttur.",
       "friendliai": "Sunucusuz çıkarım için ücretsiz katman — kredi kartı gerekmez",
-      "gemini": "Sonsuza kadar ücretsiz: Gemini 2.5 Flash için günlük 1.500 istek — kredi kartı gerekmez, anahtarı aistudio.google.com adresinden alın",
+      "gemini": "__MISSING__:Free tier through Google AI Studio; per-model quotas are no longer published (check the quota page in AI Studio) — no credit card.",
       "gigachat": "GigaChat'i (Sber) bir API anahtarı ile bağlayın.",
       "gitlab": "Genel Code Suggestions API'si için GitLab kişisel erişim belirteci. gitlab.com kullanmadığınızda barındırılan bir temel URL yapılandırın.",
       "gitlawb-gmi": "API anahtarınızı Gitlawb Opengateway panelinden alın.",

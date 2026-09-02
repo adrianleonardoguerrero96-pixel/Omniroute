@@ -6162,7 +6162,7 @@
       "freeaiapikey": "Zľavnená API proxy pre viac ako 40 modelov vrátane GPT-5, Claude Opus 4.6, Claude Sonnet 4.6, Qwen 3.5. Získajte svoj API kľúč na adrese https://freeaiapikey.com/dashboard. Základná URL: https://freeaiapikey.com/v1.",
       "freemodel-dev": "Získajte bezplatný API kredit 300 $ na adrese https://freemodel.dev — nevyžadujú sa žiadne platobné údaje. Koncový bod kompatibilný s OpenAI. K dispozícii sú modely GPT-5.4 a GPT-5.5.",
       "friendliai": "Bezplatná úroveň pre serverless inferenciu — nevyžaduje sa kreditná karta",
-      "gemini": "Navždy zadarmo: 1 500 požiadaviek/deň pre Gemini 2.5 Flash — bez kreditnej karty, kľúč získate na aistudio.google.com",
+      "gemini": "__MISSING__:Free tier through Google AI Studio; per-model quotas are no longer published (check the quota page in AI Studio) — no credit card.",
       "gigachat": "Pripojte GigaChat (Sber) pomocou API kľúča.",
       "gitlab": "Osobný prístupový token GitLab pre verejné API Code Suggestions. Ak nepoužívate gitlab.com, nakonfigurujte vlastnú základnú URL.",
       "gitlawb-gmi": "Získajte svoj API kľúč z nástenky Gitlawb Opengateway.",

@@ -6162,7 +6162,7 @@
       "freeaiapikey": "适用于 40+ 种模型的折扣 API 代理，包括 GPT-5、Claude Opus 4.6、Claude Sonnet 4.6、Qwen 3.5。在 https://freeaiapikey.com/dashboard 获取您的 API 密钥。Base URL: https://freeaiapikey.com/v1.",
       "freemodel-dev": "在 https://freemodel.dev 获取 $300 免费 API 额度 — 无需支付信息。兼容 OpenAI 的端点。提供 GPT-5.4 和 GPT-5.5 模型。",
       "friendliai": "无服务器推理免费层 — 无需信用卡",
-      "gemini": "永久免费：Gemini 2.5 Flash 每天 1,500 次请求 — 无需信用卡，在 aistudio.google.com 获取密钥",
+      "gemini": "__MISSING__:Free tier through Google AI Studio; per-model quotas are no longer published (check the quota page in AI Studio) — no credit card.",
       "gigachat": "使用 API 密钥连接 GigaChat (Sber)。",
       "gitlab": "用于公共 Code Suggestions API 的 GitLab 个人访问令牌。不使用 gitlab.com 时请配置自托管 Base URL。",
       "gitlawb-gmi": "从 Gitlawb Opengateway 控制面板获取您的 API 密钥。",

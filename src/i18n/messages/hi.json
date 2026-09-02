@@ -6162,7 +6162,7 @@
       "freeaiapikey": "GPT-5, Claude Opus 4.6, Claude Sonnet 4.6, Qwen 3.5 सहित 40+ मॉडलों के लिए रियायती API प्रॉक्सी। https://freeaiapikey.com/dashboard पर अपनी API कुंजी प्राप्त करें। बेस URL: https://freeaiapikey.com/v1।",
       "freemodel-dev": "https://freemodel.dev पर $300 का निःशुल्क API क्रेडिट प्राप्त करें — किसी भुगतान जानकारी की आवश्यकता नहीं है। OpenAI-संगत एंडपॉइंट। GPT-5.4 और GPT-5.5 मॉडल उपलब्ध हैं।",
       "friendliai": "सर्वरलेस इनफेरेंस के लिए निःशुल्क टियर — किसी क्रेडिट कार्ड की आवश्यकता नहीं है",
-      "gemini": "हमेशा के लिए निःशुल्क: Gemini 2.5 Flash के लिए 1,500 req/day — कोई क्रेडिट कार्ड नहीं, aistudio.google.com पर कुंजी प्राप्त करें",
+      "gemini": "__MISSING__:Free tier through Google AI Studio; per-model quotas are no longer published (check the quota page in AI Studio) — no credit card.",
       "gigachat": "GigaChat (Sber) को एक API कुंजी से कनेक्ट करें।",
       "gitlab": "सार्वजनिक Code Suggestions API के लिए GitLab व्यक्तिगत एक्सेस टोकन। gitlab.com का उपयोग न करते समय एक स्व-होस्टेड बेस URL कॉन्फ़िगर करें।",
       "gitlawb-gmi": "Gitlawb Opengateway डैशबोर्ड से अपनी API कुंजी प्राप्त करें।",

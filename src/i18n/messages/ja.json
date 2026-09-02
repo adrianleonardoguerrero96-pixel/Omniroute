@@ -6162,7 +6162,7 @@
       "freeaiapikey": "GPT-5、Claude Opus 4.6、Claude Sonnet 4.6、Qwen 3.5を含む40以上のモデルに対応した割引APIプロキシ。https://freeaiapikey.com/dashboard でAPIキーを取得してください。ベースURL: https://freeaiapikey.com/v1。",
       "freemodel-dev": "https://freemodel.dev で$300の無料APIクレジットを取得 — 支払い情報は不要です。OpenAI互換エンドポイント。GPT-5.4およびGPT-5.5モデルが利用可能です。",
       "friendliai": "サーバーレス推論の無料枠 — クレジットカード不要",
-      "gemini": "永久無料: Gemini 2.5 Flashが1,500 req/日 — クレジットカード不要、aistudio.google.com でキーを取得",
+      "gemini": "__MISSING__:Free tier through Google AI Studio; per-model quotas are no longer published (check the quota page in AI Studio) — no credit card.",
       "gigachat": "APIキーでGigaChat (Sber)に接続します。",
       "gitlab": "パブリックCode Suggestions API用のGitLabパーソナルアクセストークン。gitlab.comを使用しない場合は、セルフホストのベースURLを設定してください。",
       "gitlawb-gmi": "Gitlawb OpengatewayダッシュボードからAPIキーを取得します。",

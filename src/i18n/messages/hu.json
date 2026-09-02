@@ -6162,7 +6162,7 @@
       "freeaiapikey": "Kedvezményes API-proxy több mint 40 modellhez, beleértve a GPT-5, Claude Opus 4.6, Claude Sonnet 4.6, Qwen 3.5 modelleket. Szerezze be API-kulcsát a https://freeaiapikey.com/dashboard oldalon. Alap URL: https://freeaiapikey.com/v1.",
       "freemodel-dev": "Szerezzen $300 ingyenes API-kreditet a https://freemodel.dev oldalon — fizetési adat nem szükséges. OpenAI-kompatibilis végpont. GPT-5.4 és GPT-5.5 modellek érhetők el.",
       "friendliai": "Ingyenes csomag szerver nélküli következtetéshez — bankkártya nem szükséges",
-      "gemini": "Örökké ingyenes: 1500 kérés/nap a Gemini 2.5 Flash-hez — bankkártya nem szükséges, kulcs beszerzése: aistudio.google.com",
+      "gemini": "__MISSING__:Free tier through Google AI Studio; per-model quotas are no longer published (check the quota page in AI Studio) — no credit card.",
       "gigachat": "Csatlakoztassa a GigaChatet (Sber) egy API-kulccsal.",
       "gitlab": "GitLab személyes hozzáférési token a nyilvános Code Suggestions API-hoz. Állítson be saját üzemeltetésű alap URL-t, ha nem a gitlab.com-ot használja.",
       "gitlawb-gmi": "Szerezze be API-kulcsát a Gitlawb Opengateway irányítópultjáról.",

@@ -6162,7 +6162,7 @@
       "freeaiapikey": "May diskwentong API proxy para sa 40+ na modelo kabilang ang GPT-5, Claude Opus 4.6, Claude Sonnet 4.6, Qwen 3.5. Kumuha ng iyong API key sa https://freeaiapikey.com/dashboard. Base URL: https://freeaiapikey.com/v1.",
       "freemodel-dev": "Kumuha ng $300 libreng API credits sa https://freemodel.dev — walang kinakailangang impormasyon sa pagbabayad. OpenAI-compatible na endpoint. Available ang mga modelong GPT-5.4 at GPT-5.5.",
       "friendliai": "Libreng tier para sa serverless inference — walang kinakailangang credit card",
-      "gemini": "Libre magpakailanman: 1,500 req/araw para sa Gemini 2.5 Flash — walang credit card, kumuha ng key sa aistudio.google.com",
+      "gemini": "__MISSING__:Free tier through Google AI Studio; per-model quotas are no longer published (check the quota page in AI Studio) — no credit card.",
       "gigachat": "Ikonekta ang GigaChat (Sber) gamit ang isang API key.",
       "gitlab": "GitLab personal access token para sa pampublikong Code Suggestions API. Mag-configure ng self-hosted na base URL kapag hindi gumagamit ng gitlab.com.",
       "gitlawb-gmi": "Kumuha ng iyong API key mula sa Gitlawb Opengateway dashboard.",
