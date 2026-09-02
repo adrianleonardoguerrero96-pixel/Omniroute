@@ -15,7 +15,10 @@
  *   insertReadmeFlagLink(readmeText, entry, total)        README.md language block
  *   insertDocsIndexRow(indexText, entry, total)           docs/i18n/README.md
  *   insertI18nGuideRow(guideText, entry, total, rtlCodes) docs/guides/I18N.md locale table
- *   bumpCounts(text, total)                               "N languages" / "N translated documentation sets"
+ *   bumpCounts(text, total)                               llm.txt counts: "N languages",
+ *                                                         "N translated documentation sets",
+ *                                                         "N language JSON files",
+ *                                                         "N-language translated docs"
  *   buildMirrorStub({ heading, native, bar, body })       docs/i18n/<code>/llm.txt, CHANGELOG.md
  *
  * Every insertion leaves the existing lines exactly as they are and places the
@@ -164,7 +167,9 @@ export function insertI18nGuideRow(guideText, entry, total, rtlCodes = DEFAULT_R
 export function bumpCounts(text, total) {
   return text
     .replace(/\d+ languages/g, `${total} languages`)
-    .replace(/\d+ translated documentation sets/g, `${total - 1} translated documentation sets`);
+    .replace(/\d+ translated documentation sets/g, `${total - 1} translated documentation sets`)
+    .replace(/(\d+) language JSON files/g, `${total} language JSON files`)
+    .replace(/(\d+)-language translated docs/g, `${total - 1}-language translated docs`);
 }
 
 export function buildMirrorStub({ heading, native, bar, body }) {

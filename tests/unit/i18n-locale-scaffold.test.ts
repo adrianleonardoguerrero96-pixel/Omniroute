@@ -533,16 +533,34 @@ test("bumpCounts rewrites language and doc-set counts", () => {
   );
 });
 
-test("bumpCounts touches only those two phrases", () => {
-  const text =
-    "352 providers, 43 languages for UI, 42 translated documentation sets, 43 locales, 7 language packs, in 42 locales, 43 langs";
+// llm.txt's repo-tree comments count the same two things in a different shape:
+// `messages/ # N language JSON files` is the UI-locale total, `i18n/ # N-language
+// translated docs` is the docs total (one less — English is the source, not a
+// translation). Both were left behind by bumpCounts until this was added.
+test("bumpCounts rewrites the llm.txt tree-comment count phrasings", () => {
   assert.equal(
-    bumpCounts(text, 44),
-    "352 providers, 44 languages for UI, 43 translated documentation sets, 43 locales, 7 language packs, in 42 locales, 43 langs"
+    bumpCounts("messages/ # 43 language JSON files\ni18n/ # 42-language translated docs", 44),
+    "messages/ # 44 language JSON files\ni18n/ # 43-language translated docs"
   );
 });
 
-test("bumpCounts on the real llm.txt rewrites exactly the three count lines, each by one", () => {
+test("bumpCounts touches only those four phrases", () => {
+  const text =
+    "352 providers, 43 languages for UI, 42 translated documentation sets, 43 language JSON files, 42-language translated docs, 43 locales, 7 language packs, in 42 locales, 43 langs";
+  assert.equal(
+    bumpCounts(text, 44),
+    "352 providers, 44 languages for UI, 43 translated documentation sets, 44 language JSON files, 43-language translated docs, 43 locales, 7 language packs, in 42 locales, 43 langs"
+  );
+});
+
+// The four phrases, in the shapes llm.txt actually uses. `-language translated
+// docs` is hyphenated, so the separator class is `[ -]`, not a plain space.
+const LLM_COUNT_PHRASE =
+  /(?:languages|translated documentation sets|language JSON files|language translated docs)/;
+const LLM_COUNT_LINE = new RegExp(`\\d+[ -]${LLM_COUNT_PHRASE.source}`);
+const LLM_COUNT_NUMBER = new RegExp(`\\d+(?=[ -]${LLM_COUNT_PHRASE.source})`);
+
+test("bumpCounts on the real llm.txt rewrites exactly the five count lines, each by one", () => {
   const total = realConfig().locales.length;
   const before = readRepo("llm.txt").split("\n");
   const after = bumpCounts(before.join("\n"), total + 1).split("\n");
@@ -550,16 +568,23 @@ test("bumpCounts on the real llm.txt rewrites exactly the three count lines, eac
   const changed = before
     .map((line, index) => [line, after[index]])
     .filter(([from, to]) => from !== to);
-  assert.equal(changed.length, 3);
+  assert.equal(changed.length, 5);
   for (const [from, to] of changed) {
-    assert.match(from, /\d+ (languages|translated documentation sets)/);
+    assert.match(from, LLM_COUNT_LINE);
     assert.equal(
       to,
-      from.replace(/\d+(?= (?:languages|translated documentation sets))/, (n) =>
-        String(Number(n) + 1)
-      )
+      from.replace(LLM_COUNT_NUMBER, (n) => String(Number(n) + 1))
     );
   }
+});
+
+// The counterpart of the test above: at the CURRENT locale total the file is
+// already correct, so bumpCounts must be a no-op. This is what would have caught
+// the two tree-comment phrasings drifting out of sync.
+test("bumpCounts on the real llm.txt is a no-op at the current locale total", () => {
+  const total = realConfig().locales.length;
+  const text = readRepo("llm.txt");
+  assert.equal(bumpCounts(text, total), text);
 });
 
 // ---------------------------------------------------------------------------
