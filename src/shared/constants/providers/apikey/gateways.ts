@@ -15,7 +15,8 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     color: "#6366F1",
     textIcon: "1M",
     website: "https://1min.ai",
-    authHint: "Create an API key at https://docs.1min.ai/docs/api/create-api-key, then paste it here.",
+    authHint:
+      "Create an API key at https://docs.1min.ai/docs/api/create-api-key, then paste it here.",
     apiHint:
       "1min.ai uses a proprietary chat API (single prompt string + SSE) instead of OpenAI chat/completions. OmniRoute flattens OpenAI messages into a labeled prompt and translates the SSE stream.",
     passthroughModels: true,
@@ -47,7 +48,8 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     website: "https://freebuff.com",
     hasFree: true,
     serviceKinds: ["llm"],
-    authHint: "Enter Freebuff / Codebuff Auth Token (obtained via CLI login or automated harvester).",
+    authHint:
+      "Enter Freebuff / Codebuff Auth Token (obtained via CLI login or automated harvester).",
     freeNote: "Free Codebuff / Freebuff AI models.",
     apiHint: "Token is authenticated against Codebuff upstream session pool.",
     passthroughModels: true,
@@ -1332,6 +1334,24 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
       "Get a free API key via NaraRouter's Telegram channel, then paste it here as a Bearer token.",
     apiHint:
       "OpenAI-compatible endpoint at https://router.bynara.id/v1. Free-tier models are pinned; others need credit.",
+  },
+  xkiro: {
+    id: "xkiro",
+    serviceKinds: ["llm"],
+    alias: "xkiro",
+    name: "xKiro",
+    icon: "hub",
+    color: "#0EA5E9",
+    textIcon: "XK",
+    passthroughModels: true,
+    website: "https://xkiro.com",
+    hasFree: true,
+    freeNote:
+      "Free plan: 5M tokens/day per account across 40 free models (Qwen, MiniMax, DeepSeek, Mistral, SenseNova), no card; past the daily allowance free requests get a 429 until the reset. RPM not published.",
+    authHint:
+      "Create a free account at xkiro.com and paste the key here (Bearer; x-api-key also accepted).",
+    apiHint:
+      "OpenAI-compatible endpoint at https://api.xkiro.com/v1. Public /v1/models tags free rows with access_tier=free; paid models answer 403 on the free plan.",
   },
   regolo: {
     id: "regolo",
