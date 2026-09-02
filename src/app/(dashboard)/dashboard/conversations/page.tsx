@@ -290,6 +290,11 @@ function ConversationsPageContent() {
   // itself in the poll effect's dependency array (which would tear down and
   // restart the interval on every single appended turn).
   const newestSeqRef = useRef<number | null>(null);
+  // Tracks the PREVIOUS render's activeCallLogId truthiness, so the
+  // reply-just-finished effect below can detect the true->false transition
+  // specifically (not "is currently falsy", which would also fire on mount
+  // / switching conversations).
+  const wasReplyActiveRef = useRef(false);
 
   // The background list poll below only runs this while no conversation
   // modal is open — see loadActiveConversationSummary and the poll effect
@@ -630,6 +635,35 @@ function ConversationsPageContent() {
     const interval = setInterval(tick, pollSeconds * 1000);
     return () => clearInterval(interval);
   }, [activeConversationId, pollSeconds, fetchConversationPage]);
+
+  // Live incident (2026-09-02): resolveConversationId reassigns a node's
+  // last_correlation_id to the CURRENT request at request-START (before its
+  // reply streams), but that request's call-log artifact -- what
+  // resolveTurnDisplayContent needs to show real text -- is only written at
+  // completion. A node touched by a still-in-flight request therefore
+  // legitimately resolves empty if fetched during that window; the afterSeq
+  // poll above only ever APPENDS strictly newer nodes, so one already
+  // rendered empty stays empty in local state forever, even once its
+  // artifact exists moments later -- the exact "empty until you close and
+  // reopen the conversation" symptom. Once a reply that was streaming
+  // finishes (activeCallLogId's true -> false transition -- see the
+  // wasReplyActiveRef doc comment), re-fetch the recent page and merge it in
+  // by id (never drop older "Load more" history) so any node that resolved
+  // empty during the race gets its real content without a manual reopen.
+  useEffect(() => {
+    const wasActive = wasReplyActiveRef.current;
+    wasReplyActiveRef.current = Boolean(activeCallLogId);
+    if (!wasActive || activeCallLogId || !activeConversationId) return;
+
+    fetchConversationPage(activeConversationId, `limit=${CONVERSATION_PAGE_SIZE}`).then((page) => {
+      if (!page || page.nodes.length === 0) return;
+      setConversationNodes((prev) => {
+        const byId = new Map(prev.map((n) => [n.id, n] as const));
+        for (const n of page.nodes) byId.set(n.id, n);
+        return [...byId.values()].sort((a, b) => a.seq - b.seq);
+      });
+    });
+  }, [activeCallLogId, activeConversationId, fetchConversationPage]);
 
   // Live preview of the CURRENTLY streaming reply, if any: conversation_turn_nodes
   // only gains a node for an assistant turn once the client resends it as
