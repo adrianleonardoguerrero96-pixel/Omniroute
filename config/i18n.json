@@ -211,7 +211,8 @@
       "name": "Filipino",
       "native": "Filipino",
       "english": "Filipino",
-      "flag": "🇵🇭"
+      "flag": "🇵🇭",
+      "aliases": ["fil", "tl"]
     },
     {
       "code": "pl",
@@ -315,7 +316,8 @@
       "name": "Українська",
       "native": "Українська",
       "english": "Ukrainian",
-      "flag": "🇺🇦"
+      "flag": "🇺🇦",
+      "aliases": ["uk"]
     },
     {
       "code": "ur",
@@ -347,7 +349,8 @@
       "name": "中文 (繁體)",
       "native": "中文 (繁體)",
       "english": "Chinese (Traditional)",
-      "flag": "🇹🇼"
+      "flag": "🇹🇼",
+      "aliases": ["zh-hk", "zh-mo"]
     }
   ]
 }

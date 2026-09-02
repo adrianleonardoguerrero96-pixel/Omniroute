@@ -6,6 +6,7 @@ import {
   DEFAULT_LOCALE,
   LANGUAGES,
   LOCALES,
+  LOCALE_ALIASES,
   LOCALE_COOKIE,
   RTL_LOCALES,
 } from "../../src/i18n/config.ts";
@@ -33,4 +34,24 @@ test("i18n language metadata preserves native and English names", () => {
     english: englishConfig?.english,
     flag: englishConfig?.flag,
   });
+});
+
+test("locale aliases are lower-case, unique and never collide with a locale code", () => {
+  const codes = new Set(LOCALES.map((code) => code.toLowerCase()));
+  const seen = new Set<string>();
+  for (const [code, aliases] of Object.entries(LOCALE_ALIASES)) {
+    assert.ok(codes.has(code.toLowerCase()), `${code} is not a configured locale`);
+    for (const alias of aliases) {
+      assert.equal(alias, alias.toLowerCase(), `${alias} must be lower-case`);
+      assert.ok(!codes.has(alias), `${alias} collides with a locale code`);
+      assert.ok(!seen.has(alias), `${alias} is declared for two locales`);
+      seen.add(alias);
+    }
+  }
+});
+
+test("Ukrainian, Filipino and Hong-Kong/Macau browsers resolve through declared aliases", () => {
+  assert.deepEqual(LOCALE_ALIASES["uk-UA"], ["uk"]);
+  assert.deepEqual(LOCALE_ALIASES["phi"], ["fil", "tl"]);
+  assert.deepEqual(LOCALE_ALIASES["zh-TW"], ["zh-hk", "zh-mo"]);
 });
