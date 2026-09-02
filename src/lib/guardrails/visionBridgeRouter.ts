@@ -286,22 +286,25 @@ export async function getBestVisionModel(
 ): Promise<string | null> {
   const fullConfig = { ...DEFAULT_ROUTER_CONFIG, ...config };
 
+  // (#12237) `auto` / `auto/*` ids are VIRTUAL combos: there is no provider
+  // row for "auto", so the credential check always reports `false` for them.
+  // Member-level credentials are enforced downstream when the combo
+  // dispatches (mirrors the reroute guard in visionBridge.ts), so a virtual
+  // combo must not be discarded by the #8430 short-circuit — otherwise the
+  // combo silently falls through to auto-selection and never rotates. It is
+  // still subject to the pool check below: when the ENTIRE vision pool is
+  // unusable there is nothing the combo could dispatch to, and returning the
+  // combo id would let a raw image reach a text-only backend (#8430).
+  const virtualCombo =
+    fullConfig.fixedModel === "auto" || fullConfig.fixedModel?.startsWith("auto/")
+      ? fullConfig.fixedModel
+      : undefined;
+
   // If fixed model is configured, validate it has usable credentials first.
   // (#8430) An unreachable fixedModel (e.g. the default "openai/gpt-4o-mini"
   // on an instance with no OpenAI connection/key) must not short-circuit the
   // credential check — fall through to auto-selection instead.
-  if (fullConfig.fixedModel) {
-    // (#12237) `auto` / `auto/*` ids are VIRTUAL combos: there is no provider
-    // row for "auto", so the credential check always reports `false` for
-    // them. Member-level credentials are enforced downstream when the combo
-    // dispatches (mirrors the reroute guard in visionBridge.ts), so a virtual
-    // combo must never be discarded by the #8430 short-circuit — otherwise
-    // the combo silently falls through to auto-selection and never rotates.
-    const isVirtualCombo =
-      fullConfig.fixedModel === "auto" || fullConfig.fixedModel.startsWith("auto/");
-    if (isVirtualCombo) {
-      return fullConfig.fixedModel;
-    }
+  if (fullConfig.fixedModel && !virtualCombo) {
     const checkCreds = deps.hasUsableCredentials ?? hasUsableCredentialsForModel;
     const usable = await checkCreds(fullConfig.fixedModel);
     // Only skip credential validation when the check is indeterminate (null).
@@ -320,7 +323,12 @@ export async function getBestVisionModel(
   const cached = selectionCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     if (await cachedModelRemainsAvailable(cached.modelId, deps)) {
-      return cached.modelId;
+      if (!virtualCombo) return cached.modelId;
+      // The cache never re-validates credentials (the caller does that for a
+      // concrete target, but exempts virtual combos), so prove the cached
+      // member is still usable before vouching for the combo.
+      const checkCreds = deps.hasUsableCredentials ?? hasUsableCredentialsForModel;
+      if ((await checkCreds(cached.modelId)) !== false) return virtualCombo;
     }
     selectionCache.delete(cacheKey);
   }
@@ -342,7 +350,9 @@ export async function getBestVisionModel(
     expiresAt: Date.now() + fullConfig.selectionCacheTtlMs,
   });
 
-  return best.fullName;
+  // A virtual combo is returned as-is once the pool proves at least one
+  // vision-capable member is usable; it rotates its own members downstream.
+  return virtualCombo ?? best.fullName;
 }
 
 /**

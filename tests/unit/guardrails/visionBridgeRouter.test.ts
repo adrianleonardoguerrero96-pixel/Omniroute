@@ -84,16 +84,20 @@ test("getBestVisionModel — excludes a candidate with no usable active connecti
   assert.equal(model, null);
 });
 
+// `auto` / `auto/*` ids are VIRTUAL combos: there is no provider row for
+// "auto", so hasUsableCredentialsForModel reports a confirmed `false` for the
+// combo id itself while the pool members remain usable (indeterminate here).
+const virtualComboOnlyUnusable = async (fullModelId: string) =>
+  fullModelId === "auto" || fullModelId.startsWith("auto/") ? false : null;
+
 test("getBestVisionModel — keeps an auto/* virtual-combo fixedModel when its credential check is false (#12237)", async () => {
-  // `auto/*` ids are VIRTUAL combos: there is no provider row for "auto", so
-  // hasUsableCredentialsForModel reports a confirmed `false`. The #8430
-  // short-circuit must not discard the combo — member credentials are
-  // enforced downstream when the combo dispatches (same exemption as the
+  // The #8430 short-circuit must not discard the combo — member credentials
+  // are enforced downstream when the combo dispatches (same exemption as the
   // reroute guard in visionBridge.ts).
   const fixedModel = "auto/vision";
   const model = await getBestVisionModel(
     { fixedModel },
-    { hasUsableCredentials: async () => false }
+    { hasUsableCredentials: virtualComboOnlyUnusable }
   );
   assert.equal(model, fixedModel);
 });
@@ -101,9 +105,33 @@ test("getBestVisionModel — keeps an auto/* virtual-combo fixedModel when its c
 test('getBestVisionModel — keeps a bare "auto" fixedModel when its credential check is false (#12237)', async () => {
   const model = await getBestVisionModel(
     { fixedModel: "auto" },
-    { hasUsableCredentials: async () => false }
+    { hasUsableCredentials: virtualComboOnlyUnusable }
   );
   assert.equal(model, "auto");
+});
+
+test("getBestVisionModel — keeps an auto/* virtual-combo fixedModel on a cached pool selection (#12237)", async () => {
+  // Warm the selection cache with a pool pick, then ask for the combo: the
+  // cache-hit branch must still hand back the combo, not the cached member.
+  const warm = await getBestVisionModel({}, { hasUsableCredentials: virtualComboOnlyUnusable });
+  assert.ok(warm);
+  const model = await getBestVisionModel(
+    { fixedModel: "auto/vision" },
+    { hasUsableCredentials: virtualComboOnlyUnusable }
+  );
+  assert.equal(model, "auto/vision");
+});
+
+test("getBestVisionModel — discards an auto/* virtual-combo fixedModel when the ENTIRE vision pool is unusable (#8430)", async () => {
+  // The exemption only bypasses the credential check on the virtual id. With
+  // no usable vision-capable member anywhere, the combo has nothing to
+  // dispatch to and must fall through to `null` so the caller describes
+  // instead of forwarding a raw image to a text-only backend.
+  const model = await getBestVisionModel(
+    { fixedModel: "auto/vision" },
+    { hasUsableCredentials: async () => false }
+  );
+  assert.equal(model, null);
 });
 
 test("getBestVisionModel — still falls through when a concrete fixedModel has no usable credentials (#8430)", async () => {
