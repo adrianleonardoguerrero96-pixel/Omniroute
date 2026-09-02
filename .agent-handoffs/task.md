@@ -12,11 +12,9 @@ Estabelecer um protocolo auditável para que o Codex implemente mudanças e o Cl
 - Branch desta tarefa: `chore/claude-codex-handoff`
 - Worktree: `.claude/worktrees/claude-codex-handoff`
 
-## Estado herdado da base
+## Estado da base
 
-⚠️ base-red inherited: #12335
-
-Não corrigir falhas herdadas da base nesta branch documental.
+A checagem autenticada anterior ao push não encontrou `release-freeze` nem issue `base-red` aberta para `release/v3.8.51`. A issue histórica `#12335` está encerrada desde 2 de setembro de 2026 às 00:59:31 UTC.
 
 ## Responsabilidades
 
