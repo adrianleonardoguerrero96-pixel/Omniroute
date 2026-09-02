@@ -24,6 +24,7 @@ import {
   historyItemFromA2A,
   historyItemFromCloudAgent,
   historyRangeFromPreset,
+  type HistoryGrid,
   type HistoryItem,
 } from "../model/historyModel";
 import type { CloudAgentTask } from "@/lib/cloudAgent/types";
@@ -169,6 +170,135 @@ function nodeFromHistoryItem(item: HistoryItem): OrchNode {
   };
 }
 
+/** Preset range buttons (1d/7d/30d) — presentation only; selecting a preset re-samples "now"
+ * via `onSelect` (a real DOM event handler) so the range recomputes against the current clock.
+ * Extracted so `HistoryTab` stays under the max-lines ratchet, same shape as
+ * `OrchestrationToolbar.tsx`'s `ChipGroup`. */
+function PresetButtons({
+  preset,
+  t,
+  onSelect,
+}: {
+  preset: Preset;
+  t: ReturnType<typeof useTranslations>;
+  onSelect: (p: Preset) => void;
+}) {
+  return (
+    <div className="flex gap-1">
+      {PRESETS.map((p) => (
+        <button
+          key={p}
+          type="button"
+          aria-pressed={preset === p}
+          className={`px-2 py-1 text-xs rounded border ${
+            preset === p
+              ? "border-primary bg-primary/10 font-medium"
+              : "border-border text-muted"
+          }`}
+          onClick={() => onSelect(p)}
+        >
+          {t(PRESET_KEY[p])}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Alert rows for history sources that failed to fetch — presentation only. */
+function FailedSourcesList({
+  failedSources,
+  t,
+}: {
+  failedSources: ReadonlySet<SourceKind>;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  return (
+    <>
+      {[...failedSources].map((source) => (
+        <div key={source} role="alert" className="text-xs text-error">
+          {t("historySourceFailed", { source: t(SOURCE_KEY[source]) })}
+        </div>
+      ))}
+    </>
+  );
+}
+
+/** The Airflow-grid table itself — header row of bucket labels + one row per identity with
+ * state-colored cell dots. Presentation only; clicking a dot calls `onSelectItem`. Extracted so
+ * `HistoryTab` stays under the max-lines ratchet. */
+function HistoryGridTable({
+  grid,
+  preset,
+  t,
+  onSelectItem,
+}: {
+  grid: HistoryGrid;
+  preset: Preset;
+  t: ReturnType<typeof useTranslations>;
+  onSelectItem: (item: HistoryItem) => void;
+}) {
+  return (
+    // Kept mounted (with the previous range's rows) while `isLoading` is true for a refetch —
+    // only the very first load (no rows yet) falls through to the loading line above instead of
+    // an empty bordered table.
+    <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto border border-border rounded">
+      <table className="text-xs border-collapse w-full">
+        <thead>
+          <tr className="border-b border-border">
+            <th scope="col" className="px-2 py-1 sticky left-0 bg-surface" />
+            {grid.buckets.map((bucket, i) => (
+              <th
+                key={i}
+                scope="col"
+                className="px-0.5 py-1 text-[9px] font-normal text-muted whitespace-nowrap"
+              >
+                {formatBucketLabel(bucket.start, preset)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {grid.rows.map((row) => (
+            <tr key={`${row.source}:${row.identity}`} className="border-b border-border">
+              <th
+                scope="row"
+                className="text-left px-2 py-1 sticky left-0 bg-surface whitespace-nowrap font-normal"
+              >
+                <span className="font-medium">{row.identity}</span>{" "}
+                <span className="text-[9px] uppercase text-muted">
+                  {t(SOURCE_KEY[row.source])}
+                </span>
+              </th>
+              {row.cells.map((cell, i) => (
+                <td key={i} className="p-0.5 align-top">
+                  <div className="flex flex-wrap gap-0.5">
+                    {cell.map((item) => {
+                      const meta = `${item.label} · ${formatDuration(item.durationMs)} · ${t(
+                        STATE_KEY[item.state]
+                      )}`;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className="w-3 h-3 rounded-sm motion-reduce:transition-none"
+                          style={{ backgroundColor: orchStateColor(item.state) }}
+                          title={meta}
+                          aria-label={meta}
+                          onClick={() => onSelectItem(item)}
+                        />
+                      );
+                    })}
+                  </div>
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function HistoryTab() {
   const t = useTranslations("orchestration");
   // `common.loading` is an already-translated global key — the history namespace has no
@@ -191,37 +321,20 @@ export function HistoryTab() {
     [items, range, preset]
   );
 
+  const onSelectPreset = (p: Preset) => {
+    setPreset(p);
+    setNowMs(Date.now());
+  };
+  const onSelectItem = (item: HistoryItem) => setSelected(nodeFromHistoryItem(item));
+
   return (
     <div className="flex flex-col h-full min-h-0 gap-2">
       <div className="flex items-center gap-2 flex-wrap">
-        <div className="flex gap-1">
-          {PRESETS.map((p) => (
-            <button
-              key={p}
-              type="button"
-              aria-pressed={preset === p}
-              className={`px-2 py-1 text-xs rounded border ${
-                preset === p
-                  ? "border-primary bg-primary/10 font-medium"
-                  : "border-border text-muted"
-              }`}
-              onClick={() => {
-                setPreset(p);
-                setNowMs(Date.now());
-              }}
-            >
-              {t(PRESET_KEY[p])}
-            </button>
-          ))}
-        </div>
+        <PresetButtons preset={preset} t={t} onSelect={onSelectPreset} />
         <span className="text-[10px] text-muted">{t("historyConductorNote")}</span>
       </div>
 
-      {[...failedSources].map((source) => (
-        <div key={source} role="alert" className="text-xs text-error">
-          {t("historySourceFailed", { source: t(SOURCE_KEY[source]) })}
-        </div>
-      ))}
+      <FailedSourcesList failedSources={failedSources} t={t} />
 
       {isLoading && (
         <div role="status" aria-live="polite" className="text-xs text-muted">
@@ -234,64 +347,7 @@ export function HistoryTab() {
       )}
 
       {grid.rows.length > 0 && (
-        // Kept mounted (with the previous range's rows) while `isLoading` is true for a
-        // refetch — only the very first load (no rows yet) falls through to the loading
-        // line above instead of an empty bordered table.
-        <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto border border-border rounded">
-          <table className="text-xs border-collapse w-full">
-            <thead>
-              <tr className="border-b border-border">
-                <th scope="col" className="px-2 py-1 sticky left-0 bg-surface" />
-                {grid.buckets.map((bucket, i) => (
-                  <th
-                    key={i}
-                    scope="col"
-                    className="px-0.5 py-1 text-[9px] font-normal text-muted whitespace-nowrap"
-                  >
-                    {formatBucketLabel(bucket.start, preset)}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {grid.rows.map((row) => (
-                <tr key={`${row.source}:${row.identity}`} className="border-b border-border">
-                  <th
-                    scope="row"
-                    className="text-left px-2 py-1 sticky left-0 bg-surface whitespace-nowrap font-normal"
-                  >
-                    <span className="font-medium">{row.identity}</span>{" "}
-                    <span className="text-[9px] uppercase text-muted">
-                      {t(SOURCE_KEY[row.source])}
-                    </span>
-                  </th>
-                  {row.cells.map((cell, i) => (
-                    <td key={i} className="p-0.5 align-top">
-                      <div className="flex flex-wrap gap-0.5">
-                        {cell.map((item) => {
-                          const meta = `${item.label} · ${formatDuration(item.durationMs)} · ${t(
-                            STATE_KEY[item.state]
-                          )}`;
-                          return (
-                            <button
-                              key={item.id}
-                              type="button"
-                              className="w-3 h-3 rounded-sm motion-reduce:transition-none"
-                              style={{ backgroundColor: orchStateColor(item.state) }}
-                              title={meta}
-                              aria-label={meta}
-                              onClick={() => setSelected(nodeFromHistoryItem(item))}
-                            />
-                          );
-                        })}
-                      </div>
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <HistoryGridTable grid={grid} preset={preset} t={t} onSelectItem={onSelectItem} />
       )}
 
       <OrchestrationDrawer
