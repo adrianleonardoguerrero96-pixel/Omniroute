@@ -498,7 +498,7 @@ async function buildUnifiedModelsResponseCore(
       const cacheKey = keys
         .filter((k): k is string => Boolean(k))
         .sort()
-        .join(" ");
+        .join("\u0000");
       const cached = connectionsForProviderCache.get(cacheKey);
       if (cached) return cached;
       const seen = new Set<string>();
@@ -925,12 +925,8 @@ async function buildUnifiedModelsResponseCore(
           context_length: contextLength,
           max_input_tokens: contextLength,
           max_output_tokens: maxOutputTokens,
-          ...(autoInputModalities.length > 0
-            ? { input_modalities: autoInputModalities }
-            : {}),
-          ...(autoOutputModalities.length > 0
-            ? { output_modalities: autoOutputModalities }
-            : {}),
+          ...(autoInputModalities.length > 0 ? { input_modalities: autoInputModalities } : {}),
+          ...(autoOutputModalities.length > 0 ? { output_modalities: autoOutputModalities } : {}),
           capabilities: autoCapabilities,
         });
       } catch (err) {
