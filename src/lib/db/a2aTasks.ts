@@ -184,20 +184,39 @@ export function getA2ATaskHistoryById(id: string, owner?: string): A2ATaskHistor
 }
 
 /**
- * Delete task history rows older than `retentionDays`. The `ON DELETE CASCADE` foreign key on
- * `a2a_task_events.task_id` (migration 002) removes their events too. Returns the number of
- * `a2a_tasks` rows deleted.
+ * Delete task history rows older than `retentionDays`, along with their events. Does NOT rely
+ * on the `ON DELETE CASCADE` foreign key declared on `a2a_task_events.task_id` (migration 002):
+ * `better-sqlite3` runs with foreign keys enabled, but the other drivers under
+ * `src/lib/db/adapters/` never issue `PRAGMA foreign_keys = ON`, and migrations 072/073/126
+ * already document that this project does not depend on cascade behavior. On a
+ * non-better-sqlite3 driver, a cascade-reliant purge would silently leave that task's
+ * `a2a_task_events` rows behind forever — this module's only unbounded-growth path. Both
+ * deletes run inside one transaction so a crash between them cannot leave orphaned events.
+ * Returns the number of `a2a_tasks` rows deleted.
  */
 export function purgeA2AHistory(retentionDays: number): number {
   const db = getDbInstance();
-  const result = db
-    .prepare(
+  const purge = db.transaction((days: number) => {
+    db.prepare(
       `
-      DELETE FROM a2a_tasks
-      WHERE created_at < datetime('now', '-' || @days || ' days')
+      DELETE FROM a2a_task_events
+      WHERE task_id IN (
+        SELECT id FROM a2a_tasks WHERE created_at < datetime('now', '-' || @days || ' days')
+      )
     `
-    )
-    .run({ days: retentionDays });
+    ).run({ days });
 
-  return result.changes;
+    const result = db
+      .prepare(
+        `
+        DELETE FROM a2a_tasks
+        WHERE created_at < datetime('now', '-' || @days || ' days')
+      `
+      )
+      .run({ days });
+
+    return result.changes;
+  });
+
+  return purge(retentionDays);
 }

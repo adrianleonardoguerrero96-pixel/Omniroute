@@ -225,6 +225,18 @@ test("purgeA2AHistory removes rows older than retentionDays, returns deleted cou
 
   const oldEvents = a2aTasks.listA2ATaskEvents("old-1");
   assert.equal(oldEvents.length, 0);
+  const old2Events = a2aTasks.listA2ATaskEvents("old-2");
+  assert.equal(old2Events.length, 0);
   const remainingEvents = a2aTasks.listA2ATaskEvents("recent");
   assert.equal(remainingEvents.length, 1);
+
+  // The purge does not rely on `ON DELETE CASCADE` (better-sqlite3-only; the other adapters
+  // under src/lib/db/adapters/ never enable `PRAGMA foreign_keys`) — it deletes
+  // `a2a_task_events` explicitly before `a2a_tasks`, both inside one transaction. Confirm no
+  // orphans slipped through by counting the whole events table directly, independent of
+  // `listA2ATaskEvents`'s own `task_id` filter.
+  const totalEvents = db.prepare("SELECT COUNT(*) AS count FROM a2a_task_events").get() as {
+    count: number;
+  };
+  assert.equal(totalEvents.count, 1);
 });

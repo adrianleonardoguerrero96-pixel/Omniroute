@@ -74,8 +74,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ task });
     }
 
-    // Fallen out of the in-memory TTL window — fall back to the persisted history row (Task C3),
-    // applying the same owner-visibility rule as the in-memory lookup.
+    // Fallen out of the in-memory TTL window — fall back to the persisted history row (Task C3).
+    // NOTE — owner semantics diverge from the live lookup above by design: `tm.getTask(id,
+    // undefined)` (via `A2ATaskManager.isVisibleTo`) hides an owned task from an owner-less
+    // caller, while `getA2ATaskHistoryById(id, undefined)` applies no owner clause at all, so a
+    // keyed task can 404 here while live and become readable once it ages into history. This
+    // matches `listA2ATaskHistory`'s existing owner rule (management/keyless callers see
+    // everything, same posture as `listTasks`) — intentional, not a bug. Do not "fix" it by
+    // passing a stricter owner clause into the history fallback.
     const historyRow = getA2ATaskHistoryById(id, auth.owner);
     if (historyRow) {
       return NextResponse.json({ task: reconstituteHistoricalTask(historyRow) });
