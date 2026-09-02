@@ -40,8 +40,18 @@ function toggleCsv<T extends string>(current: ReadonlySet<T>, value: T): string 
   return next.size > 0 ? [...next].sort().join(",") : null;
 }
 
-export default function OrchestrationPageClient() {
-  const t = useTranslations("orchestration");
+const TAB_KEY: Record<Tab, string> = {
+  agents: "tabAgents",
+  routing: "tabRouting",
+  overview: "tabOverview",
+};
+
+/**
+ * The page's entire URL state (tab / selected node / filters / collapsed groups) plus the
+ * writer that patches it back into the query string. Pure derivation over
+ * `useSearchParams` — no state of its own, so the URL stays the single source of truth.
+ */
+function useOrchUrlState() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -49,7 +59,6 @@ export default function OrchestrationPageClient() {
   const tab: Tab = (TABS as readonly string[]).includes(params.get("tab") ?? "")
     ? (params.get("tab") as Tab)
     : "agents";
-  const nodeId = params.get("node");
   const qParam = params.get("q") ?? "";
   const stateParam = params.get("state");
   const sourceParam = params.get("source");
@@ -76,6 +85,40 @@ export default function OrchestrationPageClient() {
   );
   const collapsed = useMemo(() => parseCsvSet(collapsedParam, VALID_SOURCES), [collapsedParam]);
 
+  return { tab, nodeId: params.get("node"), filter, collapsed, setParams };
+}
+
+/** The tab strip. Presentation only — selecting a tab writes it back to the URL. */
+function TabList({
+  tab,
+  t,
+  onSelect,
+}: {
+  tab: Tab;
+  t: ReturnType<typeof useTranslations>;
+  onSelect: (tab: Tab) => void;
+}) {
+  return (
+    <div role="tablist" className="flex gap-1 border-b border-border">
+      {TABS.map((tb) => (
+        <button
+          key={tb}
+          role="tab"
+          aria-selected={tab === tb}
+          className={`px-3 py-1.5 text-sm rounded-t ${tab === tb ? "border border-b-0 border-border bg-surface font-medium" : "text-muted"}`}
+          onClick={() => onSelect(tb)}
+        >
+          {t(TAB_KEY[tb])}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export default function OrchestrationPageClient() {
+  const t = useTranslations("orchestration");
+  const { tab, nodeId, filter, collapsed, setParams } = useOrchUrlState();
+
   const { snapshot, showCompleted, setShowCompleted, refetch } = useOrchestrationSnapshot();
   const { comboEvents, activeCombos, isConnected } = useLiveComboStatus();
   const { providerHealth, connectionHealth } = useProviderBreakerHealth();
@@ -95,27 +138,9 @@ export default function OrchestrationPageClient() {
       ? setParams({ tab: "overview", node: null })
       : setParams({ node: id });
 
-  const TAB_KEY: Record<Tab, string> = {
-    agents: "tabAgents",
-    routing: "tabRouting",
-    overview: "tabOverview",
-  };
-
   return (
     <div className="flex flex-col h-[calc(100dvh-6rem)] min-h-[480px] p-4 gap-3">
-      <div role="tablist" className="flex gap-1 border-b border-border">
-        {TABS.map((tb) => (
-          <button
-            key={tb}
-            role="tab"
-            aria-selected={tab === tb}
-            className={`px-3 py-1.5 text-sm rounded-t ${tab === tb ? "border border-b-0 border-border bg-surface font-medium" : "text-muted"}`}
-            onClick={() => setParams({ tab: tb })}
-          >
-            {t(TAB_KEY[tb])}
-          </button>
-        ))}
-      </div>
+      <TabList tab={tab} t={t} onSelect={(tb) => setParams({ tab: tb })} />
       <div className="flex-1 min-h-0 flex flex-col gap-2">
         {(tab === "agents" || tab === "overview") && (
           <OrchestrationToolbar filter={filter} providerKeys={providerKeys} setParams={setParams} />

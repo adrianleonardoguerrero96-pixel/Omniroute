@@ -38,6 +38,47 @@ function toggleCsv<T extends string>(current: ReadonlySet<T>, value: T): string 
   return next.size > 0 ? [...next].sort().join(",") : null;
 }
 
+const chipClass = (active: boolean) =>
+  `text-[10px] px-2 py-0.5 rounded-full border whitespace-nowrap ${
+    active ? "border-primary bg-primary/10 text-primary" : "border-border text-muted"
+  }`;
+
+/**
+ * One labeled row of toggle chips (states / sources / providers). Pure presentation:
+ * `active` drives the pressed style + `aria-pressed`, `onToggle` writes the URL param
+ * upstream. Extracted so the toolbar itself stays under the max-lines ratchet.
+ */
+function ChipGroup<T extends string>({
+  label,
+  values,
+  active,
+  renderLabel,
+  onToggle,
+}: {
+  label: string;
+  values: readonly T[];
+  active: ReadonlySet<T>;
+  renderLabel: (value: T) => string;
+  onToggle: (value: T) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      <span className="text-[10px] text-muted">{label}</span>
+      {values.map((v) => (
+        <button
+          key={v}
+          type="button"
+          className={chipClass(active.has(v))}
+          aria-pressed={active.has(v)}
+          onClick={() => onToggle(v)}
+        >
+          {renderLabel(v)}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function OrchestrationToolbar({
   filter,
   providerKeys,
@@ -70,11 +111,6 @@ export function OrchestrationToolbar({
     setParams({ q: null, state: null, source: null, provider: null });
   };
 
-  const chipClass = (active: boolean) =>
-    `text-[10px] px-2 py-0.5 rounded-full border whitespace-nowrap ${
-      active ? "border-primary bg-primary/10 text-primary" : "border-border text-muted"
-    }`;
-
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2">
       <input
@@ -84,49 +120,28 @@ export function OrchestrationToolbar({
         placeholder={t("searchPlaceholder")}
         className="text-xs px-2 py-1 rounded border border-border bg-transparent min-w-[160px]"
       />
-      <div className="flex flex-wrap items-center gap-1">
-        <span className="text-[10px] text-muted">{t("filterStates")}</span>
-        {ORCH_STATES.map((s) => (
-          <button
-            key={s}
-            type="button"
-            className={chipClass(filter.states.has(s))}
-            aria-pressed={filter.states.has(s)}
-            onClick={() => setParams({ state: toggleCsv(filter.states, s) })}
-          >
-            {t(STATE_KEY[s])}
-          </button>
-        ))}
-      </div>
-      <div className="flex flex-wrap items-center gap-1">
-        <span className="text-[10px] text-muted">{t("filterSources")}</span>
-        {SOURCES.map((s) => (
-          <button
-            key={s}
-            type="button"
-            className={chipClass(filter.sources.has(s))}
-            aria-pressed={filter.sources.has(s)}
-            onClick={() => setParams({ source: toggleCsv(filter.sources, s) })}
-          >
-            {t(SOURCE_KEY[s])}
-          </button>
-        ))}
-      </div>
+      <ChipGroup
+        label={t("filterStates")}
+        values={ORCH_STATES}
+        active={filter.states}
+        renderLabel={(s) => t(STATE_KEY[s])}
+        onToggle={(s) => setParams({ state: toggleCsv(filter.states, s) })}
+      />
+      <ChipGroup
+        label={t("filterSources")}
+        values={SOURCES}
+        active={filter.sources}
+        renderLabel={(s) => t(SOURCE_KEY[s])}
+        onToggle={(s) => setParams({ source: toggleCsv(filter.sources, s) })}
+      />
       {providerKeys.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1">
-          <span className="text-[10px] text-muted">{t("filterProviders")}</span>
-          {providerKeys.map((p) => (
-            <button
-              key={p}
-              type="button"
-              className={chipClass(filter.providers.has(p))}
-              aria-pressed={filter.providers.has(p)}
-              onClick={() => setParams({ provider: toggleCsv(filter.providers, p) })}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
+        <ChipGroup
+          label={t("filterProviders")}
+          values={providerKeys}
+          active={filter.providers}
+          renderLabel={(p) => p}
+          onToggle={(p) => setParams({ provider: toggleCsv(filter.providers, p) })}
+        />
       )}
       {!isEmptyFilter(filter) && (
         <button

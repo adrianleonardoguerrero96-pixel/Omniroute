@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { StatusDot } from "@/shared/components/flow/StatusDot";
 import { orchStateColor, type OrchNode, type OrchState } from "../model/orchestrationTypes";
 import { useDrawerDetail } from "./useDrawerDetail";
+import type { DrawerError } from "./useDrawerDetail";
 import type { CloudAgentTask } from "@/lib/cloudAgent/types";
 import type { A2ATask } from "@/lib/a2a/taskManager";
 
@@ -138,6 +139,68 @@ function DrawerHeader({
         ✕
       </button>
     </div>
+  );
+}
+
+/**
+ * Narrows the loaded detail payload to the typed shape of the node's source — the
+ * non-matching one is always `null`, so each section can read its own shape safely.
+ */
+function narrowDetail(
+  node: OrchNode,
+  detail: unknown
+): { ca: CloudAgentTask | null; a2a: A2ATask | null } {
+  return {
+    ca: node.source === "cloud-agent" ? (detail as CloudAgentTask | null) : null,
+    a2a: node.source === "a2a" ? (detail as A2ATask | null) : null,
+  };
+}
+
+/** Objective section: the agent prompt / first A2A message, falling back to the node labels. */
+function DrawerObjective({
+  node,
+  ca,
+  a2a,
+  t,
+}: {
+  node: OrchNode;
+  ca: CloudAgentTask | null;
+  a2a: A2ATask | null;
+  t: Translate;
+}) {
+  return (
+    <Section title={t("drawerObjective")}>
+      <p className="text-xs break-words">
+        {ca?.prompt ?? a2a?.input?.messages[0]?.content ?? node.sublabel ?? node.label}
+      </p>
+    </Section>
+  );
+}
+
+/** Transient banners above the sections: toast, load/action error, loading placeholder. */
+function DrawerBanners({
+  toast,
+  error,
+  errorKind,
+  isLoading,
+  t,
+}: {
+  toast: string | null;
+  error: string | null;
+  errorKind: DrawerError["kind"] | null;
+  isLoading: boolean;
+  t: Translate;
+}) {
+  return (
+    <>
+      {toast && <div className="text-xs text-success mb-3">{toast}</div>}
+      {error && (
+        <div className="text-xs text-error mb-3">
+          {t(errorKind === "detail" ? "detailFailed" : "actionFailed", { error })}
+        </div>
+      )}
+      {isLoading && <div className="text-xs text-muted mb-3">…</div>}
+    </>
   );
 }
 
@@ -301,8 +364,7 @@ export function OrchestrationDrawer({
 
   if (!node) return null;
   const state = node.state ?? "queued";
-  const ca = node.source === "cloud-agent" ? (detail as CloudAgentTask | null) : null;
-  const a2a = node.source === "a2a" ? (detail as A2ATask | null) : null;
+  const { ca, a2a } = narrowDetail(node, detail);
 
   return (
     <>
@@ -321,19 +383,15 @@ export function OrchestrationDrawer({
           onToast={showToast}
         />
 
-        {toast && <div className="text-xs text-success mb-3">{toast}</div>}
-        {error && (
-          <div className="text-xs text-error mb-3">
-            {t(errorKind === "detail" ? "detailFailed" : "actionFailed", { error })}
-          </div>
-        )}
-        {isLoading && <div className="text-xs text-muted mb-3">…</div>}
+        <DrawerBanners
+          toast={toast}
+          error={error}
+          errorKind={errorKind}
+          isLoading={isLoading}
+          t={t}
+        />
 
-        <Section title={t("drawerObjective")}>
-          <p className="text-xs break-words">
-            {ca?.prompt ?? a2a?.input?.messages[0]?.content ?? node.sublabel ?? node.label}
-          </p>
-        </Section>
+        <DrawerObjective node={node} ca={ca} a2a={a2a} t={t} />
         <Section title={t("drawerTimeline")}>
           <Timeline node={node} detail={detail} />
         </Section>
