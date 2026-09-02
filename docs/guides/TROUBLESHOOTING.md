@@ -538,8 +538,12 @@ When many concurrent requests hit a rate-limited provider, OmniRoute uses mutex 
 
 - The chat completions endpoint returns a retryable `503` response whose error code is
   `chat_admission_busy`.
-- The response includes `Retry-After`; the byte-based path uses 2 seconds, while the
-  structure-based path uses 1 second and includes `reason: "structure_limit"`.
+- The response includes `Retry-After`. Since #12135 the value is derived from observed
+  occupancy — the larger of the `OMNIROUTE_CHAT_ADMISSION_QUEUE_MS` window the request already
+  waited and the time the current heavyweight leases have been held — rounded up to whole
+  seconds and capped at 60. On an idle gate it keeps the historical floors: 2 seconds on the
+  byte-based path, 1 second on the structure-based path (which also includes
+  `reason: "structure_limit"`).
 - This can happen while another heavyweight chat or long-running streaming response is still
   in flight.
 
