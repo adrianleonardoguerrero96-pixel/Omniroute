@@ -6162,7 +6162,7 @@
       "freeaiapikey": "Alennettu API-välityspalvelin yli 40 mallille, mukaan lukien GPT-5, Claude Opus 4.6, Claude Sonnet 4.6, Qwen 3.5. Hanki API-avaimesi osoitteesta https://freeaiapikey.com/dashboard. Perus-URL: https://freeaiapikey.com/v1.",
       "freemodel-dev": "Hanki 300 $ ilmaista API-saldoa osoitteesta https://freemodel.dev — maksutietoja ei vaadita. OpenAI-yhteensopiva päätepiste. GPT-5.4- ja GPT-5.5-mallit saatavilla.",
       "friendliai": "Ilmainen taso palvelimettomaan päättelyyn — luottokorttia ei vaadita",
-      "gemini": "Aina ilmainen: 1 500 pyyntöä/päivä Gemini 2.5 Flashille — ei luottokorttia, hanki avain osoitteesta aistudio.google.com",
+      "gemini": "__MISSING__:Free tier through Google AI Studio; per-model quotas are no longer published (check the quota page in AI Studio) — no credit card.",
       "gigachat": "Yhdistä GigaChat (Sber) API-avaimella.",
       "gitlab": "GitLabin henkilökohtainen käyttöoikeustunniste julkiselle Code Suggestions API:lle. Määritä itse isännöity perus-URL, kun et käytä gitlab.com-palvelua.",
       "gitlawb-gmi": "Hanki API-avaimesi Gitlawb Opengateway -hallintapaneelista.",

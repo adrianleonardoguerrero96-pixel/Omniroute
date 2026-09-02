@@ -6162,7 +6162,7 @@
       "freeaiapikey": "Rabatbelagt API-proxy til 40+ modeller inklusive GPT-5, Claude Opus 4.6, Claude Sonnet 4.6, Qwen 3.5. Hent din API-nøgle på https://freeaiapikey.com/dashboard. Base-URL: https://freeaiapikey.com/v1.",
       "freemodel-dev": "Få $300 gratis API-kredit på https://freemodel.dev — ingen betalingsoplysninger påkrævet. OpenAI-kompatibelt slutpunkt. GPT-5.4- og GPT-5.5-modeller tilgængelige.",
       "friendliai": "Gratis niveau til serverløs inferens — intet kreditkort påkrævet",
-      "gemini": "Gratis altid: 1.500 anmodninger/dag til Gemini 2.5 Flash — intet kreditkort, hent nøgle på aistudio.google.com",
+      "gemini": "__MISSING__:Free tier through Google AI Studio; per-model quotas are no longer published (check the quota page in AI Studio) — no credit card.",
       "gigachat": "Forbind GigaChat (Sber) med en API-nøgle.",
       "gitlab": "Personligt adgangstoken til GitLab til den offentlige Code Suggestions API. Konfigurer en selvhostet base-URL, når du ikke bruger gitlab.com.",
       "gitlawb-gmi": "Hent din API-nøgle fra Gitlawb Opengateway-dashboardet.",

@@ -6162,7 +6162,7 @@
       "freeaiapikey": "API-прокси со скидкой для более чем 40 моделей, включая GPT-5, Claude Opus 4.6, Claude Sonnet 4.6, Qwen 3.5. Получите API-ключ на https://freeaiapikey.com/dashboard. Базовый URL: https://freeaiapikey.com/v1.",
       "freemodel-dev": "Получите бесплатный баланс API $300 на https://freemodel.dev — платежная информация не требуется. Совместимая с OpenAI конечная точка. Доступны модели GPT-5.4 и GPT-5.5.",
       "friendliai": "Бесплатный тариф для бессерверного инференса — кредитная карта не требуется",
-      "gemini": "Бесплатно навсегда: 1 500 запросов в день для Gemini 2.5 Flash — без кредитной карты, получите ключ на aistudio.google.com",
+      "gemini": "__MISSING__:Free tier through Google AI Studio; per-model quotas are no longer published (check the quota page in AI Studio) — no credit card.",
       "gigachat": "Подключите GigaChat (Сбер) с помощью API-ключа.",
       "gitlab": "Персональный токен доступа GitLab для публичного Code Suggestions API. Настройте собственный базовый URL-адрес, если не используете gitlab.com.",
       "gitlawb-gmi": "Получите API-ключ в панели управления Gitlawb Opengateway.",
