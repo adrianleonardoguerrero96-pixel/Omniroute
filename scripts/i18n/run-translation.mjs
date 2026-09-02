@@ -22,6 +22,11 @@
  *   npm run i18n:run -- --force
  *   npm run i18n:run:dry
  *   npm run i18n:run -- --adopt   (rebuild .i18n-state.json from disk, no API calls)
+ *   npm run i18n:run -- --adopt --targets-only
+ *                                 (re-hash only the mirrors on disk, keeping every
+ *                                  source_hash — mechanical mirror rewrites stop
+ *                                  showing up as `target changed` while genuine
+ *                                  source drift is still reported)
  *
  * Backend (configured via env, never committed):
  *   OMNIROUTE_TRANSLATION_API_URL     e.g. https://cloud.omniroute.dev/v1
@@ -38,7 +43,7 @@ import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { normalizeLocaleText } from "./glossary-normalize.mjs";
 import { buildMirrorBar } from "./lib/language-bar.mjs";
-import { adoptState, mergeAdoptedState } from "./lib/translation-state.mjs";
+import { adoptState, mergeAdoptedState, refreshTargetHashes } from "./lib/translation-state.mjs";
 
 // ----- .env loader --------------------------------------------------------
 // Loads variables from a local `.env` (gitignored) into process.env without
@@ -161,12 +166,14 @@ function parseArgs(argv) {
     force: false,
     dryRun: false,
     adopt: false,
+    targetsOnly: false,
     concurrency: null,
   };
   for (const arg of argv.slice(2)) {
     if (arg === "--force") opts.force = true;
     else if (arg === "--dry-run" || arg === "--dryrun") opts.dryRun = true;
     else if (arg === "--adopt") opts.adopt = true;
+    else if (arg === "--targets-only") opts.targetsOnly = true;
     else if (arg.startsWith("--locale="))
       opts.locales = arg
         .slice(9)
@@ -196,6 +203,7 @@ function parseArgs(argv) {
           "  --force              Retranslate even when hashes match",
           "  --dry-run            Report what would happen but never call the API",
           "  --adopt              Rebuild .i18n-state.json from the files on disk (no API calls)",
+          "  --targets-only       With --adopt: re-hash only the mirrors, keeping every source_hash",
           "  --concurrency=<n>    Parallel API requests (default: env CONCURRENCY or 4)",
         ].join("\n")
       );
@@ -476,6 +484,46 @@ async function main() {
   logInfo(`sources: ${sources.length}`);
   logInfo(`locales: ${targetLocales.length} (${targetLocales.join(", ")})`);
   logInfo(`dry-run: ${opts.dryRun ? "yes" : "no"}, force: ${opts.force ? "yes" : "no"}`);
+
+  if (opts.targetsOnly && !opts.adopt) {
+    logError("--targets-only only applies to --adopt; re-run as `--adopt --targets-only`");
+    process.exit(2);
+  }
+
+  if (opts.adopt && opts.targetsOnly) {
+    // Covers the WHOLE recorded state (--files / --locale do not narrow it): the
+    // point is to absorb a mechanical rewrite of the mirrors without touching a
+    // single source_hash, so `i18n:check` keeps reporting the real source drift.
+    const now = new Date().toISOString();
+    const refreshed = await refreshTargetHashes({
+      state,
+      root: ROOT,
+      targetPathFor: (rel, locale) => targetPathFor(rel, locale),
+      now,
+    });
+    let recorded = 0;
+    let rehashed = 0;
+    let changed = 0;
+    for (const [rel, entry] of Object.entries(refreshed.sources ?? {})) {
+      for (const [locale, info] of Object.entries(entry.locales ?? {})) {
+        recorded += 1;
+        if (info.updated_at !== now) continue; // target missing on disk — left as recorded
+        rehashed += 1;
+        if (info.target_hash !== state.sources?.[rel]?.locales?.[locale]?.target_hash) changed += 1;
+      }
+    }
+    const scope = `${rehashed}/${recorded} recorded targets re-hashed (${changed} changed), every source_hash kept`;
+    const stateRel = path.relative(ROOT, STATE_PATH);
+    if (opts.dryRun) {
+      logInfo(
+        `adopt --targets-only (dry-run): would refresh ${scope} in ${stateRel} — nothing written`
+      );
+      return;
+    }
+    await saveState(refreshed);
+    logInfo(`adopt --targets-only: refreshed ${scope} in ${stateRel}`);
+    return;
+  }
 
   if (opts.adopt) {
     const adopted = await adoptState({

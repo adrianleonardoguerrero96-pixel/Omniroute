@@ -64,3 +64,40 @@ export function mergeAdoptedState(existing, adopted) {
   }
   return merged;
 }
+
+/**
+ * Refreshes ONLY the mirror hashes of an existing state document: every
+ * recorded `sources[rel].locales[locale]` whose target file exists on disk gets
+ * its `target_hash` recomputed from the bytes on disk and its `updated_at`
+ * restamped, while BOTH the top-level and the per-locale `source_hash` stay
+ * exactly as recorded. Entries whose target is missing are copied verbatim, and
+ * no source file is read at all.
+ *
+ * Existence reason: a mechanical rewrite of the mirrors (`i18n:sync-bars`
+ * regenerating every 🌐 bar) makes each of them "target changed" for
+ * `i18n:check` although not one translation went stale. Re-adopting with
+ * `adoptState` would silence that noise but ALSO re-hash the sources, masking
+ * the genuine source drift the same check must keep reporting — hence this
+ * narrower operation.
+ *
+ * Pure: `state` is not mutated and the result does not alias it.
+ */
+export async function refreshTargetHashes({
+  state,
+  root,
+  targetPathFor,
+  now = new Date().toISOString(),
+}) {
+  const next = { ...state, sources: {} };
+  for (const [rel, entry] of Object.entries(state?.sources ?? {})) {
+    const locales = {};
+    for (const [locale, info] of Object.entries(entry?.locales ?? {})) {
+      const target = path.resolve(root, targetPathFor(rel, locale));
+      locales[locale] = existsSync(target)
+        ? { ...info, target_hash: sha256(await fs.readFile(target)), updated_at: now }
+        : { ...info };
+    }
+    next.sources[rel] = { ...entry, locales };
+  }
+  return next;
+}

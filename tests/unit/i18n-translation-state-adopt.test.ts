@@ -6,6 +6,10 @@
  * file was lost. `mergeAdoptedState` folds such a run into an existing state so
  * a filtered `--adopt --locale=… / --files=…` never discards the entries it did
  * not touch. `run-translation.mjs --adopt` is a thin wrapper around both.
+ * `refreshTargetHashes` is the narrower `--adopt --targets-only` operation: it
+ * re-hashes the mirrors on disk while keeping every `source_hash`, so a
+ * mechanical mirror rewrite stops reading as `target changed` without masking
+ * the genuine source drift `i18n:check` must still report.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -15,7 +19,11 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { adoptState, mergeAdoptedState } from "../../scripts/i18n/lib/translation-state.mjs";
+import {
+  adoptState,
+  mergeAdoptedState,
+  refreshTargetHashes,
+} from "../../scripts/i18n/lib/translation-state.mjs";
 
 type LocaleState = { source_hash: string; target_hash: string; updated_at: string };
 type SourceState = { source_hash: string; locales: Record<string, LocaleState> };
@@ -267,4 +275,105 @@ test("run-translation.mjs --help advertises --adopt as a no-API-call state rebui
     stdio: ["ignore", "pipe", "pipe"],
   });
   assert.match(out, /--adopt\s+Rebuild \.i18n-state\.json from the files on disk \(no API calls\)/);
+});
+
+// ----- refreshTargetHashes -------------------------------------------------
+
+test("refreshTargetHashes re-hashes a changed mirror and restamps it, keeping both source hashes", async () => {
+  await withTempRoot(async (root) => {
+    mkdirSync(path.join(root, "docs", "i18n", "es"), { recursive: true });
+    // The mirror on disk moved on (a 🌐 bar rewrite); the source did NOT.
+    writeFileSync(path.join(root, "docs", "i18n", "es", "README.md"), "# A (es) v2\n");
+    const state: AdoptedState = {
+      sources: {
+        "README.md": {
+          source_hash: sha("# A\n"),
+          locales: { es: entry("# A\n", "# A (es)\n", OLD) },
+        },
+      },
+    };
+
+    const next = (await refreshTargetHashes({
+      state,
+      root,
+      targetPathFor: mirrorPathFor(root),
+      now: NEW,
+    })) as AdoptedState;
+
+    const es = next.sources["README.md"].locales.es;
+    assert.equal(es.target_hash, sha("# A (es) v2\n"));
+    assert.equal(es.updated_at, NEW);
+    // The two source hashes are what `i18n:check` compares against the sources:
+    // re-hashing them here would silence the genuine drift this must preserve.
+    assert.equal(es.source_hash, sha("# A\n"));
+    assert.equal(next.sources["README.md"].source_hash, sha("# A\n"));
+  });
+});
+
+test("refreshTargetHashes leaves an entry whose target file is missing exactly as recorded", async () => {
+  await withTempRoot(async (root) => {
+    mkdirSync(path.join(root, "docs", "i18n", "es"), { recursive: true });
+    writeFileSync(path.join(root, "docs", "i18n", "es", "README.md"), "# A (es)\n");
+    const state: AdoptedState = {
+      sources: {
+        "README.md": {
+          source_hash: sha("# A\n"),
+          // `de` has a recorded entry but no file on disk (mirror deleted).
+          locales: {
+            es: entry("# A\n", "# A (es)\n", OLD),
+            de: entry("# A\n", "# A (de)\n", OLD),
+          },
+        },
+      },
+    };
+
+    const next = (await refreshTargetHashes({
+      state,
+      root,
+      targetPathFor: mirrorPathFor(root),
+      now: NEW,
+    })) as AdoptedState;
+
+    assert.deepEqual(next.sources["README.md"].locales.de, state.sources["README.md"].locales.de);
+    // …and the present one is still refreshed (same bytes → same hash, new stamp).
+    assert.equal(next.sources["README.md"].locales.es.target_hash, sha("# A (es)\n"));
+    assert.equal(next.sources["README.md"].locales.es.updated_at, NEW);
+  });
+});
+
+test("refreshTargetHashes is pure — the input state is neither mutated nor aliased", async () => {
+  await withTempRoot(async (root) => {
+    for (const locale of ["es", "de"]) {
+      mkdirSync(path.join(root, "docs", "i18n", locale), { recursive: true });
+      writeFileSync(path.join(root, "docs", "i18n", locale, "README.md"), `# A (${locale}) v2\n`);
+    }
+    const state = twoByTwo();
+    // docs/GUIDE.md has no mirror on disk at all — the untouched half.
+    const snapshot = structuredClone(state);
+
+    const next = (await refreshTargetHashes({
+      state,
+      root,
+      targetPathFor: mirrorPathFor(root),
+      now: NEW,
+    })) as AdoptedState;
+
+    assert.deepEqual(state, snapshot);
+    next.sources["README.md"].locales.es.updated_at = "mutated";
+    next.sources["README.md"].source_hash = "mutated";
+    next.sources["docs/GUIDE.md"].locales.de.target_hash = "mutated";
+    next.sources["README.md"].locales.zz = entry("x", "y", NEW);
+    assert.deepEqual(state, snapshot);
+  });
+});
+
+test("run-translation.mjs --help advertises --targets-only as a mirror-only re-hash", () => {
+  const out = execFileSync(process.execPath, [RUN_TRANSLATION, "--help"], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  assert.match(
+    out,
+    /--targets-only\s+With --adopt: re-hash only the mirrors, keeping every source_hash/
+  );
 });
