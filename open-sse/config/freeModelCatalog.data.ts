@@ -474,8 +474,9 @@ export const FREE_MODEL_BUDGETS: FreeModelBudget[] = [
   // account ⇒ single pool: 5M × 30 = 150M. Rows = the 40 `access_tier: "free"` models on the public
   // GET https://api.xkiro.com/v1/models minus openai/gpt-5.3-codex-spark (undeclared provenance).
   // hardStopGuaranteed: https://docs.xkiro.com/api/rate-limits/ — "Past it, free-model requests are blocked with a
-  // 429 until the daily reset" + "No credit card" on the pricing card. tos: caution — ToS (2026-07-30) forbids
-  // reselling the service and violating the upstream providers' terms; personal proxy use is not addressed.
+  // 429 until the daily reset" + "No credit card" (page header) / "no card required" (Free plan card).
+  // tos: caution — ToS (2026-07-30) forbids reselling the service and violating the upstream providers' terms;
+  // personal proxy use is not addressed.
   { provider: "xkiro", modelId: "qwen/qwen3-vl-plus:free", displayName: "Qwen3 VL Plus (xKiro)", monthlyTokens: 150000000, creditTokens: 0, freeType: "recurring-daily", poolKey: "xkiro-free", tos: "caution", hardStopGuaranteed: true },
   { provider: "xkiro", modelId: "sensenova/sensenova-6.8-flash-lite", displayName: "SenseNova 6.8 Flash-Lite (xKiro)", monthlyTokens: 150000000, creditTokens: 0, freeType: "recurring-daily", poolKey: "xkiro-free", tos: "caution", hardStopGuaranteed: true },
   { provider: "xkiro", modelId: "minimax/minimax-m2.7:free", displayName: "MiniMax M2.7 (xKiro)", monthlyTokens: 150000000, creditTokens: 0, freeType: "recurring-daily", poolKey: "xkiro-free", tos: "caution", hardStopGuaranteed: true },

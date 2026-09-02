@@ -33,7 +33,7 @@ test("xkiro free plan is one 5M/day account-wide pool = 150M/month, counted once
     assert.equal(m.freeType, "recurring-daily", m.modelId);
     assert.equal(m.tos, "caution", m.modelId);
     assert.equal(m.hardStopGuaranteed, true, m.modelId);
-    assert.equal(m.eligibilityGate, undefined, m.modelId);
+    assert.equal((m as { eligibilityGate?: unknown }).eligibilityGate, undefined, m.modelId);
   }
   const withXkiro = computeFreeModelTotals().steadyRecurringTokens;
   const without = computeFreeModelTotals({
@@ -48,6 +48,7 @@ test("xkiro never lists the undeclared-provenance codex-spark route", () => {
 });
 
 test("every xkiro catalog row is a pinned registry model", () => {
+  assert.equal(REGISTRY.xkiro.models.length, rows.length);
   const pinned = new Set(REGISTRY.xkiro.models.map((m) => m.id));
   for (const r of rows) assert.ok(pinned.has(r.modelId), r.modelId);
 });
