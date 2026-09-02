@@ -73,7 +73,7 @@
 </div>
 
 <div align="center">
- <b>🌐 支援 43 種語言環境</b>
+ <b>🌐 支援 42 種語言環境</b>
  <table>
   <tr>
     <td align="center"><a href="README.md">🇺🇸</a></td>
@@ -280,7 +280,7 @@ Result: 4 fallback layers reduce downtime; upstream availability is not guarante
 | ☁️ 雲端代理                | **Codex、Cursor、Devin、Jules**                        | 無          |
 | 🥷 TLS 指紋隱身            | **JA3/JA4 透過 wreq-js**                               | 無          |
 | 🖥️ 多平台                  | **Web · 桌面 · Termux · PWA**                          | 僅 Web      |
-| 🌍 國際化                  | **43 種語言環境**                                      | 0–4         |
+| 🌍 國際化                  | **42 種語言環境**                                      | 0–4         |
 
 <sub>📊 與 LiteLLM、OpenRouter 和 Portkey 的詳細比較 → [`docs/comparison/OMNIROUTE_VS_ALTERNATIVES.md`](../../comparison/OMNIROUTE_VS_ALTERNATIVES.md)</sub>
 
@@ -949,7 +949,7 @@ podman compose --profile base up -d --build
 | [Contributing](../../CONTRIBUTING.md)               | 開發設定和指南                   |
 | [Changelog](../../CHANGELOG.md)                     | 完整每個版本的發布歷史           |
 | [Security Policy](../../SECURITY.md)                | 漏洞回報和安全實踐               |
-| [i18n Guide](../../guides/I18N.md)                  | 43 種語言環境、翻譯工作流程、RTL |
+| [i18n Guide](../../guides/I18N.md)                  | 42 種語言環境、翻譯工作流程、RTL |
 | [Release Checklist](../../ops/RELEASE_CHECKLIST.md) | 發布前驗證步驟                   |
 | [Coverage Plan](../../ops/COVERAGE_PLAN.md)         | 測試覆蓋率策略和 14,965 測試套件 |
 

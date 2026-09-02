@@ -251,7 +251,7 @@ Combo: "always-on"                         strategy: priority
 | ☁️ Cloud agents           | **Codex, Cursor, Devin, Jules**        | Нет            |
 | 🥷 TLS stealth            | **JA3/JA4 via wreq-js**                | Нет            |
 | 🖥️ Платформы              | **Web · Desktop · Termux · PWA**       | Только web     |
-| 🌍 i18n                   | **43 локали**                          | 0–4            |
+| 🌍 i18n                   | **42 локали**                          | 0–4            |
 
 <sub>📊 Сравнение с LiteLLM, OpenRouter, Portkey → [`docs/comparison/OMNIROUTE_VS_ALTERNATIVES.md`](../../comparison/OMNIROUTE_VS_ALTERNATIVES.md)</sub>
 
@@ -840,7 +840,7 @@ Combo: "free-tier-fallback"
 | [CONTRIBUTING](../../../CONTRIBUTING.md) | Dev setup                    |
 | [CHANGELOG](../../../CHANGELOG.md)       | История релизов              |
 | [SECURITY](../../../SECURITY.md)         | Vulnerability reporting      |
-| [I18N](../../guides/I18N.md)             | 43 языка, pipeline переводов |
+| [I18N](../../guides/I18N.md)             | 42 языка, pipeline переводов |
 
 ---
 

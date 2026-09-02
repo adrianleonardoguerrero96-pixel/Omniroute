@@ -73,7 +73,7 @@
 </div>
 
 <div align="center">
- <b>🌐 支持 43 种语言环境</b>
+ <b>🌐 支持 42 种语言环境</b>
  <table>
   <tr>
     <td align="center"><a href="README.md">🇺🇸</a></td>
@@ -285,7 +285,7 @@ Combo: "always-on"                         策略: priority
 | ☁️ 云代理                      | **Codex、Cursor、Devin、Jules**                                  | 无           |
 | 🥷 TLS 指纹伪装                | **JA3/JA4 基于 wreq-js**                                         | 无           |
 | 🖥️ 多平台                      | **Web · 桌面 · Termux · PWA**                                    | 仅 Web       |
-| 🌍 国际化                      | **43 种语言环境**                                                | 0–4          |
+| 🌍 国际化                      | **42 种语言环境**                                                | 0–4          |
 
 <sub>📊 与 LiteLLM、OpenRouter、Portkey 的详细对比 → [`docs/comparison/OMNIROUTE_VS_ALTERNATIVES.md`](../../comparison/OMNIROUTE_VS_ALTERNATIVES.md)</sub>
 
@@ -958,7 +958,7 @@ podman compose --profile base up -d --build
 | [贡献指南](../../CONTRIBUTING.md)              | 开发环境设置与规范             |
 | [更新日志](../../CHANGELOG.md)                 | 完整按版本发布历史             |
 | [安全策略](../../SECURITY.md)                  | 漏洞报告与安全实践             |
-| [i18n 指南](../../guides/I18N.md)              | 43 种语言环境、翻译流程、RTL   |
+| [i18n 指南](../../guides/I18N.md)              | 42 种语言环境、翻译流程、RTL   |
 | [发布检查清单](../../ops/RELEASE_CHECKLIST.md) | 发布前验证步骤                 |
 | [测试覆盖计划](../../ops/COVERAGE_PLAN.md)     | 测试覆盖策略与 14,965 测试套件 |
 
