@@ -3,8 +3,9 @@
  * OmniRoute — add one locale to every surface with a single command.
  *
  *   npm run i18n:add-locale -- --code=el --english=Greek --native=Ελληνικά --flag=🇬🇷 \
- *     [--aliases=el-gr] [--flag-file=gr.svg] [--rtl] [--docs=core|all] [--cli-full] [--force-cli] \
- *     [--site-dir=../omnirouteSite] [--batch-size=40] [--only=<phase,…>] [--skip=<phase,…>] [--dry-run]
+ *     [--aliases=el-gr] [--flag-file=gr.svg] [--rtl] [--docs=core|all | --files=<csv>] [--cli-full] \
+ *     [--force-cli] [--site-dir=../omnirouteSite] [--batch-size=40] [--only=<phase,…>] \
+ *     [--skip=<phase,…>] [--dry-run]
  *
  * Phases, in order. Every phase checks presence first, so re-running the command
  * for an already-added locale is a no-op apart from re-translating whatever is
@@ -12,10 +13,11 @@
  *
  *   config   config/i18n.json entry (+ aliases, rtl) — the single source of truth
  *   flag     docs/assets/flags/<cc>.svg from lipis/flag-icons (MIT) when missing
- *   ui       src/i18n/messages/<code>.json — scaffold, then sync-ui-keys --translate-markers
+ *   ui       src/i18n/messages/<code>.json — scaffold, then sync-ui-keys --translate-markers;
+ *            markers still __MISSING__ afterwards are reported and fail the run (exit 1)
  *   docs     docs/i18n/<code>/** via run-translation — the core set every existing locale
- *            carries (lib/docs-core-set.mjs; --docs=all for the full source set) — then the
- *            llm.txt / CHANGELOG.md mirror stubs
+ *            carries (lib/docs-core-set.mjs; --docs=all for the full source set, --files=<csv>
+ *            for an explicit list) — then the llm.txt / CHANGELOG.md mirror stubs
  *   cli      bin/cli/locales/<code>.json — generate-locales --code scaffold, then the
  *            common + program sections (--cli-full: every section) translated in batches
  *   readme   README flag link, docs/i18n/README.md row, docs/guides/I18N.md row, and the
@@ -25,7 +27,8 @@
  *   site     <site-dir>/lang/<code>.json (translated), js/i18n.js SUPPORTED_LANGS and the
  *            language dropdowns (lib/site-scaffold.mjs); node --check on the edited JS
  *
- * A real run ends with Prettier on the touched repo files. `--dry-run` prints every
+ * A real run ends with Prettier on the touched repo files (never the site checkout).
+ * `--dry-run` prints every
  * planned write / command — including the computed docs core set — and touches
  * nothing: no files, no network, no child processes.
  *
@@ -59,7 +62,14 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIR, "..", "..");
 
 const PHASES = ["config", "flag", "ui", "docs", "cli", "readme", "bars", "site"];
-const PHASES_READING_CONFIG_FROM_DISK = ["ui", "docs", "cli", "bars"];
+// Phases whose outcome must agree with config/i18n.json ON DISK: the child scripts
+// (ui, docs, cli, bars) read the locale list from there, and the readme edits list
+// the locale on every surface the parity test checks against the config. For a
+// brand-new locale they need the config phase in the same run. readme is guarded in
+// dry-run too — its edits are computed in-process, so nothing else would flag the
+// inconsistency — while the child-backed phases stay previewable (--only=docs).
+const PHASES_REQUIRING_CONFIG_ON_DISK = ["ui", "docs", "cli", "readme", "bars"];
+const PHASES_GUARDED_IN_DRY_RUN = ["readme"];
 const PHASES_TRANSLATING = ["ui", "docs", "cli", "site"];
 const FLAG_CDN = "https://raw.githubusercontent.com/lipis/flag-icons/main/flags/4x3/";
 const SITE_PAGES = ["index.html", "why/index.html", "viral/index.html"];
@@ -84,6 +94,7 @@ const USAGE = `Usage: node scripts/i18n/add-locale.mjs --code=<code> --english=<
   --flag-file=<file>    docs/assets/flags/<file> when it cannot be derived from the emoji
   --rtl                 add the code to config/i18n.json "rtl"
   --docs=core|all       docs to translate: the core set every locale carries (default) or every source
+  --files=<csv>         repo-relative English sources to translate instead of the core set (not with --docs=all)
   --cli-full            translate every CLI catalog section (default: common + program)
   --force-cli           retranslate CLI keys that already have a value
   --site-dir=<dir>      omnirouteSite checkout (relative to the repo root or absolute); skipped when absent
@@ -151,6 +162,7 @@ function parseArgs(argv) {
     flagFile: null,
     rtl: false,
     docs: "core",
+    files: null,
     cliFull: false,
     forceCli: false,
     siteDir: null,
@@ -196,6 +208,12 @@ function parseArgs(argv) {
       case "--docs":
         o.docs = value;
         break;
+      case "--files":
+        o.files = value
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        break;
       case "--cli-full":
         o.cliFull = true;
         break;
@@ -229,6 +247,10 @@ function parseArgs(argv) {
   if (!["core", "all"].includes(o.docs)) {
     throw new Error(`--docs must be "core" or "all" (got "${o.docs}")`);
   }
+  if (o.files && o.files.length === 0) {
+    throw new Error("--files needs at least one repo-relative path");
+  }
+  if (o.files && o.docs === "all") throw new Error("--files and --docs=all are mutually exclusive");
   for (const alias of o.aliases) {
     if (!ALIAS.test(alias))
       throw new Error(`invalid alias "${alias}" (lower-case BCP-47, e.g. el-gr)`);
@@ -286,6 +308,10 @@ function flattenLeaves(node, prefix = "", out = []) {
   }
   return out;
 }
+
+/** Leaves still carrying the `__MISSING__:` placeholder that sync-ui-keys leaves behind. */
+const countMarkers = (leaves) =>
+  leaves.filter((leaf) => leaf.text.startsWith(PLACEHOLDER_PREFIX)).length;
 
 function getDeep(node, id) {
   let cursor = node;
@@ -407,9 +433,7 @@ async function phaseUi(ctx) {
   if (!existing) await writeFile(ctx, file, "{}\n");
   const have = new Set((existing ?? []).map((leaf) => leaf.id));
   const missing = source.filter((leaf) => !have.has(leaf.id)).length;
-  const markers = (existing ?? []).filter((leaf) =>
-    leaf.text.startsWith(PLACEHOLDER_PREFIX)
-  ).length;
+  const markers = countMarkers(existing ?? []);
   log(
     `ui: ${source.length} source keys — ${missing} missing, ${markers} __MISSING__ markers → ${missing + markers} to translate`
   );
@@ -424,12 +448,36 @@ async function phaseUi(ctx) {
     `writes ${display(file)}`
   );
   ctx.touched.add(file);
+  // sync-ui-keys keeps a marker for every string it could not translate and still
+  // exits 0; a committed marker turns the i18n-ui-coverage CI shard red, so the
+  // leftovers are counted here and fail this run like the cli / site loops do.
+  if (ctx.dry) {
+    log(
+      `[DRY] then re-count the __MISSING__ markers left in ${display(file)} — leftovers fail the run`
+    );
+    return;
+  }
+  const leftover = countMarkers(flattenLeaves(await readJson(file)));
+  log(`ui: ${leftover} __MISSING__ markers left in ${display(file)}`);
+  if (leftover > 0) {
+    ctx.failures.push(
+      `ui: ${leftover} keys still __MISSING__ (re-run add-locale or sync-ui-keys --translate-markers)`
+    );
+  }
 }
 
 async function phaseDocs(ctx) {
   const localeDir = path.join(ROOT, "docs", "i18n", ctx.code);
   let files = null;
-  if (ctx.o.docs === "core") {
+  if (ctx.o.files) {
+    files = ctx.o.files;
+    for (const rel of files) {
+      if (!existsSync(path.join(ROOT, rel))) {
+        throw new Error(`docs: --files entry "${rel}" has no English source at the repo root`);
+      }
+    }
+    log(`docs: explicit source list (--files) = ${files.length} files`);
+  } else if (ctx.o.docs === "core") {
     // The target locale is left out of the intersection: a partial earlier run
     // of the same locale must not shrink the set it is being caught up to.
     const peers = {
@@ -442,18 +490,29 @@ async function phaseDocs(ctx) {
         "docs: no existing locale mirror to derive the core set from — use --docs=all"
       );
     }
-    log(
-      `docs: core set = ${files.length} files (carried by every one of the ${docsLocaleDirs({ root: ROOT, config: peers }).length} existing locale mirrors)`
-    );
-    if (ctx.dry) {
-      for (const rel of files) {
-        const target = path.join(localeDir, rel);
-        log(`[DRY] write ${display(target)} (via run-translation)`);
-        ctx.touched.add(target);
-      }
+    // The thinnest mirrors bound the intersection — a partial peer shows up here.
+    const sizes = [];
+    for (const code of docsLocaleDirs({ root: ROOT, config: peers })) {
+      const count = (await walkFiles(path.join(ROOT, "docs", "i18n", code))).length;
+      sizes.push({ code, count });
     }
+    sizes.sort((a, b) => a.count - b.count || a.code.localeCompare(b.code, "en"));
+    const smallest = sizes
+      .slice(0, 3)
+      .map((peer) => `${peer.code} ${peer.count}`)
+      .join(", ");
+    log(
+      `docs: core set = ${files.length} files (intersection of ${sizes.length} existing locale mirrors; smallest mirrors: ${smallest})`
+    );
   } else {
     log("docs: full source set (--docs=all)");
+  }
+  if (ctx.dry && files) {
+    for (const rel of files) {
+      const target = path.join(localeDir, rel);
+      log(`[DRY] write ${display(target)} (via run-translation)`);
+      ctx.touched.add(target);
+    }
   }
   runNode(
     ctx,
@@ -655,10 +714,17 @@ const PHASE_RUNNERS = {
 };
 
 async function runPrettier(ctx, phases) {
-  // Repo files only (the site has its own tooling) and only the kinds Prettier
-  // has a parser for — llm.txt and the .mmd diagram would make it exit 2.
+  // Repo files only: nothing under --site-dir (the site repo has its own tooling and
+  // Prettier config, and it may live inside this checkout, e.g. _mono_repo/), nothing
+  // outside the repo root, and only the kinds Prettier has a parser for — llm.txt and
+  // the .mmd diagram would make it exit 2.
+  const siteDir = ctx.o.siteDir;
+  const underSite = (file) =>
+    siteDir !== null && (file === siteDir || file.startsWith(`${siteDir}${path.sep}`));
   const files = new Set(
-    [...ctx.touched].filter((file) => insideRepo(file) && /\.(json|md)$/.test(file))
+    [...ctx.touched].filter(
+      (file) => insideRepo(file) && !underSite(file) && /\.(json|md)$/.test(file)
+    )
   );
   const localeDir = path.join(ROOT, "docs", "i18n", ctx.code);
   if (!ctx.dry && phases.includes("docs") && existsSync(localeDir)) {
@@ -706,6 +772,11 @@ async function main() {
           `--${field}=${o[field]} differs from config/i18n.json (${stored[field]}) — the stored value wins`
         );
       }
+    }
+    if (o.aliases.length && JSON.stringify(o.aliases) !== JSON.stringify(stored.aliases ?? [])) {
+      warn(
+        `--aliases=${o.aliases.join(",")} is ignored for an already-configured locale (config/i18n.json keeps ${stored.aliases?.length ? stored.aliases.join(",") : "none"}) — edit the config entry by hand`
+      );
     }
   }
 
@@ -755,17 +826,21 @@ async function main() {
     backend: null,
   };
 
-  if (!o.dryRun) {
-    if (!stored && !phases.includes("config")) {
-      const needing = phases.filter((phase) => PHASES_READING_CONFIG_FROM_DISK.includes(phase));
-      if (needing.length) {
-        throw new Error(
-          `config/i18n.json does not list ${o.code} yet and the ${needing.join(", ")} phase(s) read it from disk — run the config phase first`
-        );
-      }
+  if (!stored && !phases.includes("config")) {
+    const needing = phases.filter(
+      (phase) =>
+        PHASES_REQUIRING_CONFIG_ON_DISK.includes(phase) &&
+        (!o.dryRun || PHASES_GUARDED_IN_DRY_RUN.includes(phase))
+    );
+    if (needing.length) {
+      throw new Error(
+        `config/i18n.json does not list ${o.code} yet and the ${needing.join(", ")} phase(s) need it on disk — run the config phase first (add it to --only or drop it from --skip)`
+      );
     }
-    // Fail before the first write when a translating phase has no backend.
-    if (phases.some((phase) => PHASES_TRANSLATING.includes(phase))) ctx.backend = backendConfig();
+  }
+  // Fail before the first write when a translating phase has no backend.
+  if (!o.dryRun && phases.some((phase) => PHASES_TRANSLATING.includes(phase))) {
+    ctx.backend = backendConfig();
   }
 
   log(
