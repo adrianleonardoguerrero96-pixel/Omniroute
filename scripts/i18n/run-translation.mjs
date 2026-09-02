@@ -38,7 +38,7 @@ import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { normalizeLocaleText } from "./glossary-normalize.mjs";
 import { buildMirrorBar } from "./lib/language-bar.mjs";
-import { adoptState } from "./lib/translation-state.mjs";
+import { adoptState, mergeAdoptedState } from "./lib/translation-state.mjs";
 
 // ----- .env loader --------------------------------------------------------
 // Loads variables from a local `.env` (gitignored) into process.env without
@@ -484,10 +484,20 @@ async function main() {
       locales: targetLocales,
       targetPathFor: (rel, locale) => targetPathFor(rel, locale),
     });
-    await saveState(adopted);
-    logInfo(
-      `adopted ${sources.length} sources × ${targetLocales.length} locales into ${path.relative(ROOT, STATE_PATH)}`
+    const adoptedTargets = Object.values(adopted.sources).reduce(
+      (n, entry) => n + Object.keys(entry.locales).length,
+      0
     );
+    const scope = `${sources.length} sources × ${targetLocales.length} locales (${adoptedTargets} existing targets)`;
+    const stateRel = path.relative(ROOT, STATE_PATH);
+    if (opts.dryRun) {
+      logInfo(`adopt (dry-run): would adopt ${scope} into ${stateRel} — nothing written`);
+      return;
+    }
+    // Merge, never overwrite: a filtered run (--files / --locale) must keep every
+    // entry it did not re-hash, or the next i18n:run retranslates all of them.
+    await saveState(mergeAdoptedState(state, adopted));
+    logInfo(`adopted ${scope} into ${stateRel}`);
     return;
   }
 

@@ -3,7 +3,9 @@
  * `.i18n-state.json` document from what is already on disk — hashing sources
  * and existing mirrors, never calling a translation backend — so incremental
  * drift detection (`npm run i18n:check`) can be re-bootstrapped after the state
- * file was lost. `run-translation.mjs --adopt` is a thin wrapper around it.
+ * file was lost. `mergeAdoptedState` folds such a run into an existing state so
+ * a filtered `--adopt --locale=… / --files=…` never discards the entries it did
+ * not touch. `run-translation.mjs --adopt` is a thin wrapper around both.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -13,12 +15,11 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { adoptState } from "../../scripts/i18n/lib/translation-state.mjs";
+import { adoptState, mergeAdoptedState } from "../../scripts/i18n/lib/translation-state.mjs";
 
 type LocaleState = { source_hash: string; target_hash: string; updated_at: string };
-type AdoptedState = {
-  sources: Record<string, { source_hash: string; locales: Record<string, LocaleState> }>;
-};
+type SourceState = { source_hash: string; locales: Record<string, LocaleState> };
+type AdoptedState = { sources: Record<string, SourceState> };
 
 const RUN_TRANSLATION = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -59,16 +60,18 @@ test("adoptState hashes every existing source/target pair and skips missing targ
   });
 });
 
-test("adoptState records every source (nested paths too), keeps `locales` empty without mirrors, and stamps ISO timestamps", async () => {
+test("adoptState records every source (nested paths too), keeps `locales` empty without mirrors, and stamps one ISO timestamp per run", async () => {
   await withTempRoot(async (root) => {
     mkdirSync(path.join(root, "docs", "guides"), { recursive: true });
     writeFileSync(path.join(root, "README.md"), "# A\n");
     writeFileSync(path.join(root, "docs", "guides", "GUIDE.md"), "# Guide\n");
-    mkdirSync(path.join(root, "docs", "i18n", "fr", "docs", "guides"), { recursive: true });
-    writeFileSync(
-      path.join(root, "docs", "i18n", "fr", "docs", "guides", "GUIDE.md"),
-      "# Guide (FR)\n"
-    );
+    for (const locale of ["fr", "de"]) {
+      mkdirSync(path.join(root, "docs", "i18n", locale, "docs", "guides"), { recursive: true });
+      writeFileSync(
+        path.join(root, "docs", "i18n", locale, "docs", "guides", "GUIDE.md"),
+        `# Guide (${locale})\n`
+      );
+    }
 
     const asked: string[] = [];
     const before = Date.now();
@@ -88,13 +91,16 @@ test("adoptState records every source (nested paths too), keeps `locales` empty 
 
     const guide = state.sources["docs/guides/GUIDE.md"];
     assert.equal(guide.source_hash, sha("# Guide\n"));
-    assert.deepEqual(Object.keys(guide.locales), ["fr"]);
+    assert.deepEqual(Object.keys(guide.locales), ["fr", "de"]);
     assert.equal(guide.locales.fr.source_hash, sha("# Guide\n"));
-    assert.equal(guide.locales.fr.target_hash, sha("# Guide (FR)\n"));
+    assert.equal(guide.locales.fr.target_hash, sha("# Guide (fr)\n"));
+    assert.equal(guide.locales.de.target_hash, sha("# Guide (de)\n"));
 
     const stamp = Date.parse(guide.locales.fr.updated_at);
     assert.equal(new Date(stamp).toISOString(), guide.locales.fr.updated_at);
     assert.ok(stamp >= before && stamp <= Date.now(), "updated_at is the adoption time");
+    // All entries of one adopt run share a single `updated_at`.
+    assert.equal(guide.locales.de.updated_at, guide.locales.fr.updated_at);
 
     // Every (source, locale) pair is resolved through the caller's path mapper.
     assert.deepEqual(asked, [
@@ -103,6 +109,33 @@ test("adoptState records every source (nested paths too), keeps `locales` empty 
       "docs/guides/GUIDE.md → fr",
       "docs/guides/GUIDE.md → de",
     ]);
+  });
+});
+
+test("adoptState stamps every adopted entry with the single `now` of the run", async () => {
+  await withTempRoot(async (root) => {
+    writeFileSync(path.join(root, "A.md"), "# A\n");
+    writeFileSync(path.join(root, "B.md"), "# B\n");
+    for (const locale of ["es", "fr"]) {
+      mkdirSync(path.join(root, "docs", "i18n", locale), { recursive: true });
+      writeFileSync(path.join(root, "docs", "i18n", locale, "A.md"), `# A (${locale})\n`);
+      writeFileSync(path.join(root, "docs", "i18n", locale, "B.md"), `# B (${locale})\n`);
+    }
+
+    const now = "2026-09-02T12:00:00.000Z";
+    const state = (await adoptState({
+      root,
+      sources: ["A.md", "B.md"],
+      locales: ["es", "fr"],
+      targetPathFor: mirrorPathFor(root),
+      now,
+    })) as AdoptedState;
+
+    const stamps = Object.values(state.sources).flatMap((source) =>
+      Object.values(source.locales).map((info) => info.updated_at)
+    );
+    assert.equal(stamps.length, 4);
+    assert.deepEqual([...new Set(stamps)], [now]);
   });
 });
 
@@ -118,6 +151,114 @@ test("adoptState rejects instead of silently skipping a listed source that is mi
       { code: "ENOENT" }
     );
   });
+});
+
+// ----- mergeAdoptedState ---------------------------------------------------
+
+const OLD = "2026-01-01T00:00:00.000Z";
+const NEW = "2026-09-02T00:00:00.000Z";
+
+const entry = (source: string, target: string, updated_at: string): LocaleState => ({
+  source_hash: sha(source),
+  target_hash: sha(target),
+  updated_at,
+});
+
+// Two sources × two locales, the shape a full adopt run leaves behind.
+const twoByTwo = (): AdoptedState => ({
+  sources: {
+    "README.md": {
+      source_hash: sha("# A\n"),
+      locales: {
+        es: entry("# A\n", "# A (es)\n", OLD),
+        de: entry("# A\n", "# A (de)\n", OLD),
+      },
+    },
+    "docs/GUIDE.md": {
+      source_hash: sha("# G\n"),
+      locales: {
+        es: entry("# G\n", "# G (es)\n", OLD),
+        de: entry("# G\n", "# G (de)\n", OLD),
+      },
+    },
+  },
+});
+
+test("mergeAdoptedState keeps the three entries a filtered adopt did not touch and replaces the adopted one", () => {
+  const existing = twoByTwo();
+  // `--adopt --files=README.md --locale=es` after README.md changed on disk.
+  const adopted: AdoptedState = {
+    sources: {
+      "README.md": {
+        source_hash: sha("# A v2\n"),
+        locales: { es: entry("# A v2\n", "# A v2 (es)\n", NEW) },
+      },
+    },
+  };
+  const existingSnapshot = structuredClone(existing);
+  const adoptedSnapshot = structuredClone(adopted);
+
+  const merged = mergeAdoptedState(existing, adopted) as AdoptedState;
+
+  // The adopted pair is replaced and its source hash refreshed…
+  assert.equal(merged.sources["README.md"].source_hash, sha("# A v2\n"));
+  assert.deepEqual(merged.sources["README.md"].locales.es, adopted.sources["README.md"].locales.es);
+  // …while the three untouched entries survive as recorded. The stale per-locale
+  // `source_hash` of README.md/de is exactly what makes `i18n:run` still
+  // retranslate it later — a merge must not "adopt" what it did not hash.
+  assert.deepEqual(
+    merged.sources["README.md"].locales.de,
+    existing.sources["README.md"].locales.de
+  );
+  assert.deepEqual(merged.sources["docs/GUIDE.md"], existing.sources["docs/GUIDE.md"]);
+  assert.deepEqual(Object.keys(merged.sources), ["README.md", "docs/GUIDE.md"]);
+  assert.deepEqual(Object.keys(merged.sources["README.md"].locales), ["es", "de"]);
+
+  // Pure: neither input is mutated, and the result does not alias them.
+  assert.deepEqual(existing, existingSnapshot);
+  assert.deepEqual(adopted, adoptedSnapshot);
+  merged.sources["docs/GUIDE.md"].locales.de.updated_at = "mutated";
+  merged.sources["README.md"].locales.es.updated_at = "mutated";
+  merged.sources["README.md"].locales.zz = entry("x", "y", NEW);
+  assert.deepEqual(existing, existingSnapshot);
+  assert.deepEqual(adopted, adoptedSnapshot);
+});
+
+test("mergeAdoptedState into an empty state yields the adopted document", () => {
+  const adopted = twoByTwo();
+  const adoptedSnapshot = structuredClone(adopted);
+
+  const merged = mergeAdoptedState({ sources: {} }, adopted) as AdoptedState;
+
+  assert.deepEqual(merged, adopted);
+  assert.notEqual(merged, adopted);
+  assert.notEqual(merged.sources["README.md"].locales.es, adopted.sources["README.md"].locales.es);
+  assert.deepEqual(adopted, adoptedSnapshot);
+});
+
+test("mergeAdoptedState preserves a source the adopt run did not cover", () => {
+  const existing = twoByTwo();
+  // `--adopt --files=docs/GUIDE.md --locale=de`: README.md is not in the run at all.
+  const adopted: AdoptedState = {
+    sources: {
+      "docs/GUIDE.md": {
+        source_hash: sha("# G\n"),
+        locales: { de: entry("# G\n", "# G (de) v2\n", NEW) },
+      },
+    },
+  };
+
+  const merged = mergeAdoptedState(existing, adopted) as AdoptedState;
+
+  assert.deepEqual(merged.sources["README.md"], existing.sources["README.md"]);
+  assert.deepEqual(
+    merged.sources["docs/GUIDE.md"].locales.es,
+    existing.sources["docs/GUIDE.md"].locales.es
+  );
+  assert.deepEqual(
+    merged.sources["docs/GUIDE.md"].locales.de,
+    adopted.sources["docs/GUIDE.md"].locales.de
+  );
 });
 
 test("run-translation.mjs --help advertises --adopt as a no-API-call state rebuild", () => {
