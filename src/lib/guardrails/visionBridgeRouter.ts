@@ -274,6 +274,51 @@ function selectBestModel(
 }
 
 /**
+ * (#12237) `auto` / `auto/*` ids are VIRTUAL combos: there is no provider
+ * row for "auto", so the credential check always reports `false` for them.
+ * Member-level credentials are enforced downstream when the combo
+ * dispatches (mirrors the reroute guard in visionBridge.ts), so a virtual
+ * combo must not be discarded by the #8430 short-circuit — otherwise the
+ * combo silently falls through to auto-selection and never rotates. It is
+ * still subject to the pool check in `getBestVisionModel`: when the ENTIRE
+ * vision pool is unusable there is nothing the combo could dispatch to, and
+ * returning the combo id would let a raw image reach a text-only backend
+ * (#8430).
+ *
+ * Returns the combo id when `fixedModel` is virtual, `undefined` otherwise.
+ */
+function resolveVirtualCombo(fixedModel: string | undefined): string | undefined {
+  return fixedModel === "auto" || fixedModel?.startsWith("auto/") ? fixedModel : undefined;
+}
+
+/**
+ * Resolve a live selection-cache entry for `cacheKey`.
+ *
+ * Returns the id to hand back: the cached member for a concrete target, or
+ * `virtualCombo` once the cached member proves it still has usable
+ * credentials (the cache never re-validates credentials, and the caller
+ * exempts virtual combos from that check). A missing or expired entry yields
+ * `null`; an entry whose member is no longer available or usable is dropped
+ * so the pool is rescanned.
+ */
+async function resolveCachedSelection(
+  cacheKey: string,
+  virtualCombo: string | undefined,
+  deps: VisionBridgeRouterDeps
+): Promise<string | null> {
+  const cached = selectionCache.get(cacheKey);
+  if (!cached || cached.expiresAt <= Date.now()) return null;
+
+  if (await cachedModelRemainsAvailable(cached.modelId, deps)) {
+    if (!virtualCombo) return cached.modelId;
+    const checkCreds = deps.hasUsableCredentials ?? hasUsableCredentialsForModel;
+    if ((await checkCreds(cached.modelId)) !== false) return virtualCombo;
+  }
+  selectionCache.delete(cacheKey);
+  return null;
+}
+
+/**
  * Get the best vision model for image description.
  * Respects fixed model override if configured, but validates it has usable
  * credentials before short-circuiting — a fixedModel that is confirmed
@@ -285,25 +330,14 @@ export async function getBestVisionModel(
   deps: VisionBridgeRouterDeps = {}
 ): Promise<string | null> {
   const fullConfig = { ...DEFAULT_ROUTER_CONFIG, ...config };
-
-  // (#12237) `auto` / `auto/*` ids are VIRTUAL combos: there is no provider
-  // row for "auto", so the credential check always reports `false` for them.
-  // Member-level credentials are enforced downstream when the combo
-  // dispatches (mirrors the reroute guard in visionBridge.ts), so a virtual
-  // combo must not be discarded by the #8430 short-circuit — otherwise the
-  // combo silently falls through to auto-selection and never rotates. It is
-  // still subject to the pool check below: when the ENTIRE vision pool is
-  // unusable there is nothing the combo could dispatch to, and returning the
-  // combo id would let a raw image reach a text-only backend (#8430).
-  const virtualCombo =
-    fullConfig.fixedModel === "auto" || fullConfig.fixedModel?.startsWith("auto/")
-      ? fullConfig.fixedModel
-      : undefined;
+  const virtualCombo = resolveVirtualCombo(fullConfig.fixedModel);
 
   // If fixed model is configured, validate it has usable credentials first.
   // (#8430) An unreachable fixedModel (e.g. the default "openai/gpt-4o-mini"
   // on an instance with no OpenAI connection/key) must not short-circuit the
   // credential check — fall through to auto-selection instead.
+  // (#12237) A virtual combo is exempt here and goes through the pool
+  // selection below instead; see `resolveVirtualCombo`.
   if (fullConfig.fixedModel && !virtualCombo) {
     const checkCreds = deps.hasUsableCredentials ?? hasUsableCredentialsForModel;
     const usable = await checkCreds(fullConfig.fixedModel);
@@ -320,18 +354,8 @@ export async function getBestVisionModel(
     fullConfig.excludedModels.length > 0
       ? `excl:${[...fullConfig.excludedModels].sort().join(",")}`
       : "default";
-  const cached = selectionCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) {
-    if (await cachedModelRemainsAvailable(cached.modelId, deps)) {
-      if (!virtualCombo) return cached.modelId;
-      // The cache never re-validates credentials (the caller does that for a
-      // concrete target, but exempts virtual combos), so prove the cached
-      // member is still usable before vouching for the combo.
-      const checkCreds = deps.hasUsableCredentials ?? hasUsableCredentialsForModel;
-      if ((await checkCreds(cached.modelId)) !== false) return virtualCombo;
-    }
-    selectionCache.delete(cacheKey);
-  }
+  const cachedPick = await resolveCachedSelection(cacheKey, virtualCombo, deps);
+  if (cachedPick) return cachedPick;
 
   // Get all vision-capable candidates
   const candidates = await getVisionCapableModels(deps);
