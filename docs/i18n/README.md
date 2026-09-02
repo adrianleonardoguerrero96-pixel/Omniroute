@@ -1,6 +1,6 @@
 # 🌐 Multilingual Documentation — OmniRoute
 
-Translations of documentation into 42 languages; together with the English source, the UI supports 43 locales. Code blocks remain in English.
+Translations of documentation into 41 languages; together with the English source, the UI supports 42 locales. Code blocks remain in English.
 
 ---
 
@@ -20,7 +20,6 @@ Translations of documentation into 42 languages; together with the English sourc
 - 🇮🇳 **हिन्दी** (`hi`): [Docs Root](./hi/README.md)
 - 🇭🇺 **Magyar** (`hu`): [Docs Root](./hu/README.md)
 - 🇮🇩 **Bahasa Indonesia** (`id`): [Docs Root](./id/README.md)
-- 🇮🇩 **Bahasa Indonesia (Alt)** (`in`): [Docs Root](./in/README.md)
 - 🇮🇹 **Italiano** (`it`): [Docs Root](./it/README.md)
 - 🇯🇵 **日本語** (`ja`): [Docs Root](./ja/README.md)
 - 🇰🇷 **한국어** (`ko`): [Docs Root](./ko/README.md)

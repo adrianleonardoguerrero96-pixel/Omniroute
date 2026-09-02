@@ -890,7 +890,7 @@ const TRANSLATIONS = {
 
 // Languages with no translation in this script — will be created as empty objects
 // All keys fall back to `en` via i18n.mjs's fallback mechanism.
-const SCAFFOLD_ONLY = ["bn", "gu", "he", "in", "mr", "ms", "phi", "sw", "ta", "te", "ur"];
+const SCAFFOLD_ONLY = ["bn", "gu", "he", "mr", "ms", "phi", "sw", "ta", "te", "ur"];
 
 let created = 0;
 let skipped = 0;
