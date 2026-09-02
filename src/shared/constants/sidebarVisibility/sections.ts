@@ -253,6 +253,13 @@ const TOOLS_GROUP: SidebarItemGroup = {
       subtitleFallback: "CLI-agent fleet",
     },
     {
+      id: "orchestration",
+      href: "/dashboard/orchestration",
+      i18nKey: "orchestration",
+      subtitleKey: "orchestrationSubtitle",
+      icon: "account_tree",
+    },
+    {
       id: "agent-bridge",
       href: "/dashboard/tools/agent-bridge",
       i18nKey: "agentBridge",
@@ -295,6 +302,15 @@ const INTEGRATIONS_GROUP: SidebarItemGroup = {
       i18nKey: "webhooks",
       subtitleKey: "webhooksSubtitle",
       icon: "webhook",
+    },
+    {
+      id: "log-export",
+      href: "/dashboard/log-export",
+      i18nKey: "logExport",
+      subtitleKey: "logExportSubtitle",
+      icon: "cloud_upload",
+      labelFallback: "Log export",
+      subtitleFallback: "Ship call logs out",
     },
   ],
 };

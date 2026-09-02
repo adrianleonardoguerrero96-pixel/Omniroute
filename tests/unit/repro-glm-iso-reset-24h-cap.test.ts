@@ -43,25 +43,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const NOW = Date.UTC(2026, 7, 23, 20, 30, 56); // 2026-08-23 20:30:56 UTC
 const RESET = Date.UTC(2026, 7, 29, 21, 1, 21); // 2026-08-29 21:01:21 UTC
 
-// The two subtests that exercise buildWeeklyQuotaFallback / checkFallbackError /
-// parseRetryFromErrorText below do NOT accept an injectable clock — those code
-// paths read the real Date.now(). A hardcoded absolute reset date would silently
-// go stale (turn into a past reset -> tiny cooldown) the moment the wall clock
-// passed it, which is exactly the base-red that surfaced here. Build the body's
-// reset stamp dynamically ~6 days in the real future, formatted in the same
-// "YYYY-MM-DD HH:MM:SS" shape the parser reads, so these assertions stay true
-// regardless of when the suite runs.
-function isoSpaceStamp(ms: number): string {
-  return new Date(ms)
-    .toISOString()
-    .replace("T", " ")
-    .replace(/\.\d+Z$/, "");
-}
-const FUTURE_RESET_MS = Date.now() + 6 * DAY_MS;
-const GLM_BODY_FUTURE =
-  "[1310][Weekly/Monthly Limit Exhausted. Your current plan has run out of its weekly/monthly quota. " +
-  `Your limit will reset at ${isoSpaceStamp(FUTURE_RESET_MS)}]`;
-
 describe("Z.AI GLM weekly quota — absolute ISO reset", () => {
   it("looksLikeQuotaExhausted matches the [1310] weekly/monthly body", () => {
     assert.equal(looksLikeQuotaExhausted(GLM_BODY), true);
@@ -122,7 +103,10 @@ describe("Z.AI GLM weekly quota — absolute ISO reset", () => {
   });
 
   it("buildWeeklyQuotaFallback uses the parsed ISO reset, not the 24h default", () => {
-    const result = buildWeeklyQuotaFallback(GLM_BODY_FUTURE);
+    // nowMs is injected: the fixture pins the reset to a fixed calendar date,
+    // so wall-clock evaluation would time-bomb once real time drifts past
+    // 5 days before it (exactly what happened in CI on 2026-08-25).
+    const result = buildWeeklyQuotaFallback(GLM_BODY, NOW);
     assert.ok(result);
     assert.equal(result!.reason, RateLimitReason.QUOTA_EXHAUSTED);
     assert.equal(result!.usedUpstreamRetryHint, true);
@@ -141,16 +125,25 @@ describe("Z.AI GLM weekly quota — absolute ISO reset", () => {
     const { checkFallbackError, parseRetryFromErrorText } =
       await import("../../open-sse/services/accountFallback.ts");
 
-    const parsed = parseRetryFromErrorText(GLM_BODY_FUTURE);
-    assert.ok(parsed && parsed > 5 * DAY_MS, `parsed reset was ${parsed}`);
+    // Pin the clock to the fixture's NOW: the fixture's reset is a fixed
+    // calendar date, and wall-clock evaluation fails once real time drifts
+    // within 5 days of it (CI time-bomb on 2026-08-25).
+    const realNow = Date.now;
+    Date.now = () => NOW;
+    try {
+      const parsed = parseRetryFromErrorText(GLM_BODY);
+      assert.ok(parsed && parsed > 5 * DAY_MS, `parsed reset was ${parsed}`);
 
-    const out = checkFallbackError(429, GLM_BODY_FUTURE, 0, "glm-5.3", "zai", null, null, null);
-    assert.equal(out.shouldFallback, true);
-    assert.equal(out.reason, RateLimitReason.QUOTA_EXHAUSTED);
-    assert.ok(
-      (out.cooldownMs ?? 0) > 5 * DAY_MS,
-      `expected a multi-day cooldown, got ${out.cooldownMs}`
-    );
-    assert.ok((out.cooldownMs ?? 0) !== DAY_MS, "must not land on the 24h weekly default");
+      const out = checkFallbackError(429, GLM_BODY, 0, "glm-5.3", "zai", null, null, null);
+      assert.equal(out.shouldFallback, true);
+      assert.equal(out.reason, RateLimitReason.QUOTA_EXHAUSTED);
+      assert.ok(
+        (out.cooldownMs ?? 0) > 5 * DAY_MS,
+        `expected a multi-day cooldown, got ${out.cooldownMs}`
+      );
+      assert.ok((out.cooldownMs ?? 0) !== DAY_MS, "must not land on the 24h weekly default");
+    } finally {
+      Date.now = realNow;
+    }
   });
 });

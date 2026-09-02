@@ -152,12 +152,12 @@ test("postExchange attempts onboarding when projectId is empty and returns disco
     }
     if (u.includes("onboardUser")) {
       onboardUserCalled = true;
-      // A real onboarding success carries cloudaicompanionProject in the body;
-      // #8491's BYOP guard only SKIPS the retry loadCodeAssist when the body has
-      // NO project (personal/standard-tier). This test exercises the genuine
-      // success path (project created → retry discovers new-project-456), so the
-      // onboardUser body must carry a project.
-      return jsonRes({ cloudaicompanionProject: "new-project-456", done: true });
+      // Real onboarding success: the body carries a cloudaicompanionProject.
+      // #11284 made that the discriminator — a 200 WITHOUT one is Google BYOP
+      // (no project was created, none ever will be) and short-circuits before
+      // the retry. The id here is deliberately NOT the expected one, so the
+      // assertion below still proves the value came from the retry discovery.
+      return jsonRes({ done: true, cloudaicompanionProject: "onboard-body-project" });
     }
     return jsonRes({});
   }) as typeof fetch;

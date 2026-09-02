@@ -62,9 +62,9 @@ export function sanitizeLiveWsPort(port: unknown): number | null {
 }
 
 export interface LiveWsUrlParts {
-  /** Explicit `wsUrl` passed by the caller, always wins. */
+  /** Explicit `wsUrl` passed by the caller - always wins. */
   explicit?: string | null;
-  /** `live.publicUrl` from the handshake, a complete URL, used as-is. */
+  /** `live.publicUrl` from the handshake - a complete URL, used as-is. */
   handshakeUrl?: string | null;
   /** `live.port` from the handshake, i.e. the running LIVE_WS_PORT. */
   handshakePort?: number | null;
@@ -77,9 +77,15 @@ export interface LiveWsUrlParts {
 /**
  * Resolve the live dashboard WebSocket URL.
  *
+ * The handshake reports the port the live server is actually listening on, but
+ * the client read only `publicUrl` and `path` from it. An operator who moved
+ * the server with `LIVE_WS_PORT` still got the compiled-in 20132, and the
+ * dashboard sat on "Live disabled - WebSocket disconnected" with no way to
+ * correct it short of rebuilding the image (#11331).
+ *
  * Precedence: an explicit `wsUrl` wins, then a complete `publicUrl` from the
  * handshake, then the default URL with whatever port and path the handshake
- * reported applied to it (#11331).
+ * reported applied to it.
  */
 export function resolveLiveWsUrl({
   explicit,

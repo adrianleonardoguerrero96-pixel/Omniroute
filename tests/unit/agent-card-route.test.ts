@@ -13,12 +13,14 @@ import type { NextRequest } from "next/server";
 const { GET } = await import("../../src/app/.well-known/agent.json/route.js");
 
 /**
- * Build a minimal NextRequest stand-in for the Agent Card handler.
- * The route derives its base URL via getBaseUrl(request), which reads
- * request.nextUrl.origin, so the mock only needs a nextUrl URL object.
+ * The agent-card routes derive their base URL from `request.nextUrl.origin`
+ * (S2 topology sanitisation, #11418), so the handler must be invoked with a
+ * request the way Next.js does — a bare `GET()` throws on `nextUrl`.
  */
-function makeRequest(url = "http://localhost:20128/.well-known/agent.json"): NextRequest {
-  return { nextUrl: new URL(url) } as unknown as NextRequest;
+function makeCardRequest(url = "https://gateway.example.com/.well-known/agent.json"): NextRequest {
+  const request = new Request(url) as unknown as NextRequest;
+  Object.defineProperty(request, "nextUrl", { value: new URL(url), configurable: true });
+  return request;
 }
 
 interface AgentSkillEntry {
@@ -36,7 +38,7 @@ interface AgentCard {
 }
 
 test("GET /.well-known/agent.json returns 6 skills", async () => {
-  const response = await GET(makeRequest());
+  const response = await GET(makeCardRequest());
   assert.equal(response.status, 200, "Expected HTTP 200");
 
   const body = (await response.json()) as AgentCard;
@@ -45,7 +47,7 @@ test("GET /.well-known/agent.json returns 6 skills", async () => {
 });
 
 test("Agent Card includes list-capabilities skill entry", async () => {
-  const response = await GET(makeRequest());
+  const response = await GET(makeCardRequest());
   const body = (await response.json()) as AgentCard;
 
   const skill = body.skills.find((s) => s.id === "list-capabilities");
@@ -53,7 +55,7 @@ test("Agent Card includes list-capabilities skill entry", async () => {
 });
 
 test("list-capabilities entry has required tags [discovery, capabilities]", async () => {
-  const response = await GET(makeRequest());
+  const response = await GET(makeCardRequest());
   const body = (await response.json()) as AgentCard;
 
   const skill = body.skills.find((s) => s.id === "list-capabilities");
@@ -64,7 +66,7 @@ test("list-capabilities entry has required tags [discovery, capabilities]", asyn
 });
 
 test("list-capabilities entry has at least one example question", async () => {
-  const response = await GET(makeRequest());
+  const response = await GET(makeCardRequest());
   const body = (await response.json()) as AgentCard;
 
   const skill = body.skills.find((s) => s.id === "list-capabilities");
@@ -74,7 +76,7 @@ test("list-capabilities entry has at least one example question", async () => {
 });
 
 test("Agent Card includes all 5 original skills", async () => {
-  const response = await GET(makeRequest());
+  const response = await GET(makeCardRequest());
   const body = (await response.json()) as AgentCard;
 
   const originalIds = [

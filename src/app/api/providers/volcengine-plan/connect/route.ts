@@ -1,37 +1,32 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { bindVolcenginePlansFromConsoleCredentials } from "@/lib/providers/volcenginePlanBinding";
-import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error.ts";
-
-// All fields optional: a bare POST (no body) legitimately triggers the manual
-// headful login flow, so an empty object must validate. Zod still rejects
-// wrong-typed fields (e.g. a non-string phone) per Hard Rule #7 / t06 gate.
-const connectBodySchema = z.object({
-  timeout: z.number().optional(),
-  phone: z.string().optional(),
-});
+import { formatValidationMessage, validateBody } from "@/shared/validation/helpers";
+import { volcenginePlanConnectSchema } from "@/shared/validation/schemas/volcenginePlan";
 
 export async function POST(request: Request): Promise<NextResponse> {
   const auth = await requireManagementAuth(request);
   if (auth) return auth;
 
-  const rawBody = await request.json().catch(() => ({}));
-  const validation = validateBody(connectBodySchema, rawBody);
-  if (isValidationFailure(validation)) {
-    return NextResponse.json({ error: validation.error }, { status: 400 });
+  const raw = await request.json().catch(() => ({}));
+  const validation = validateBody(volcenginePlanConnectSchema, raw);
+  if (validation.success === false) {
+    return NextResponse.json(
+      { success: false, error: formatValidationMessage(validation.error) },
+      { status: 400 }
+    );
   }
-  const body = validation.data;
-  const timeout = body.timeout;
+  const { phone, timeout } = validation.data;
 
   // Auto flow: phone present → start a session-based headless phone/SMS login.
-  if (typeof body.phone === "string" && body.phone.trim()) {
+  if (phone) {
     try {
-      const { volcengineConsoleAutoLoginService } =
-        await import("@omniroute/open-sse/services/volcengineConsoleAutoLogin.ts");
-      const started = await volcengineConsoleAutoLoginService.startLogin(body.phone, { timeout });
-      if (!started.ok) {
+      const { volcengineConsoleAutoLoginService } = await import(
+        "@omniroute/open-sse/services/volcengineConsoleAutoLogin.ts"
+      );
+      const started = await volcengineConsoleAutoLoginService.startLogin(phone, { timeout });
+      if (started.ok === false) {
         return NextResponse.json({ success: false, error: started.error }, { status: 400 });
       }
       return NextResponse.json({ success: true, session: started.session });

@@ -14,6 +14,19 @@ const settingsDb = await import("../../src/lib/db/settings.ts");
 const a2aRoute = await import("../../src/app/a2a/route.ts");
 const agentCardRoute = await import("../../src/app/.well-known/agent-card.json/route.ts");
 
+/**
+ * The agent-card routes derive their base URL from `request.nextUrl.origin`
+ * (S2 topology sanitisation, #11418), so the handler must be invoked with a
+ * request the way Next.js does — a bare `GET()` throws on `nextUrl`.
+ */
+function makeCardRequest(
+  url = "https://gateway.example.com/.well-known/agent-card.json"
+): NextRequest {
+  const request = new Request(url) as unknown as NextRequest;
+  Object.defineProperty(request, "nextUrl", { value: new URL(url), configurable: true });
+  return request;
+}
+
 function makeJsonRpcRequest(body: unknown): NextRequest {
   return new Request("http://localhost/a2a", {
     method: "POST",
@@ -22,27 +35,16 @@ function makeJsonRpcRequest(body: unknown): NextRequest {
   }) as unknown as NextRequest;
 }
 
-/**
- * Minimal NextRequest stand-in for the Agent Card GET handler, which derives
- * its base URL via getBaseUrl(request) (reads request.nextUrl.origin). Mirrors
- * the mock used by tests/unit/agent-card-route.test.ts.
- */
-function makeAgentCardRequest(
-  url = "http://localhost:20128/.well-known/agent-card.json"
-): NextRequest {
-  return { nextUrl: new URL(url) } as unknown as NextRequest;
-}
-
 test.beforeEach(async () => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
   await settingsDb.updateSettings({ a2aEnabled: true });
 });
 
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("#10839: v1.0 SendMessage is aliased to message/send and reshapes the response", async () => {
@@ -119,7 +121,7 @@ test("#10839: SendStreamingMessage no longer 404s (aliased to message/stream)", 
 });
 
 test("#10839: GET /.well-known/agent-card.json serves a v1.0 card declaring both interfaces", async () => {
-  const res = await agentCardRoute.GET(makeAgentCardRequest());
+  const res = await agentCardRoute.GET(makeCardRequest());
   assert.equal(res.status, 200);
   const card = (await res.json()) as { supportedInterfaces?: { protocolVersion?: string }[] };
   assert.ok(Array.isArray(card.supportedInterfaces));

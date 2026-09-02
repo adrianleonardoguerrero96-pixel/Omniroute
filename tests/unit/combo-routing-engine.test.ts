@@ -16,9 +16,8 @@ const {
   handleComboChat,
 } = await import("../../open-sse/services/combo.ts");
 const { resolveComboTargets } = await import("../../open-sse/services/combo/comboStructure.ts");
-const { getComboFailureCount, __resetComboFailureTrackerForTests } = await import(
-  "../../open-sse/services/combo/failureTracker.ts"
-);
+const { getComboFailureCount, __resetComboFailureTrackerForTests } =
+  await import("../../open-sse/services/combo/failureTracker.ts");
 const { applyPromptCacheAffinity } =
   await import("../../open-sse/services/combo/promptCacheAffinity.ts");
 const { resolveReasoningBufferedMaxTokens } =
@@ -129,7 +128,7 @@ async function cleanupTestDataDir() {
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
       core.resetDbInstance();
-      fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+      fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
       return;
     } catch (error: any) {
       lastError = error;
@@ -1351,11 +1350,10 @@ test("#11408 guard: no-executable-targets early exit still records the combo fai
         retryDelayMs: 1,
       },
     },
-    relayOptions: { sessionId: "sess-guard-11408" } as any,
+    relayOptions: { sessionId: "sess-guard-11408" },
     allCombos: null,
   });
 
-  await result.json();
   assert.equal(result.status, 404);
   // The quota-share slot release must not replace the #5923 silent-stop
   // bookkeeping: the consecutive-failure counter must still advance so the

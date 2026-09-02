@@ -1,16 +1,9 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { bindVolcenginePlansFromConsoleCredentials } from "@/lib/providers/volcenginePlanBinding";
-import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error.ts";
-
-// index is validated for integer/range below; timeout stays optional. All
-// fields optional so the shape is tolerant, but Zod enforces types per Rule #7.
-const identityBodySchema = z.object({
-  timeout: z.number().optional(),
-  index: z.union([z.string(), z.number()]).optional(),
-});
+import { formatValidationMessage, validateBody } from "@/shared/validation/helpers";
+import { volcenginePlanIdentitySchema } from "@/shared/validation/schemas/volcenginePlan";
 
 /**
  * POST /api/providers/volcengine-plan/connect/[sessionId]/identity
@@ -25,16 +18,21 @@ export async function POST(
   if (auth) return auth;
 
   const { sessionId } = await params;
-  const rawBody = await request.json().catch(() => ({}));
-  const validation = validateBody(identityBodySchema, rawBody);
-  if (isValidationFailure(validation)) {
-    return NextResponse.json({ error: validation.error }, { status: 400 });
+  const raw = await request.json().catch(() => ({}));
+  // Validate BEFORE the session lookup — see the sibling code/route.ts note.
+  const validation = validateBody(volcenginePlanIdentitySchema, raw);
+  if (validation.success === false) {
+    return NextResponse.json(
+      { success: false, error: formatValidationMessage(validation.error) },
+      { status: 400 }
+    );
   }
-  const body = validation.data;
+  const { index, timeout } = validation.data;
 
   try {
-    const { volcengineConsoleAutoLoginService } =
-      await import("@omniroute/open-sse/services/volcengineConsoleAutoLogin.ts");
+    const { volcengineConsoleAutoLoginService } = await import(
+      "@omniroute/open-sse/services/volcengineConsoleAutoLogin.ts"
+    );
 
     if (!volcengineConsoleAutoLoginService.getStatus(sessionId)) {
       return NextResponse.json(
@@ -43,15 +41,6 @@ export async function POST(
       );
     }
 
-    const index = Number(body.index);
-    if (!Number.isInteger(index) || index < 0) {
-      return NextResponse.json(
-        { success: false, error: "Invalid identity index" },
-        { status: 400 }
-      );
-    }
-
-    const timeout = body.timeout;
     const session = await volcengineConsoleAutoLoginService.selectIdentity(sessionId, index, {
       timeout,
     });

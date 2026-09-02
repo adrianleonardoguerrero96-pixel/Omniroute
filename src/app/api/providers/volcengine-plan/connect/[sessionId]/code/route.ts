@@ -1,17 +1,9 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { bindVolcenginePlansFromConsoleCredentials } from "@/lib/providers/volcenginePlanBinding";
-import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error.ts";
-
-// Lenient by design: code/captcha may be absent while the session waits, so all
-// fields are optional. Zod still rejects wrong-typed fields per Hard Rule #7.
-const codeBodySchema = z.object({
-  timeout: z.number().optional(),
-  code: z.union([z.string(), z.number()]).optional(),
-  captcha: z.string().optional(),
-});
+import { formatValidationMessage, validateBody } from "@/shared/validation/helpers";
+import { volcenginePlanCodeSchema } from "@/shared/validation/schemas/volcenginePlan";
 
 /**
  * POST /api/providers/volcengine-plan/connect/[sessionId]/code
@@ -27,16 +19,23 @@ export async function POST(
   if (auth) return auth;
 
   const { sessionId } = await params;
-  const rawBody = await request.json().catch(() => ({}));
-  const validation = validateBody(codeBodySchema, rawBody);
-  if (isValidationFailure(validation)) {
-    return NextResponse.json({ error: validation.error }, { status: 400 });
+  const raw = await request.json().catch(() => ({}));
+  // Validate BEFORE the session lookup: a malformed body is the caller's bug
+  // regardless of whether the session happens to exist, and answering 404 for
+  // it (the previous behavior) hides the real cause.
+  const validation = validateBody(volcenginePlanCodeSchema, raw);
+  if (validation.success === false) {
+    return NextResponse.json(
+      { success: false, error: formatValidationMessage(validation.error) },
+      { status: 400 }
+    );
   }
-  const body = validation.data;
+  const { code, captcha, timeout } = validation.data;
 
   try {
-    const { volcengineConsoleAutoLoginService } =
-      await import("@omniroute/open-sse/services/volcengineConsoleAutoLogin.ts");
+    const { volcengineConsoleAutoLoginService } = await import(
+      "@omniroute/open-sse/services/volcengineConsoleAutoLogin.ts"
+    );
 
     if (!volcengineConsoleAutoLoginService.getStatus(sessionId)) {
       return NextResponse.json(
@@ -45,13 +44,9 @@ export async function POST(
       );
     }
 
-    const timeout = body.timeout;
-    const session = await volcengineConsoleAutoLoginService.submitCode(
-      sessionId,
-      String(body.code ?? ""),
-      typeof body.captcha === "string" ? body.captcha : undefined,
-      { timeout }
-    );
+    const session = await volcengineConsoleAutoLoginService.submitCode(sessionId, code, captcha, {
+      timeout,
+    });
     if (!session) {
       return NextResponse.json(
         { success: false, error: "Unknown or expired Volcano login session" },
