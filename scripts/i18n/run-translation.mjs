@@ -36,6 +36,7 @@ import crypto from "node:crypto";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { normalizeLocaleText } from "./glossary-normalize.mjs";
+import { buildMirrorBar } from "./lib/language-bar.mjs";
 
 // ----- .env loader --------------------------------------------------------
 // Loads variables from a local `.env` (gitignored) into process.env without
@@ -266,36 +267,6 @@ function targetPathFor(relSource, locale) {
   // `docs/X.md` → `docs/i18n/<loc>/docs/X.md`
   // `docs/features/Y.md` → `docs/i18n/<loc>/docs/features/Y.md`
   return path.join(DOCS_I18N_DIR, locale, relSource);
-}
-
-function relativeBackToRoot(targetAbsPath) {
-  // From the target file's directory back to the repo root, used to build the
-  // "🇺🇸 English" link in the language bar.
-  const targetDir = path.dirname(targetAbsPath);
-  const rel = path.relative(targetDir, ROOT);
-  return rel === "" ? "." : rel;
-}
-
-function buildLanguageBar(relSource, locale, config) {
-  const targetAbs = targetPathFor(relSource, locale);
-  const targetDir = path.dirname(targetAbs);
-  const rootRel = relativeBackToRoot(targetAbs);
-
-  const parts = [];
-  // English link → source file relative to target dir.
-  const enRel = path.relative(targetDir, path.join(ROOT, relSource));
-  parts.push(`🇺🇸 [English](${enRel.split(path.sep).join("/")})`);
-
-  for (const entry of config.locales) {
-    if (entry.code === "en" || entry.code === locale) continue;
-    const peerAbs = targetPathFor(relSource, entry.code);
-    const peerRel = path.relative(targetDir, peerAbs).split(path.sep).join("/");
-    parts.push(`${entry.flag} [${entry.code}](${peerRel})`);
-  }
-
-  return `🌐 **Languages:** ${parts.join(" · ")}`;
-  // Quiet the unused linter warning for rootRel — kept here for future expansion.
-  void rootRel;
 }
 
 function extractTopHeading(markdown) {
@@ -586,7 +557,7 @@ async function main() {
         const heading = topHeading
           ? `# ${topHeading} (${localeEntry.native})`
           : `# ${path.basename(task.rel, ".md")} (${localeEntry.native})`;
-        const langBar = buildLanguageBar(task.rel, task.locale, config);
+        const langBar = buildMirrorBar(task.rel, task.locale, config);
         const rawContent = `${heading}\n\n${langBar}\n\n---\n\n${translatedBody.trim()}\n`;
         // Pre-format with Prettier (markdown parser) so the on-disk content
         // matches what `lint-staged` would produce. This keeps `target_hash`
