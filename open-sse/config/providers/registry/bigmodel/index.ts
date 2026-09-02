@@ -2,7 +2,7 @@ import type { RegistryEntry } from "../../shared.ts";
 
 export const bigmodelProvider: RegistryEntry = {
   id: "bigmodel",
-  alias: "zhipu",
+  alias: "bigmodel",
   format: "openai",
   executor: "default",
   baseUrl: "https://open.bigmodel.cn/api/paas/v4/chat/completions",
@@ -11,6 +11,7 @@ export const bigmodelProvider: RegistryEntry = {
   passthroughModels: true,
   models: [
     { id: "glm-5.3", name: "GLM 5.3" },
+    { id: "glm-5.3-flash", name: "GLM 5.3 Flash" },
     { id: "glm-5.2", name: "GLM 5.2" },
     { id: "glm-5.1", name: "GLM 5.1" },
     { id: "glm-5-turbo", name: "GLM 5 Turbo" },

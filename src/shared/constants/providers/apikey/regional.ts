@@ -37,7 +37,8 @@ export const APIKEY_PROVIDERS_REGIONAL = {
   },
   bigmodel: {
     id: "bigmodel",
-    alias: "zhipu",
+    serviceKinds: ["llm"],
+    alias: "bigmodel",
     name: "BigModel.cn (Zhipu)",
     icon: "psychology",
     color: "#2563EB",

@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import { getRegistryEntry } from "../../open-sse/config/providerRegistry.ts";
+import { PROVIDER_MODELS } from "../../open-sse/config/providerModels.ts";
 import { DefaultExecutor } from "../../open-sse/executors/default.ts";
+import { parseModel } from "../../open-sse/services/model.ts";
 import { APIKEY_PROVIDERS } from "../../src/shared/constants/providers.ts";
 
 const BIGMODEL_CHAT_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
@@ -11,13 +13,22 @@ const BIGMODEL_CHAT_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions
 test("BigModel.cn uses the documented OpenAI chat endpoint with Bearer authentication", () => {
   const entry = getRegistryEntry("bigmodel");
   assert.ok(entry);
-  assert.equal(entry.alias, "zhipu");
+  assert.equal(entry.alias, "bigmodel");
   assert.equal(entry.format, "openai");
   assert.equal(entry.baseUrl, BIGMODEL_CHAT_URL);
   assert.equal(entry.authHeader, "bearer");
   assert.equal(entry.passthroughModels, true);
-  assert.equal(getRegistryEntry("zhipu"), entry);
-  assert.ok(entry.models.some((model) => model.id === "glm-5.3"));
+  assert.equal(getRegistryEntry("zhipu"), null);
+  assert.ok(PROVIDER_MODELS.bigmodel.some((model) => model.id === "glm-5.3"));
+  assert.ok(PROVIDER_MODELS.bigmodel.some((model) => model.id === "glm-5.3-flash"));
+  assert.equal(PROVIDER_MODELS.zhipu, undefined);
+  assert.deepEqual(parseModel("bigmodel/glm-5.3-flash"), {
+    provider: "bigmodel",
+    model: "glm-5.3-flash",
+    isAlias: false,
+    providerAlias: "bigmodel",
+    extendedContext: false,
+  });
 
   const executor = new DefaultExecutor("bigmodel");
   assert.equal(executor.buildUrl("glm-5.3", true), BIGMODEL_CHAT_URL);
@@ -32,7 +43,7 @@ test("BigModel.cn and Z.AI expose distinct platform links and localized descript
   const zai = APIKEY_PROVIDERS.zai;
 
   assert.equal(bigmodel.name, "BigModel.cn (Zhipu)");
-  assert.equal(bigmodel.alias, "zhipu");
+  assert.equal(bigmodel.alias, "bigmodel");
   assert.equal(bigmodel.website, "https://open.bigmodel.cn");
   assert.match(bigmodel.apiHint, /bigmodel\.cn\/usercenter\/proj-mgmt\/apikeys/);
   assert.equal(zai.website, "https://z.ai/model-api");
