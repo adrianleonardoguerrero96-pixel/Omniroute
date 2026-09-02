@@ -2371,6 +2371,8 @@
     "allowedCombos": "अनुमत कॉम्बोज",
     "allCombosAllowed": "ही की कोणताही कॉम्बो वापरू शकते.",
     "restrictedComboCount": "{count, plural, one {# कॉम्बोपुरते मर्यादित} other {# कॉम्बोजपुरते मर्यादित}}.",
+    "preservedComboRules": "__MISSING__:{count, plural, one {# stored entry is} other {# stored entries are}} not in this combo list (for example routing rules) and will be kept as saved.",
+    "preservedComboRuleHint": "__MISSING__:Kept as stored. This entry is not a combo in the list above, so it can only be changed through the API.",
     "apiManagerCustomRateLimits": "सानुकूल दर मर्यादा",
     "apiManagerCustomRateLimitsDesc": "जागतिक डीफॉल्ट मर्यादा ओव्हरराइड करा. डीफॉल्ट वापरण्यासाठी रिकामे सोडा.",
     "apiManagerRateLimitRequestsPlaceholder": "विनंत्या",

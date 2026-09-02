@@ -2371,6 +2371,8 @@
     "allowedCombos": "Toegestane combo's",
     "allCombosAllowed": "Deze sleutel kan elke combo gebruiken.",
     "restrictedComboCount": "Beperkt tot {count, plural, one {# combo} other {# combo's}}.",
+    "preservedComboRules": "__MISSING__:{count, plural, one {# stored entry is} other {# stored entries are}} not in this combo list (for example routing rules) and will be kept as saved.",
+    "preservedComboRuleHint": "__MISSING__:Kept as stored. This entry is not a combo in the list above, so it can only be changed through the API.",
     "apiManagerCustomRateLimits": "Aangepaste tarieflimieten",
     "apiManagerCustomRateLimitsDesc": "Overschrijf de algemene standaardlimieten. Laat leeg om standaardinstellingen te gebruiken.",
     "apiManagerRateLimitRequestsPlaceholder": "Verzoeken",

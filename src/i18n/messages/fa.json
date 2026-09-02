@@ -2371,6 +2371,8 @@
     "allowedCombos": "ترکیب‌های مجاز",
     "allCombosAllowed": "این کلید می‌تواند از هر ترکیبی استفاده کند.",
     "restrictedComboCount": "محدود به {count, plural, one {# ترکیب} other {# ترکیب}}.",
+    "preservedComboRules": "__MISSING__:{count, plural, one {# stored entry is} other {# stored entries are}} not in this combo list (for example routing rules) and will be kept as saved.",
+    "preservedComboRuleHint": "__MISSING__:Kept as stored. This entry is not a combo in the list above, so it can only be changed through the API.",
     "apiManagerCustomRateLimits": "محدودیت های نرخ سفارشی",
     "apiManagerCustomRateLimitsDesc": "محدودیت های پیش فرض جهانی را لغو کنید. برای استفاده از پیش فرض ها خالی بگذارید.",
     "apiManagerRateLimitRequestsPlaceholder": "درخواست ها",

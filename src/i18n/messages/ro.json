@@ -2371,6 +2371,8 @@
     "allowedCombos": "Combinații permise",
     "allCombosAllowed": "Această cheie poate utiliza orice combinație.",
     "restrictedComboCount": "Restricționat la {count, plural, one {# combinație} few {# combinații} other {# de combinații}}.",
+    "preservedComboRules": "__MISSING__:{count, plural, one {# stored entry is} other {# stored entries are}} not in this combo list (for example routing rules) and will be kept as saved.",
+    "preservedComboRuleHint": "__MISSING__:Kept as stored. This entry is not a combo in the list above, so it can only be changed through the API.",
     "apiManagerCustomRateLimits": "Limite de tarif personalizate",
     "apiManagerCustomRateLimitsDesc": "Înlocuiți limitele globale implicite. Lăsați gol pentru a utiliza valorile implicite.",
     "apiManagerRateLimitRequestsPlaceholder": "Cereri",

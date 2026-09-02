@@ -2371,6 +2371,8 @@
     "allowedCombos": "Разрешени комбинации",
     "allCombosAllowed": "Този ключ може да използва всяка комбинация.",
     "restrictedComboCount": "Ограничено до {count, plural, one {# комбинация} other {# комбинации}}.",
+    "preservedComboRules": "__MISSING__:{count, plural, one {# stored entry is} other {# stored entries are}} not in this combo list (for example routing rules) and will be kept as saved.",
+    "preservedComboRuleHint": "__MISSING__:Kept as stored. This entry is not a combo in the list above, so it can only be changed through the API.",
     "apiManagerCustomRateLimits": "Персонализирани ограничения на скоростта",
     "apiManagerCustomRateLimitsDesc": "Замяна на глобалните ограничения по подразбиране. Оставете празно, за да използвате настройките по подразбиране.",
     "apiManagerRateLimitRequestsPlaceholder": "Заявки",

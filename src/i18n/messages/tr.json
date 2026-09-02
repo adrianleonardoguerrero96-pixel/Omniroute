@@ -2371,6 +2371,8 @@
     "allowedCombos": "İzin Verilen Kombinasyonlar",
     "allCombosAllowed": "Bu anahtar herhangi bir kombinasyonu kullanabilir.",
     "restrictedComboCount": "{count, plural, one {# kombinasyon} other {# kombinasyon}} ile sınırlandırıldı.",
+    "preservedComboRules": "__MISSING__:{count, plural, one {# stored entry is} other {# stored entries are}} not in this combo list (for example routing rules) and will be kept as saved.",
+    "preservedComboRuleHint": "__MISSING__:Kept as stored. This entry is not a combo in the list above, so it can only be changed through the API.",
     "apiManagerCustomRateLimits": "Özel Fiyat Limitleri",
     "apiManagerCustomRateLimitsDesc": "Genel varsayılan sınırları geçersiz kılın. Varsayılanları kullanmak için boş bırakın.",
     "apiManagerRateLimitRequestsPlaceholder": "İstekler",

@@ -2371,6 +2371,8 @@
     "allowedCombos": "Povolené kombinácie",
     "allCombosAllowed": "Tento kľúč môže použiť akúkoľvek kombináciu.",
     "restrictedComboCount": "Obmedzené na {count, plural, one {# kombináciu} few {# kombinácie} other {# kombinácií}}.",
+    "preservedComboRules": "__MISSING__:{count, plural, one {# stored entry is} other {# stored entries are}} not in this combo list (for example routing rules) and will be kept as saved.",
+    "preservedComboRuleHint": "__MISSING__:Kept as stored. This entry is not a combo in the list above, so it can only be changed through the API.",
     "apiManagerCustomRateLimits": "Vlastné limity sadzieb",
     "apiManagerCustomRateLimitsDesc": "Prepísať globálne predvolené limity. Ak chcete použiť predvolené hodnoty, nechajte prázdne.",
     "apiManagerRateLimitRequestsPlaceholder": "Žiadosti",

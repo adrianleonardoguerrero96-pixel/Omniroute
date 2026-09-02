@@ -2371,6 +2371,8 @@
     "allowedCombos": "Zulässige Kombinationen",
     "allCombosAllowed": "Dieser Schlüssel kann jede Kombination verwenden.",
     "restrictedComboCount": "Beschränkt auf {count, plural, one {# Kombination} other {# Kombinationen}}.",
+    "preservedComboRules": "__MISSING__:{count, plural, one {# stored entry is} other {# stored entries are}} not in this combo list (for example routing rules) and will be kept as saved.",
+    "preservedComboRuleHint": "__MISSING__:Kept as stored. This entry is not a combo in the list above, so it can only be changed through the API.",
     "apiManagerCustomRateLimits": "Benutzerdefinierte Tariflimits",
     "apiManagerCustomRateLimitsDesc": "Überschreiben Sie globale Standardgrenzen. Lassen Sie das Feld leer, um die Standardeinstellungen zu verwenden.",
     "apiManagerRateLimitRequestsPlaceholder": "Anfragen",

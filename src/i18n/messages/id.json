@@ -2371,6 +2371,8 @@
     "allowedCombos": "Kombo yang Diizinkan",
     "allCombosAllowed": "Kunci ini dapat menggunakan kombo apa pun.",
     "restrictedComboCount": "Dibatasi hingga {count, plural, one {# kombo} other {# kombo}}.",
+    "preservedComboRules": "__MISSING__:{count, plural, one {# stored entry is} other {# stored entries are}} not in this combo list (for example routing rules) and will be kept as saved.",
+    "preservedComboRuleHint": "__MISSING__:Kept as stored. This entry is not a combo in the list above, so it can only be changed through the API.",
     "apiManagerCustomRateLimits": "Batas Tarif Khusus",
     "apiManagerCustomRateLimitsDesc": "Ganti batas default global. Biarkan kosong untuk menggunakan default.",
     "apiManagerRateLimitRequestsPlaceholder": "Permintaan",

@@ -2371,6 +2371,8 @@
     "allowedCombos": "Tillåtna kombinationer",
     "allCombosAllowed": "Denna nyckel kan använda valfri kombination.",
     "restrictedComboCount": "Begränsad till {count, plural, one {# kombination} other {# kombinationer}}.",
+    "preservedComboRules": "__MISSING__:{count, plural, one {# stored entry is} other {# stored entries are}} not in this combo list (for example routing rules) and will be kept as saved.",
+    "preservedComboRuleHint": "__MISSING__:Kept as stored. This entry is not a combo in the list above, so it can only be changed through the API.",
     "apiManagerCustomRateLimits": "Anpassade prisgränser",
     "apiManagerCustomRateLimitsDesc": "Åsidosätt globala standardgränser. Lämna tomt om du vill använda standardinställningarna.",
     "apiManagerRateLimitRequestsPlaceholder": "Förfrågningar",

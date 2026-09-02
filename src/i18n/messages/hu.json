@@ -2371,6 +2371,8 @@
     "allowedCombos": "Engedélyezett kombinációk",
     "allCombosAllowed": "Ez a kulcs bármilyen kombinációt használhat.",
     "restrictedComboCount": "{count, plural, one {# kombinációra korlátozva} other {# kombinációra korlátozva}}.",
+    "preservedComboRules": "__MISSING__:{count, plural, one {# stored entry is} other {# stored entries are}} not in this combo list (for example routing rules) and will be kept as saved.",
+    "preservedComboRuleHint": "__MISSING__:Kept as stored. This entry is not a combo in the list above, so it can only be changed through the API.",
     "apiManagerCustomRateLimits": "Egyéni díjkorlátok",
     "apiManagerCustomRateLimitsDesc": "A globális alapértelmezett korlátok felülbírálása. Hagyja üresen az alapértelmezett értékek használatához.",
     "apiManagerRateLimitRequestsPlaceholder": "Kérések",

@@ -2371,6 +2371,8 @@
     "allowedCombos": "許可された組み合わせ",
     "allCombosAllowed": "このキーは任意の組み合わせを使用できます。",
     "restrictedComboCount": "{count, plural, one {# 個の組み合わせ} other {# 個の組み合わせ}}に制限されています。",
+    "preservedComboRules": "__MISSING__:{count, plural, one {# stored entry is} other {# stored entries are}} not in this combo list (for example routing rules) and will be kept as saved.",
+    "preservedComboRuleHint": "__MISSING__:Kept as stored. This entry is not a combo in the list above, so it can only be changed through the API.",
     "apiManagerCustomRateLimits": "カスタムレート制限",
     "apiManagerCustomRateLimitsDesc": "グローバルなデフォルト制限をオーバーライドします。デフォルトを使用する場合は空のままにしてください。",
     "apiManagerRateLimitRequestsPlaceholder": "リクエスト",

@@ -2371,6 +2371,8 @@
     "allowedCombos": "Tillatte kombinasjoner",
     "allCombosAllowed": "Denne nøkkelen kan bruke alle kombinasjoner.",
     "restrictedComboCount": "Begrenset til {count, plural, one {# kombinasjon} other {# kombinasjoner}}.",
+    "preservedComboRules": "__MISSING__:{count, plural, one {# stored entry is} other {# stored entries are}} not in this combo list (for example routing rules) and will be kept as saved.",
+    "preservedComboRuleHint": "__MISSING__:Kept as stored. This entry is not a combo in the list above, so it can only be changed through the API.",
     "apiManagerCustomRateLimits": "Egendefinerte satsgrenser",
     "apiManagerCustomRateLimitsDesc": "Overstyr globale standardgrenser. La stå tomt for å bruke standardinnstillinger.",
     "apiManagerRateLimitRequestsPlaceholder": "Forespørsler",

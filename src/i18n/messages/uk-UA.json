@@ -2371,6 +2371,8 @@
     "allowedCombos": "Дозволені комбінації",
     "allCombosAllowed": "Цей ключ може використовувати будь-яку комбінацію.",
     "restrictedComboCount": "Обмежено до {count, plural, one {# комбінації} few {# комбінацій} many {# комбінацій} other {# комбінацій}}.",
+    "preservedComboRules": "__MISSING__:{count, plural, one {# stored entry is} other {# stored entries are}} not in this combo list (for example routing rules) and will be kept as saved.",
+    "preservedComboRuleHint": "__MISSING__:Kept as stored. This entry is not a combo in the list above, so it can only be changed through the API.",
     "apiManagerCustomRateLimits": "Спеціальні ліміти ставок",
     "apiManagerCustomRateLimitsDesc": "Перевизначити глобальні обмеження за умовчанням. Залиште пустим, щоб використовувати значення за умовчанням.",
     "apiManagerRateLimitRequestsPlaceholder": "Запити",

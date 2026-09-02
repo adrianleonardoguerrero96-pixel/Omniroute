@@ -2371,6 +2371,8 @@
     "allowedCombos": "Mga Pinapayagang Combo",
     "allCombosAllowed": "Maaaring gumamit ng anumang combo ang key na ito.",
     "restrictedComboCount": "Limitado sa {count, plural, one {# combo} other {# na combo}}.",
+    "preservedComboRules": "__MISSING__:{count, plural, one {# stored entry is} other {# stored entries are}} not in this combo list (for example routing rules) and will be kept as saved.",
+    "preservedComboRuleHint": "__MISSING__:Kept as stored. This entry is not a combo in the list above, so it can only be changed through the API.",
     "apiManagerCustomRateLimits": "Mga Limitasyon ng Custom na Rate",
     "apiManagerCustomRateLimitsDesc": "I-override ang mga pandaigdigang default na limitasyon. Iwanang walang laman upang gamitin ang mga default.",
     "apiManagerRateLimitRequestsPlaceholder": "Mga kahilingan",

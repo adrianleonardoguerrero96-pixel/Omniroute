@@ -2371,6 +2371,8 @@
     "allowedCombos": "التركيبات المسموح بها",
     "allCombosAllowed": "يمكن لهذا المفتاح استخدام أي تركيبة.",
     "restrictedComboCount": "مقتصر على {count, plural, one {# تركيبة} other {# تركيبات}}.",
+    "preservedComboRules": "__MISSING__:{count, plural, one {# stored entry is} other {# stored entries are}} not in this combo list (for example routing rules) and will be kept as saved.",
+    "preservedComboRuleHint": "__MISSING__:Kept as stored. This entry is not a combo in the list above, so it can only be changed through the API.",
     "apiManagerCustomRateLimits": "حدود معدل الطلبات المخصصة لمدير الـ API",
     "apiManagerCustomRateLimitsDesc": "تجاوز الحدود الافتراضية العالمية. اتركه فارغًا لاستخدام الإعدادات الافتراضية.",
     "apiManagerRateLimitRequestsPlaceholder": "الطلبات",

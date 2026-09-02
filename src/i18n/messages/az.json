@@ -2371,6 +2371,8 @@
     "allowedCombos": "İcazə verilən kombinasiyalar",
     "allCombosAllowed": "Bu açar istənilən kombinasiyanı istifadə edə bilər.",
     "restrictedComboCount": "{count, plural, one {# kombinasiya} other {# kombinasiya}} ilə məhdudlaşdırılıb.",
+    "preservedComboRules": "__MISSING__:{count, plural, one {# stored entry is} other {# stored entries are}} not in this combo list (for example routing rules) and will be kept as saved.",
+    "preservedComboRuleHint": "__MISSING__:Kept as stored. This entry is not a combo in the list above, so it can only be changed through the API.",
     "apiManagerCustomRateLimits": "Fərdi tarif limitləri",
     "apiManagerCustomRateLimitsDesc": "Qlobal standart limitləri ləğv edin. Defoltları istifadə etmək üçün boş buraxın.",
     "apiManagerRateLimitRequestsPlaceholder": "Sorğular",

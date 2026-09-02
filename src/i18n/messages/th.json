@@ -2371,6 +2371,8 @@
     "allowedCombos": "คอมโบที่อนุญาต",
     "allCombosAllowed": "คีย์นี้สามารถใช้คอมโบใดก็ได้.",
     "restrictedComboCount": "จำกัดไว้ที่ {count, plural, one {# คอมโบ} other {# คอมโบ}}.",
+    "preservedComboRules": "__MISSING__:{count, plural, one {# stored entry is} other {# stored entries are}} not in this combo list (for example routing rules) and will be kept as saved.",
+    "preservedComboRuleHint": "__MISSING__:Kept as stored. This entry is not a combo in the list above, so it can only be changed through the API.",
     "apiManagerCustomRateLimits": "ขีดจำกัดอัตราที่กำหนดเอง",
     "apiManagerCustomRateLimitsDesc": "แทนที่ขีดจำกัดเริ่มต้นส่วนกลาง เว้นว่างไว้เพื่อใช้ค่าเริ่มต้น",
     "apiManagerRateLimitRequestsPlaceholder": "คำขอ",

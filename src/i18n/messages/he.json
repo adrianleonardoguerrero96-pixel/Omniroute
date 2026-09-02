@@ -2371,6 +2371,8 @@
     "allowedCombos": "שילובים מורשים",
     "allCombosAllowed": "מפתח זה יכול להשתמש בכל שילוב.",
     "restrictedComboCount": "מוגבל ל-{count, plural, one {# שילוב} other {# שילובים}}.",
+    "preservedComboRules": "__MISSING__:{count, plural, one {# stored entry is} other {# stored entries are}} not in this combo list (for example routing rules) and will be kept as saved.",
+    "preservedComboRuleHint": "__MISSING__:Kept as stored. This entry is not a combo in the list above, so it can only be changed through the API.",
     "apiManagerCustomRateLimits": "מגבלות תעריף מותאמות אישית",
     "apiManagerCustomRateLimitsDesc": "עוקף מגבלות ברירת מחדל גלובליות. השאר ריק כדי להשתמש בברירות המחדל.",
     "apiManagerRateLimitRequestsPlaceholder": "בקשות",

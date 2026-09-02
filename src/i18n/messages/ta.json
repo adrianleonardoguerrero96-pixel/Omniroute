@@ -2371,6 +2371,8 @@
     "allowedCombos": "அனுமதிக்கப்பட்ட சேர்க்கைகள்",
     "allCombosAllowed": "இந்த key எந்த சேர்க்கையையும் பயன்படுத்தலாம்.",
     "restrictedComboCount": "{count, plural, one {# சேர்க்கைக்கு} other {# சேர்க்கைகளுக்கு}} மட்டுமே கட்டுப்படுத்தப்பட்டது.",
+    "preservedComboRules": "__MISSING__:{count, plural, one {# stored entry is} other {# stored entries are}} not in this combo list (for example routing rules) and will be kept as saved.",
+    "preservedComboRuleHint": "__MISSING__:Kept as stored. This entry is not a combo in the list above, so it can only be changed through the API.",
     "apiManagerCustomRateLimits": "விருப்ப விகித வரம்புகள்",
     "apiManagerCustomRateLimitsDesc": "உலகளாவிய இயல்புநிலை வரம்புகளை மீறு. இயல்புநிலைகளைப் பயன்படுத்த காலியாக விடவும்.",
     "apiManagerRateLimitRequestsPlaceholder": "கோரிக்கைகள்",

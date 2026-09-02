@@ -2371,6 +2371,8 @@
     "allowedCombos": "允許的組合",
     "allCombosAllowed": "此金鑰可使用任何組合。",
     "restrictedComboCount": "Restricted to {count, plural, one {# combo} other {# combos}}.",
+    "preservedComboRules": "__MISSING__:{count, plural, one {# stored entry is} other {# stored entries are}} not in this combo list (for example routing rules) and will be kept as saved.",
+    "preservedComboRuleHint": "__MISSING__:Kept as stored. This entry is not a combo in the list above, so it can only be changed through the API.",
     "apiManagerCustomRateLimits": "自定義費率限制",
     "apiManagerCustomRateLimitsDesc": "覆蓋全域性預設限制。留空以使用預設值。",
     "apiManagerRateLimitRequestsPlaceholder": "要求",
