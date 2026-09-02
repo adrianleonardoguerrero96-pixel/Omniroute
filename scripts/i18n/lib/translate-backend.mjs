@@ -143,10 +143,11 @@ export const BATCH_SYSTEM = (englishName, native) =>
 /**
  * Pure parser for a batch answer. Accepts a bare JSON object or one wrapped in
  * a ```json fence; anything else (prose around the object, arrays, invalid
- * JSON) throws. Every id in `expectedIds` must be present with a non-empty
+ * JSON) throws. Every id in `expectedIds` must be present as an OWN property
+ * (an inherited name such as `constructor` counts as missing) with a non-empty
  * string value — an empty translation would replace the `__MISSING__` marker
  * for good, so it fails the batch instead (the per-string path rejects empty
- * completions the same way).
+ * completions the same way). Values are trimmed, like `translateString` does.
  *
  * @param {string} text raw assistant content
  * @param {string[]} expectedIds ids the caller sent (and expects back)
@@ -169,12 +170,13 @@ export function parseBatchResponse(text, expectedIds) {
   }
   const out = new Map();
   for (const id of expectedIds) {
-    if (!(id in parsed)) throw new Error(`batch response missing id ${id}`);
+    if (!Object.hasOwn(parsed, id)) throw new Error(`batch response missing id ${id}`);
     if (typeof parsed[id] !== "string") {
       throw new Error(`batch response has non-string value for ${id}`);
     }
-    if (!parsed[id].trim()) throw new Error(`batch response has empty value for ${id}`);
-    out.set(id, parsed[id]);
+    const value = parsed[id].trim();
+    if (!value) throw new Error(`batch response has empty value for ${id}`);
+    out.set(id, value);
   }
   return out;
 }

@@ -149,6 +149,30 @@ test("parseBatchResponse rejects an empty or whitespace-only value", () => {
   assert.throws(() => parseBatchResponse('{"k1":"  \\n"}', ["k1"]), /empty value for k1/);
 });
 
+test("parseBatchResponse trims every value, like the per-string path does", () => {
+  assert.deepEqual(
+    [...parseBatchResponse('{"k1":"  Salvar \\n","k2":"\\tCancelar"}', ["k1", "k2"])],
+    [
+      ["k1", "Salvar"],
+      ["k2", "Cancelar"],
+    ]
+  );
+});
+
+test("parseBatchResponse only honours own properties — inherited names count as missing", () => {
+  // `"constructor" in {}` is true, so an `in` check would report the wrong
+  // error (non-string value) for an id the model simply dropped.
+  assert.throws(() => parseBatchResponse('{"k1":"a"}', ["constructor"]), /missing id constructor/);
+  assert.throws(() => parseBatchResponse('{"k1":"a"}', ["toString"]), /missing id toString/);
+  assert.deepEqual(
+    [...parseBatchResponse('{"constructor":"x","toString":"y"}', ["constructor", "toString"])],
+    [
+      ["constructor", "x"],
+      ["toString", "y"],
+    ]
+  );
+});
+
 // ---------------------------------------------------------------------------
 // translateBatch — one chat request per batch, mapped back by id
 // ---------------------------------------------------------------------------
