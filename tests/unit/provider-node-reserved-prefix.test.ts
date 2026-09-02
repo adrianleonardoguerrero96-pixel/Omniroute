@@ -162,8 +162,6 @@ test("shared set excludes manual aliases that never intercept nodes at runtime",
 });
 
 test("shared set size includes live REGISTRY and retired Designer + Felo + Qwen Web prefixes", () => {
-  // 2026-09-02: 400 → 402 with the gemini-business REGISTRY entry (#12107): its id
-  // "gemini-business" and alias "gembiz" were both new members — computed, not hand-derived.
   // 2026-08-30: 398 → 400 with Perplexity Agent API (#12103) and the second prefix the same
   // afternoon batch registered — computed, not hand-derived (see the note below).
   // Computed (not hand-derived) after combining Designer's 2 retired
@@ -173,7 +171,11 @@ test("shared set size includes live REGISTRY and retired Designer + Felo + Qwen 
   // 1 and adds 2 distinct tombstones "qwen-web"/"qw", a net +1) on top of the
   // live REGISTRY walk, minus the 3 GPL-derived Raycast/Hailuo Web
   // ids/aliases removed from REGISTRY by #11691's migration 166.
-  assert.equal(RESERVED_PREFIX_COUNT, 402);
+  // #11513: the two UC providers add four REGISTRY prefixes — the persona id "uc" +
+  // alias "ucn", and the Developer API id "uc-direct" + alias "ucd" (402 → 406).
+  // #12389: the gemini-business registry entry adds its id "gemini-business" and
+  // alias "gembiz" to the REGISTRY walk (406 → 408).
+  assert.equal(RESERVED_PREFIX_COUNT, 408);
 });
 
 test("isReservedProviderPrefix rejects non-string input", () => {

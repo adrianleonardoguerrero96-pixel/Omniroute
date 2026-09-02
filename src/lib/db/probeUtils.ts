@@ -22,7 +22,19 @@ import path from "node:path";
  */
 export function isTransientProbeError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
-  return /SQLITE_BUSY|SQLITE_PROTOCOL|SQLITE_IOERR|ENOENT/i.test(message);
+  if (/SQLITE_BUSY|SQLITE_PROTOCOL|SQLITE_IOERR|ENOENT|database is locked/i.test(message)) {
+    return true;
+  }
+  // The real drivers do not put the result-code name in the message: both
+  // report plain "database is locked" for SQLITE_BUSY. better-sqlite3 carries
+  // the name in `code`, node:sqlite the numeric primary code in `errcode`
+  // (5 BUSY, 10 IOERR, 15 PROTOCOL; extended codes live in the high bits).
+  // Without this, a transient lock during the probe was classified as
+  // corruption and the database was renamed away.
+  if (typeof error !== "object" || error === null) return false;
+  const { code, errcode } = error as { code?: unknown; errcode?: unknown };
+  if (typeof code === "string" && /^SQLITE_(BUSY|PROTOCOL|IOERR)/.test(code)) return true;
+  return typeof errcode === "number" && [5, 10, 15].includes(errcode & 0xff);
 }
 
 /**
