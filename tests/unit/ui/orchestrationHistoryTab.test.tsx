@@ -54,6 +54,9 @@ afterEach(() => {
 
 const NOW = Date.parse("2026-09-01T12:00:00Z");
 const hoursAgo = (h: number) => new Date(NOW - h * 60 * 60 * 1000).toISOString();
+/** Relative to the REAL clock — for assertions that must hold inside the 1d window too
+ * (the component derives its range from `Date.now()`, not from the fixed `NOW` above). */
+const realHoursAgo = (h: number) => new Date(Date.now() - h * 60 * 60 * 1000).toISOString();
 
 function mockFetch(opts: {
   a2aTasks?: unknown[];
@@ -110,7 +113,10 @@ function a2aTask(overrides: Record<string, unknown> = {}) {
 
 describe("HistoryTab", () => {
   it("fetches both sources on mount and renders one row per (source, identity)", async () => {
-    vi.stubGlobal("fetch", mockFetch({ a2aTasks: [a2aTask()], cloudAgentTasks: [cloudAgentTask()] }));
+    vi.stubGlobal(
+      "fetch",
+      mockFetch({ a2aTasks: [a2aTask()], cloudAgentTasks: [cloudAgentTask()] })
+    );
     const { c, cleanup } = render(<HistoryTab />);
     await flush();
     expect(c.textContent).toContain("smart-routing");
@@ -119,16 +125,31 @@ describe("HistoryTab", () => {
     cleanup();
   });
 
-  it("switching the preset re-fetches A2A history with a different from/to range", async () => {
+  it("switching the preset re-fetches A2A history with a from/to window matching the new preset", async () => {
     const fetchMock = mockFetch({});
     vi.stubGlobal("fetch", fetchMock);
     const { c, cleanup } = render(<HistoryTab />);
     await flush();
 
     const historyCalls = () =>
-      fetchMock.mock.calls.map((call) => String(call[0])).filter((u) => u.includes("/api/a2a/tasks/history"));
+      fetchMock.mock.calls
+        .map((call) => String(call[0]))
+        .filter((u) => u.includes("/api/a2a/tasks/history"));
+
+    // Derives the actual [from, to] window (ms) the component asked for — this is what
+    // catches "preset ignored" bugs; a plain "URL changed" assertion would not, since
+    // `nowMs` is re-sampled on every click regardless of whether `setPreset` even ran.
+    function windowMs(url: string): number {
+      const parsed = new URL(url, "http://localhost");
+      const from = Date.parse(parsed.searchParams.get("from") ?? "");
+      const to = Date.parse(parsed.searchParams.get("to") ?? "");
+      return to - from;
+    }
+
     const firstCall = historyCalls().at(-1);
     expect(firstCall).toBeTruthy();
+    // Default preset is "7d".
+    expect(windowMs(firstCall!)).toBeCloseTo(7 * 24 * 60 * 60 * 1000, -4);
 
     const btn1d = Array.from(c.querySelectorAll("button")).find(
       (b) => b.textContent === "historyRange1d"
@@ -142,6 +163,67 @@ describe("HistoryTab", () => {
     const secondCall = historyCalls().at(-1);
     expect(secondCall).toBeTruthy();
     expect(secondCall).not.toBe(firstCall);
+    expect(windowMs(secondCall!)).toBeCloseTo(24 * 60 * 60 * 1000, -4);
+    cleanup();
+  });
+
+  it("shows a loading line instead of an empty bordered table, and keeps rows visible while refetching", async () => {
+    vi.stubGlobal("fetch", mockFetch({ a2aTasks: [a2aTask()] }));
+    const { c, cleanup } = render(<HistoryTab />);
+
+    // First load, still in flight: a loading line, and NO empty bordered table/grid.
+    expect(c.querySelector('[role="status"]')).toBeTruthy();
+    expect(c.querySelector("table")).toBeNull();
+
+    await flush();
+    expect(c.querySelector('[role="status"]')).toBeNull();
+    expect(c.querySelector("table")).toBeTruthy();
+
+    // Refetch (30d is a superset of the current 7d window, so the already-fetched rows stay
+    // in range): the grid must stay on screen instead of blanking while loading.
+    const btn30d = Array.from(c.querySelectorAll("button")).find(
+      (b) => b.textContent === "historyRange30d"
+    ) as HTMLButtonElement;
+    act(() => {
+      btn30d.click();
+    });
+    expect(c.querySelector('[role="status"]')).toBeTruthy();
+    expect(c.querySelector("table")).toBeTruthy();
+    expect(c.querySelectorAll("tbody tr").length).toBe(1);
+    cleanup();
+  });
+
+  it("renders a bucket time axis header derived from the fetched window", async () => {
+    const fetchMock = mockFetch({ a2aTasks: [a2aTask({ createdAt: realHoursAgo(1) })] });
+    vi.stubGlobal("fetch", fetchMock);
+    const { c, cleanup } = render(<HistoryTab />);
+    await flush();
+
+    const fromMs = () => {
+      const url = fetchMock.mock.calls
+        .map((call) => String(call[0]))
+        .filter((u) => u.includes("/api/a2a/tasks/history"))
+        .at(-1)!;
+      return Date.parse(new URL(url, "http://localhost").searchParams.get("from")!);
+    };
+
+    // Default preset is 7d → 7 daily buckets + the leading row-label column.
+    const headers7d = Array.from(c.querySelectorAll("thead th"));
+    expect(headers7d.length).toBe(8);
+    expect(headers7d[1].textContent).toBe(new Date(fromMs()).toLocaleDateString());
+
+    const btn1d = Array.from(c.querySelectorAll("button")).find(
+      (b) => b.textContent === "historyRange1d"
+    ) as HTMLButtonElement;
+    act(() => {
+      btn1d.click();
+    });
+    await flush();
+
+    // 1d preset → 24 hourly buckets, labeled by time-of-day instead of date.
+    const headers1d = Array.from(c.querySelectorAll("thead th"));
+    expect(headers1d.length).toBe(25);
+    expect(headers1d[1].textContent).toBe(new Date(fromMs()).toLocaleTimeString());
     cleanup();
   });
 
@@ -155,7 +237,9 @@ describe("HistoryTab", () => {
     act(() => {
       cell.click();
     });
-    const last = drawerCalls.at(-1) as { node: { id: string; source: string; kind: string } | null };
+    const last = drawerCalls.at(-1) as {
+      node: { id: string; source: string; kind: string } | null;
+    };
     expect(last.node?.id).toBe("a2a:t1");
     expect(last.node?.source).toBe("a2a");
     expect(last.node?.kind).toBe("work");
@@ -163,10 +247,7 @@ describe("HistoryTab", () => {
   });
 
   it("shows a source-failed warning for A2A while Cloud Agent rows still render", async () => {
-    vi.stubGlobal(
-      "fetch",
-      mockFetch({ a2aFail: true, cloudAgentTasks: [cloudAgentTask()] })
-    );
+    vi.stubGlobal("fetch", mockFetch({ a2aFail: true, cloudAgentTasks: [cloudAgentTask()] }));
     const { c, cleanup } = render(<HistoryTab />);
     await flush();
     expect(c.textContent).toContain("historySourceFailed");

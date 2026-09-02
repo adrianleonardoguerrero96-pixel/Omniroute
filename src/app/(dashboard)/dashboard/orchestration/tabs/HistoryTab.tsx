@@ -55,6 +55,14 @@ function formatDuration(ms: number | null): string {
   return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
 }
 
+/** Column header label for one bucket — hour-of-day for the 1d preset (24 hourly slices),
+ * calendar date for 7d/30d (daily slices), so an operator can tell which column is which
+ * time slice without hovering every cell. */
+function formatBucketLabel(startMs: number, preset: Preset): string {
+  const d = new Date(startMs);
+  return preset === "1d" ? d.toLocaleTimeString() : d.toLocaleDateString();
+}
+
 /**
  * Resets `isLoading` back to `true` synchronously during render when `rangeKey` changes —
  * React's documented "adjust state when a prop changes" idiom (same shape as
@@ -148,6 +156,9 @@ function nodeFromHistoryItem(item: HistoryItem): OrchNode {
 
 export function HistoryTab() {
   const t = useTranslations("orchestration");
+  // `common.loading` is an already-translated global key — the history namespace has no
+  // loading string of its own and this task adds no new i18n keys (Task C5 owns i18n).
+  const tCommon = useTranslations("common");
   const [preset, setPreset] = useState<Preset>("7d");
   // Sampled at mount (lazy initializer, runs once) and re-sampled directly inside the
   // button's onClick below (a real DOM event handler, which — unlike a plain closure
@@ -197,11 +208,36 @@ export function HistoryTab() {
         </div>
       ))}
 
-      {!isLoading && grid.rows.length === 0 ? (
+      {isLoading && (
+        <div role="status" aria-live="polite" className="text-xs text-muted">
+          {tCommon("loading")}
+        </div>
+      )}
+
+      {grid.rows.length === 0 && !isLoading && (
         <div className="text-xs text-muted p-4">{t("historyEmpty")}</div>
-      ) : (
+      )}
+
+      {grid.rows.length > 0 && (
+        // Kept mounted (with the previous range's rows) while `isLoading` is true for a
+        // refetch — only the very first load (no rows yet) falls through to the loading
+        // line above instead of an empty bordered table.
         <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto border border-border rounded">
           <table className="text-xs border-collapse w-full">
+            <thead>
+              <tr className="border-b border-border">
+                <th scope="col" className="px-2 py-1 sticky left-0 bg-surface" />
+                {grid.buckets.map((bucket, i) => (
+                  <th
+                    key={i}
+                    scope="col"
+                    className="px-0.5 py-1 text-[9px] font-normal text-muted whitespace-nowrap"
+                  >
+                    {formatBucketLabel(bucket.start, preset)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
             <tbody>
               {grid.rows.map((row) => (
                 <tr key={`${row.source}:${row.identity}`} className="border-b border-border">
