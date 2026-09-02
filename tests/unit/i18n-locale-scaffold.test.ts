@@ -55,6 +55,58 @@ const realConfig = (): I18nConfig => JSON.parse(readRepo("config/i18n.json")) as
 const pipeColumns = (line: string): number[] =>
   [...line].flatMap((char, index) => (char === "|" ? [index] : []));
 
+// A locale code that can never be configured, so the real-file tests keep passing after any
+// real locale (Greek included) lands. Fails loudly if every candidate is taken.
+const SENTINEL_CANDIDATES = ["zz", "zy", "zx"];
+const sentinelCode = (config: I18nConfig): string => {
+  const configured = new Set(config.locales.map((l) => l.code));
+  const code = SENTINEL_CANDIDATES.find((candidate) => !configured.has(candidate));
+  assert.ok(
+    code,
+    `every sentinel code (${SENTINEL_CANDIDATES.join(", ")}) is configured — extend SENTINEL_CANDIDATES`
+  );
+  return code;
+};
+
+const readmeLinkFor = (entry: LocaleEntry, flagFile: string): string =>
+  `  <a href="docs/i18n/${entry.code}/README.md"><img src="docs/assets/flags/${flagFile}" width="30" alt="${entry.native} (${entry.code})" title="${entry.native} (${entry.code})"></a>`;
+const indexRowFor = (entry: LocaleEntry): string =>
+  `- ${entry.flag} **${entry.native}** (\`${entry.code}\`): [Docs Root](./${entry.code}/README.md)`;
+
+type RowRef = { index: number; code: string };
+
+// Where a new row must land: right before the first existing row whose code sorts after it
+// under localeCompare("en"), or right after the last row when no row sorts after it.
+const expectedRowIndex = (rows: RowRef[], code: string): number => {
+  assert.ok(rows.length > 0, "no locale rows found");
+  const next = rows.find((row) => row.code.localeCompare(code, "en") > 0);
+  return next ? next.index : rows[rows.length - 1].index + 1;
+};
+
+const indexRows = (lines: string[]): RowRef[] =>
+  lines.flatMap((line, index) => {
+    const code = line.match(/^- .+ \(`([^`]+)`\): \[Docs Root\]/)?.[1];
+    return code ? [{ index, code }] : [];
+  });
+
+// The locale table of docs/guides/I18N.md: its header line and the contiguous rows under it
+// (the guide has other tables with backticked first cells, which must not count).
+const guideRows = (lines: string[]): { header: number; rows: RowRef[] } => {
+  const header = lines.findIndex((line) =>
+    /^\| Code +\| Language +\| RTL +\| Google Translate Code +\|$/.test(line)
+  );
+  assert.ok(header >= 0, "locale table header not found");
+  const rows: RowRef[] = [];
+  for (let index = header + 2; index < lines.length; index += 1) {
+    const code = lines[index].match(/^\| `([^`]+)` *\|/)?.[1];
+    if (!code) break;
+    rows.push({ index, code });
+  }
+  return { header, rows };
+};
+
+const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 // ---------------------------------------------------------------------------
 // insertLocaleEntry
 // ---------------------------------------------------------------------------
@@ -102,7 +154,8 @@ test("insertLocaleEntry inserts at both ends, strips flagFile and stores the ent
 test("insertLocaleEntry on the real config keeps every top-level key, its order and the existing code order", () => {
   const raw = readRepo("config/i18n.json");
   const before = JSON.parse(raw) as I18nConfig;
-  const text = insertLocaleEntry(raw, { ...el, flagFile: "gr.svg" });
+  const entry: LocaleEntry = { ...el, code: sentinelCode(before) };
+  const text = insertLocaleEntry(raw, { ...entry, flagFile: "gr.svg" });
   assert.ok(text.endsWith("}\n"));
   const after = JSON.parse(text) as I18nConfig;
 
@@ -111,27 +164,29 @@ test("insertLocaleEntry on the real config keeps every top-level key, its order 
   const { locales: afterLocales, ...afterRest } = after;
   assert.deepEqual(afterRest, beforeRest);
 
-  // The 43 existing entries are untouched and keep their relative order.
+  // The existing entries are untouched and keep their relative order.
   assert.equal(afterLocales.length, beforeLocales.length + 1);
   assert.deepEqual(
-    afterLocales.filter((l) => l.code !== "el"),
+    afterLocales.filter((l) => l.code !== entry.code),
     beforeLocales
   );
-  // ...and the new entry sits exactly where a full localeCompare("en") sort would put it.
-  const sorted = [...beforeLocales.map((l) => l.code), "el"].sort((a, b) =>
+  // ...and the new entry sits exactly where a full localeCompare("en") sort would put it:
+  // before the first existing code that sorts after it, or last when none does.
+  const sorted = [...beforeLocales.map((l) => l.code), entry.code].sort((a, b) =>
     a.localeCompare(b, "en")
   );
   assert.deepEqual(
     afterLocales.map((l) => l.code),
     sorted
   );
+  const next = beforeLocales.findIndex((l) => l.code.localeCompare(entry.code, "en") > 0);
   assert.equal(
-    afterLocales.findIndex((l) => l.code === "el"),
-    beforeLocales.findIndex((l) => l.code === "en")
+    afterLocales.findIndex((l) => l.code === entry.code),
+    next === -1 ? beforeLocales.length : next
   );
   assert.deepEqual(
-    afterLocales.find((l) => l.code === "el"),
-    el
+    afterLocales.find((l) => l.code === entry.code),
+    entry
   );
 });
 
@@ -220,9 +275,11 @@ test("insertReadmeFlagLink rejects a duplicate link and a README without the lan
 });
 
 test("insertReadmeFlagLink on the real README adds exactly one line right before the block's </div>", () => {
-  const total = realConfig().locales.length;
+  const config = realConfig();
+  const total = config.locales.length;
+  const entry: LocaleEntry = { ...el, code: sentinelCode(config) };
   const before = readRepo("README.md").split("\n");
-  const after = insertReadmeFlagLink(before.join("\n"), el, total + 1).split("\n");
+  const after = insertReadmeFlagLink(before.join("\n"), entry, total + 1).split("\n");
   assert.equal(after.length, before.length + 1);
 
   const marker = before.indexOf(`  <b>🌐 In ${total} languages</b>`);
@@ -230,7 +287,7 @@ test("insertReadmeFlagLink on the real README adds exactly one line right before
   assert.ok(marker > 0 && close > marker);
   assert.equal(after[marker], `  <b>🌐 In ${total + 1} languages</b>`);
   assert.match(after[close - 1], /^  <a href="docs\/i18n\/[^"]+\/README\.md"><img /);
-  assert.equal(after[close], EL_README_LINK);
+  assert.equal(after[close], readmeLinkFor(entry, "gr.svg"));
   assert.equal(after[close + 1], "</div>");
   assert.deepEqual(
     [...after.slice(0, marker), ...after.slice(marker + 1, close), ...after.slice(close + 1)],
@@ -290,26 +347,28 @@ test("insertDocsIndexRow rejects a duplicate row, a missing sentence and an inde
   );
 });
 
-test("insertDocsIndexRow on the real docs/i18n/README.md adds one row before `es` and rewrites only the sentence", () => {
-  const total = realConfig().locales.length;
+test("insertDocsIndexRow on the real docs/i18n/README.md adds one row at the derived position and rewrites only the sentence", () => {
+  const config = realConfig();
+  const total = config.locales.length;
+  const entry: LocaleEntry = { ...el, code: sentinelCode(config) };
   const before = readRepo("docs/i18n/README.md").split("\n");
-  const after = insertDocsIndexRow(before.join("\n"), el, total + 1).split("\n");
+  const after = insertDocsIndexRow(before.join("\n"), entry, total + 1).split("\n");
   assert.equal(after.length, before.length + 1);
 
   const sentence = before.findIndex((line) =>
     line.startsWith("Translations of documentation into")
   );
-  const es = before.findIndex((line) => line.includes("(`es`): [Docs Root]"));
-  assert.ok(sentence >= 0 && es > sentence);
+  const at = expectedRowIndex(indexRows(before), entry.code);
+  assert.ok(sentence >= 0 && at > sentence);
   assert.equal(
     after[sentence],
     before[sentence]
       .replace(`into ${total - 1} languages`, `into ${total} languages`)
       .replace(`supports ${total} locales`, `supports ${total + 1} locales`)
   );
-  assert.equal(after[es], EL_INDEX_ROW);
+  assert.equal(after[at], indexRowFor(entry));
   assert.deepEqual(
-    [...after.slice(0, sentence), ...after.slice(sentence + 1, es), ...after.slice(es + 1)],
+    [...after.slice(0, sentence), ...after.slice(sentence + 1, at), ...after.slice(at + 1)],
     [...before.slice(0, sentence), ...before.slice(sentence + 1)]
   );
 });
@@ -431,25 +490,34 @@ test("insertI18nGuideRow only touches the locale table, not other tables with ba
   );
 });
 
-test("insertI18nGuideRow on the real docs/guides/I18N.md aligns the new row with its neighbours", () => {
+test("insertI18nGuideRow on the real docs/guides/I18N.md adds one aligned row at the derived position", () => {
   const config = realConfig();
   const total = config.locales.length;
+  const entry: LocaleEntry = { ...el, code: sentinelCode(config) };
   const before = readRepo("docs/guides/I18N.md").split("\n");
-  const after = insertI18nGuideRow(before.join("\n"), el, total + 1, config.rtl).split("\n");
+  const after = insertI18nGuideRow(before.join("\n"), entry, total + 1, config.rtl).split("\n");
   assert.equal(after.length, before.length + 1);
 
   const headline = before.findIndex((line) => line.includes(`supports **${total} languages**`));
-  const es = before.findIndex((line) => line.startsWith("| `es` "));
-  assert.ok(headline >= 0 && es > headline);
+  const { header, rows } = guideRows(before);
+  const at = expectedRowIndex(rows, entry.code);
+  assert.ok(headline >= 0 && header > headline && at > header + 1);
   assert.equal(
     after[headline],
     before[headline].replace(`**${total} languages**`, `**${total + 1} languages**`)
   );
-  assert.match(after[es], /^\| `el` +\| Ελληνικά +\| No +\| `el` +\|$/);
-  assert.deepEqual(pipeColumns(after[es]), pipeColumns(before[es]));
-  assert.deepEqual(pipeColumns(after[es]), pipeColumns(before[es - 1]));
+  const rtl = config.rtl.includes(entry.code) ? "Yes" : "No";
+  assert.match(
+    after[at],
+    new RegExp(
+      `^\\| \`${entry.code}\` +\\| ${escapeRegExp(entry.native)} +\\| ${rtl} +\\| \`${entry.code}\` +\\|$`
+    )
+  );
+  // Aligned with the table: the same pipe columns as its (ASCII) header and separator lines.
+  assert.deepEqual(pipeColumns(after[at]), pipeColumns(before[header]));
+  assert.deepEqual(pipeColumns(after[at]), pipeColumns(before[header + 1]));
   assert.deepEqual(
-    [...after.slice(0, headline), ...after.slice(headline + 1, es), ...after.slice(es + 1)],
+    [...after.slice(0, headline), ...after.slice(headline + 1, at), ...after.slice(at + 1)],
     [...before.slice(0, headline), ...before.slice(headline + 1)]
   );
 });
