@@ -21,6 +21,7 @@
  *   npm run i18n:run -- --files=CLAUDE.md,docs/ARCHITECTURE.md
  *   npm run i18n:run -- --force
  *   npm run i18n:run:dry
+ *   npm run i18n:run -- --adopt   (rebuild .i18n-state.json from disk, no API calls)
  *
  * Backend (configured via env, never committed):
  *   OMNIROUTE_TRANSLATION_API_URL     e.g. https://cloud.omniroute.dev/v1
@@ -37,6 +38,7 @@ import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { normalizeLocaleText } from "./glossary-normalize.mjs";
 import { buildMirrorBar } from "./lib/language-bar.mjs";
+import { adoptState } from "./lib/translation-state.mjs";
 
 // ----- .env loader --------------------------------------------------------
 // Loads variables from a local `.env` (gitignored) into process.env without
@@ -158,11 +160,13 @@ function parseArgs(argv) {
     files: null,
     force: false,
     dryRun: false,
+    adopt: false,
     concurrency: null,
   };
   for (const arg of argv.slice(2)) {
     if (arg === "--force") opts.force = true;
     else if (arg === "--dry-run" || arg === "--dryrun") opts.dryRun = true;
+    else if (arg === "--adopt") opts.adopt = true;
     else if (arg.startsWith("--locale="))
       opts.locales = arg
         .slice(9)
@@ -191,6 +195,7 @@ function parseArgs(argv) {
           "  --files=<csv>        Relative paths to translate (default: all sources)",
           "  --force              Retranslate even when hashes match",
           "  --dry-run            Report what would happen but never call the API",
+          "  --adopt              Rebuild .i18n-state.json from the files on disk (no API calls)",
           "  --concurrency=<n>    Parallel API requests (default: env CONCURRENCY or 4)",
         ].join("\n")
       );
@@ -471,6 +476,20 @@ async function main() {
   logInfo(`sources: ${sources.length}`);
   logInfo(`locales: ${targetLocales.length} (${targetLocales.join(", ")})`);
   logInfo(`dry-run: ${opts.dryRun ? "yes" : "no"}, force: ${opts.force ? "yes" : "no"}`);
+
+  if (opts.adopt) {
+    const adopted = await adoptState({
+      root: ROOT,
+      sources,
+      locales: targetLocales,
+      targetPathFor: (rel, locale) => targetPathFor(rel, locale),
+    });
+    await saveState(adopted);
+    logInfo(
+      `adopted ${sources.length} sources × ${targetLocales.length} locales into ${path.relative(ROOT, STATE_PATH)}`
+    );
+    return;
+  }
 
   // Read backend env up front so dry-run can still print masked summary.
   let backend = null;
