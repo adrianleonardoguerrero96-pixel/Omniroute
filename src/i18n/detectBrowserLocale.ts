@@ -47,7 +47,9 @@ export function detectBrowserLocale(
       matchExactOrAlias(lookupCandidates(language), normalizedLocales, locales, aliasIndex) ??
       matchTraditionalChineseFold(language, normalizedLocales, locales) ??
       matchRegionalFallback(language.split("-")[0], normalizedLocales, locales);
-    if (match) return match;
+    // `!== null`, not truthiness: a configured (if pathological) empty-string
+    // locale must still win here, exactly as it did before the split.
+    if (match !== null) return match;
   }
 
   return null;

@@ -40,7 +40,7 @@ test("buildSourceBar lists every locale with its native name and a pipe separato
 });
 
 test("replaceLanguageBar swaps only the bar line and returns null when there is none", () => {
-  const md = "# T\n\n🌐 **Languages:** old\n\n---\nbody\n";
+  const md = "# T\n\n🌐 **Languages:** 🇺🇸 [English](./old.md)\n\n---\nbody\n";
   assert.equal(
     replaceLanguageBar(md, "🌐 **Languages:** new"),
     "# T\n\n🌐 **Languages:** new\n\n---\nbody\n"
@@ -63,11 +63,44 @@ test("replaceLanguageBar rewrites a translated bar label, not just the canonical
   assert.equal(replaceLanguageBar("# T\n\n🌐 [Website](https://x)\n", "x"), null);
 });
 
+// The detector guards a destructive rewrite, so it must not fire on every bold
+// `🌐` line: a bar is a colon-closed bold label AND at least one markdown link.
+test("isLanguageBar (via replaceLanguageBar) rejects 🌐 lines that are not language bars", () => {
+  const notBars = [
+    "🌐 **Website**",
+    "🌐 **Website** — https://x",
+    "🌐 **Note:** we support many languages",
+  ];
+  for (const line of notBars) {
+    assert.equal(
+      replaceLanguageBar(`# T\n\n${line}\n\n---\nbody\n`, "🌐 **Languages:** new"),
+      null,
+      line
+    );
+  }
+});
+
+test("isLanguageBar (via replaceLanguageBar) accepts a canonical bar and a translated-label one", () => {
+  const bars = [
+    "🌐 **Languages:** 🇺🇸 [English](./X.md)",
+    "🌐 **Main README translations:** 🇺🇸 [English](../README.md) | 🇸🇦 [العربية](../ar/README.md)",
+    // Fullwidth colon — the shape the CJK mirrors were written with.
+    "🌐 **語言：** 🇺🇸 [English](../../../README.md) · 🇸🇦 [ar](../ar/README.md)",
+  ];
+  for (const line of bars) {
+    assert.equal(
+      replaceLanguageBar(`# T\n\n${line}\n\n---\nbody\n`, "🌐 **Languages:** new"),
+      "# T\n\n🌐 **Languages:** new\n\n---\nbody\n",
+      line
+    );
+  }
+});
+
 test("replaceLanguageBar rewrites EVERY bar in the file, including a stale one left in the body", () => {
   const md = [
     "# T",
     "",
-    "🌐 **Languages:** header",
+    "🌐 **Languages:** 🇺🇸 [English](./header.md)",
     "",
     "---",
     "",
@@ -101,13 +134,14 @@ test("syncLanguageBars rewrites stale bars from config, lists them in dry-run an
     // English source with a stale bar.
     const enDoc = path.join(root, "docs", "guides", "X.md");
     mkdirSync(path.dirname(enDoc), { recursive: true });
-    const enBefore = "# X\n\n🌐 **Languages:** stale\n\n---\n\nbody\n";
+    const enBefore = "# X\n\n🌐 **Languages:** 🇺🇸 [English](./stale.md)\n\n---\n\nbody\n";
     writeFileSync(enDoc, enBefore, "utf8");
 
     // Mirror with a stale bar.
     const arDoc = path.join(root, "docs", "i18n", "ar", "docs", "guides", "X.md");
     mkdirSync(path.dirname(arDoc), { recursive: true });
-    const arBefore = "# X (العربية)\n\n🌐 **Languages:** stale\n\n---\n\ncorpo\n";
+    const arBefore =
+      "# X (العربية)\n\n🌐 **Languages:** 🇺🇸 [English](./stale.md)\n\n---\n\ncorpo\n";
     writeFileSync(arDoc, arBefore, "utf8");
 
     // Mirror without any bar — must never gain one.

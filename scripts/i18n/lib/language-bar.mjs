@@ -9,8 +9,9 @@
  *     🌐 **Languages:** 🇺🇸 [English](../../../README.md) · 🇸🇦 [ar](../ar/README.md) · …
  *   buildSourceBar(rel, config)          →  English source format:
  *     🌐 **Languages:** 🇺🇸 [English](./USER_GUIDE.md) | 🇧🇷 [Português (Brasil)](../i18n/pt-BR/docs/guides/USER_GUIDE.md) | …
- *   replaceLanguageBar(markdown, bar)    →  swaps EVERY bar line (any `🌐 **<label>:**`,
- *                                          translated labels included), `null` when there is none.
+ *   replaceLanguageBar(markdown, bar)    →  swaps EVERY language-bar line (any
+ *                                          `🌐 **<label>:** …[…](…)`, translated labels
+ *                                          included), `null` when there is none.
  */
 import path from "node:path";
 
@@ -43,15 +44,22 @@ export function buildSourceBar(relSource, config) {
 }
 
 /**
- * A language-bar line: `🌐 **<label>:**  …`. The label is NOT pinned to the
- * canonical English "Languages" — older mirrors carry the label the translation
- * backend produced (`🌐 **Idiomas:**`, `🌐 **語言:**`, `🌐 **Available in:**`, …)
- * and those bars are exactly the ones that still list retired locales. Matching
- * them by prefix (no regex, no backtracking on ~6 KB lines) is what lets
- * syncLanguageBars normalize every bar in the repo instead of only the ones
- * already in canonical form.
+ * A language-bar line has BOTH halves of the shape `🌐 **<label>:** …[…](…)`:
+ *
+ *   1. a bold label of 1–40 non-`*` characters closed by a colon (ASCII `:` or the
+ *      fullwidth `：` the CJK mirrors use), followed by a space, and
+ *   2. at least one markdown link — a bar without links is not a bar.
+ *
+ * The label is NOT pinned to the canonical English "Languages": older mirrors carry
+ * whatever the translation backend produced (`🌐 **Idiomas:**`, `🌐 **語言：**`,
+ * `🌐 **Available in:**`, …) and those bars are exactly the ones that still listed
+ * retired locales, so syncLanguageBars must normalize them too. Both halves are
+ * required so a future `🌐 **Website**` or `🌐 **Note:** we support many languages`
+ * line is never silently overwritten. The label class is bounded and anchored, so
+ * the regex cannot backtrack on the ~6 KB bar lines.
  */
-const isLanguageBar = (line) => line.startsWith("🌐 **") && line.indexOf("**", 4) !== -1;
+const LANGUAGE_BAR_LABEL = /^🌐 \*\*[^*]{1,40}[:：]\*\* /;
+const isLanguageBar = (line) => LANGUAGE_BAR_LABEL.test(line) && line.includes("](");
 
 export function replaceLanguageBar(markdown, bar) {
   const lines = markdown.split("\n");
