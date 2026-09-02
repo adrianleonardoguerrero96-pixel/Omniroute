@@ -5,6 +5,7 @@
 export const WEB_COOKIE_PROVIDERS = {
   "chatgpt-web-codex": {
     id: "chatgpt-web-codex",
+    serviceKinds: ["llm"],
     alias: "cgpt-codex",
     name: "ChatGPT Web (Codex)",
     icon: "terminal",
@@ -17,21 +18,9 @@ export const WEB_COOKIE_PROVIDERS = {
     riskNoticeVariant: "webCookie",
     toolCalling: "native",
   },
-  "chatgpt-web": {
-    id: "chatgpt-web",
-    alias: "cgpt-web",
-    name: "ChatGPT Web (Plus/Pro)",
-    icon: "auto_awesome",
-    color: "#10A37F",
-    textIcon: "CG",
-    website: "https://chatgpt.com",
-    authHint: "Paste your __Secure-next-auth.session-token cookie value from chatgpt.com",
-    subscriptionRisk: true,
-    riskNoticeVariant: "webCookie",
-    toolCalling: "emulated",
-  },
   "grok-web": {
     id: "grok-web",
+    serviceKinds: ["llm"],
     alias: "gw",
     name: "Grok Web (Subscription)",
     icon: "auto_awesome",
@@ -45,6 +34,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "gemini-web": {
     id: "gemini-web",
+    serviceKinds: ["llm"],
     alias: "gweb",
     name: "Gemini Web (Free)",
     icon: "auto_awesome",
@@ -52,7 +42,7 @@ export const WEB_COOKIE_PROVIDERS = {
     textIcon: "GWeb",
     website: "https://gemini.google.com",
     authHint:
-      "Paste your __Secure-1PSID cookie value from gemini.google.com. Optionally add __Secure-1PSIDTS separated by semicolon.",
+      "Paste the full cookie header, the __Secure-1PSID value, or the JSON export containing cookies from gemini.google.com. Include __Secure-1PSIDTS and __Secure-1PSIDCC when available.",
     subscriptionRisk: true,
     riskNoticeVariant: "webCookie",
     // #7286 Level 2: tools[] is prompt-emulated via webTools.ts (parseToolCallsFromText).
@@ -60,6 +50,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "perplexity-web": {
     id: "perplexity-web",
+    serviceKinds: ["llm"],
     alias: "pplx-web",
     name: "Perplexity Web (Pro/Max)",
     icon: "search",
@@ -73,6 +64,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "blackbox-web": {
     id: "blackbox-web",
+    serviceKinds: ["llm"],
     alias: "bb-web",
     name: "Blackbox Web (Subscription)",
     icon: "view_in_ar",
@@ -87,6 +79,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "muse-spark-web": {
     id: "muse-spark-web",
+    serviceKinds: ["llm"],
     alias: "ms-web",
     name: "Muse Spark Web (Meta AI)",
     icon: "auto_awesome",
@@ -103,6 +96,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "claude-web": {
     id: "claude-web",
+    serviceKinds: ["llm"],
     alias: "cw",
     name: "Claude Web",
     icon: "auto_awesome",
@@ -118,6 +112,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "deepseek-web": {
     id: "deepseek-web",
+    serviceKinds: ["llm"],
     alias: "ds-web",
     name: "DeepSeek Web",
     icon: "auto_awesome",
@@ -132,6 +127,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "copilot-web": {
     id: "copilot-web",
+    serviceKinds: ["llm"],
     alias: "copilot",
     name: "Microsoft Copilot Web",
     icon: "auto_awesome",
@@ -145,6 +141,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "copilot-m365-web": {
     id: "copilot-m365-web",
+    serviceKinds: ["llm"],
     alias: "m365copilot",
     name: "Microsoft 365 Copilot (BizChat)",
     icon: "business_center",
@@ -156,21 +153,9 @@ export const WEB_COOKIE_PROVIDERS = {
     subscriptionRisk: true,
     riskNoticeVariant: "webCookie",
   },
-  "microsoft-designer-web": {
-    id: "microsoft-designer-web",
-    alias: "msdesigner",
-    name: "Microsoft Designer (Image Generation)",
-    icon: "auto_awesome",
-    color: "#0078D4",
-    textIcon: "MSD",
-    website: "https://designer.microsoft.com",
-    authHint:
-      "Sign in at designer.microsoft.com, then open DevTools → Network, generate an image, and find the request to DallE.ashx?action=GetDallEImagesCogSci. Copy the value of its Authorization: Bearer header (the access_token — no 'Bearer ' prefix). The token is short-lived; this is an unofficial, reverse-engineered integration.",
-    subscriptionRisk: true,
-    riskNoticeVariant: "webCookie",
-  },
   "t3-web": {
     id: "t3-web",
+    serviceKinds: ["llm"],
     alias: "t3chat",
     name: "t3.chat (Pro/Free)",
     icon: "auto_awesome",
@@ -187,6 +172,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "inner-ai": {
     id: "inner-ai",
+    serviceKinds: ["llm"],
     alias: "in-ai",
     name: "Inner.ai (Subscription)",
     icon: "auto_awesome",
@@ -201,6 +187,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "adapta-web": {
     id: "adapta-web",
+    serviceKinds: ["llm"],
     alias: "adp-web",
     name: "Adapta.org (Adapta One Web)",
     icon: "auto_awesome",
@@ -217,6 +204,7 @@ export const WEB_COOKIE_PROVIDERS = {
     // Wire id stays `lmarena` for DB/combo/model-prefix back-compat.
     // Product rebranded LMArena → Arena (arena.ai) in Jan 2026.
     id: "lmarena",
+    serviceKinds: ["llm"],
     alias: "lma",
     name: "Arena (Free)",
     icon: "auto_awesome",
@@ -232,6 +220,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "yuanbao-web": {
     id: "yuanbao-web",
+    serviceKinds: ["llm"],
     alias: "ybw",
     name: "Tencent Yuanbao (Free)",
     icon: "auto_awesome",
@@ -247,6 +236,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "tencent-aistudio-web": {
     id: "tencent-aistudio-web",
+    serviceKinds: ["llm"],
     alias: "tasw",
     name: "Tencent AI Studio (Free)",
     icon: "auto_awesome",
@@ -262,6 +252,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   huggingchat: {
     id: "huggingchat",
+    serviceKinds: ["llm"],
     // huggingchat is addressed by its own id as alias (stable routing; the
     // historical "hc" alias collided with another provider and was retired).
     alias: "huggingchat",
@@ -278,6 +269,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "poe-web": {
     id: "poe-web",
+    serviceKinds: ["llm"],
     alias: "poe",
     name: "Poe Web (Subscription)",
     icon: "auto_awesome",
@@ -290,6 +282,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "venice-web": {
     id: "venice-web",
+    serviceKinds: ["llm"],
     alias: "ven",
     name: "Venice Web (Privacy)",
     icon: "auto_awesome",
@@ -301,11 +294,12 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "v0-vercel-web": {
     id: "v0-vercel-web",
+    serviceKinds: ["llm"],
     // #6343: was "v0", colliding with the unrelated "v0-vercel" API-key provider's
     // alias. Aliases resolve 1:1 to a provider id, so the dashboard's model-string
     // routing always picked v0-vercel, silently hiding this provider's own
     // credentials. Follows the established secondary-web-variant convention (see
-    // kimi-web / qwen-web / huggingchat in tests/unit/provider-alias-uniqueness.test.ts):
+    // kimi-web / huggingchat in tests/unit/provider-alias-uniqueness.test.ts):
     // the web/secondary variant uses its own id as alias instead of a short prefix.
     alias: "v0-vercel-web",
     name: "v0 Vercel Web (Code Gen)",
@@ -318,6 +312,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "kimi-web": {
     id: "kimi-web",
+    serviceKinds: ["llm"],
     // Legacy "kimi" API provider keeps the short alias; web variant uses its own id.
     alias: "kimi-web",
     name: "Kimi Web",
@@ -332,6 +327,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "doubao-web": {
     id: "doubao-web",
+    serviceKinds: ["llm"],
     alias: "db",
     name: "Dola Web (ByteDance)",
     icon: "auto_awesome",
@@ -343,41 +339,9 @@ export const WEB_COOKIE_PROVIDERS = {
     subscriptionRisk: true,
     riskNoticeVariant: "webCookie",
   },
-  "hailuo-web": {
-    id: "hailuo-web",
-    // Distinct alias: avoid colliding with the existing API-key "minimax"/
-    // "minimax-cn" providers (src/shared/constants/providers/apikey/regional.ts).
-    alias: "hailuo-web",
-    name: "Hailuo Web (MiniMax)",
-    icon: "auto_awesome",
-    color: "#5B21B6",
-    textIcon: "HL",
-    website: "https://chat.minimax.io",
-    authHint:
-      "Open hailuo.ai, log in, then open DevTools → Application → Local Storage → copy the " +
-      '"_token" value. device_id/uuid fingerprint fields are derived automatically; if ' +
-      "requests fail, re-capture _token (sessions can expire).",
-    subscriptionRisk: true,
-    riskNoticeVariant: "webCookie",
-  },
-  "qwen-web": {
-    id: "qwen-web",
-    // The web variant uses its own id; the retired `qw` alias is not reassigned.
-    alias: "qwen-web",
-    name: "Qwen Web (Free)",
-    icon: "auto_awesome",
-    color: "#10B981",
-    textIcon: "QW",
-    website: "https://chat.qwen.ai",
-    hasFree: true,
-    freeNote: "Free — Qwen models via chat.qwen.ai with login token. No subscription required.",
-    authHint:
-      "Open chat.qwen.ai, log in, then open DevTools → Application → Local Storage → " +
-      'copy the "token" value (or use tongyi_sso_ticket cookie as Bearer token).',
-    toolCalling: "emulated",
-  },
   "gemini-business": {
     id: "gemini-business",
+    serviceKinds: ["llm"],
     alias: "gembiz",
     name: "Gemini Business (Enterprise)",
     icon: "business_center",
@@ -392,6 +356,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "zenmux-free": {
     id: "zenmux-free",
+    serviceKinds: ["llm"],
     alias: "zmf",
     name: "ZenMux Free (Web)",
     icon: "bolt",
@@ -406,6 +371,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "tinycms-web": {
     id: "tinycms-web",
+    serviceKinds: ["llm"],
     alias: "tcw",
     name: "TinyCMS Web (Free/Sub)",
     icon: "layers",
@@ -420,6 +386,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "zai-web": {
     id: "zai-web",
+    serviceKinds: ["llm"],
     alias: "zw",
     name: "Z.ai Web",
     icon: "auto_awesome",
@@ -436,6 +403,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   promptql: {
     id: "promptql",
+    serviceKinds: ["llm"],
     alias: "pql",
     name: "PromptQL (Unofficial/Experimental)",
     icon: "auto_awesome",
@@ -449,6 +417,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "notion-web": {
     id: "notion-web",
+    serviceKinds: ["llm"],
     alias: "nw",
     name: "Notion AI Web (Unofficial/Experimental)",
     icon: "auto_awesome",
@@ -468,6 +437,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "adobe-firefly": {
     id: "adobe-firefly",
+    serviceKinds: [],
     alias: "firefly",
     name: "Adobe Firefly (Image/Video)",
     icon: "auto_awesome",
@@ -481,6 +451,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   hyperagent: {
     id: "hyperagent",
+    serviceKinds: ["llm"],
     alias: "ha",
     name: "HyperAgent (Unofficial/Experimental)",
     icon: "auto_awesome",
@@ -494,6 +465,7 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   "conol-web": {
     id: "conol-web",
+    serviceKinds: ["llm"],
     alias: "cnl",
     name: "Conol (Unofficial/Experimental)",
     icon: "auto_awesome",
@@ -505,8 +477,30 @@ export const WEB_COOKIE_PROVIDERS = {
     authHint:
       "Use browser sign-in, or paste the full Cookie header from conol.ai. The __Secure-better-auth.session_token cookie is required.",
   },
+  maxai: {
+    id: "maxai",
+    serviceKinds: ["llm"],
+    alias: "mx",
+    name: "MaxAI",
+    icon: "auto_awesome",
+    color: "#6D28D9",
+    textIcon: "MX",
+    website: "https://www.maxai.co",
+    // No subscriptionRisk / riskNoticeVariant / notice: MaxAI is TOKEN-authenticated
+    // (a bearer access token + a long-lived refresh token that OmniRoute refreshes
+    // browserlessly), NOT a fragile browser-cookie session, so the "webCookie"
+    // caveat ("may invalidate at any time, log in again, not for unattended use")
+    // and the "oauth" caveat ("official session not authorized for proxy use") are
+    // both inaccurate — MaxAI is a purpose-built aggregator whose token IS meant for
+    // API use. Treated like codex-app-server: no risk banner and no notice; the
+    // authHint carries the only guidance a connecting operator needs.
+    toolCalling: "emulated",
+    authHint:
+      "Sign in once (email code or browser) to mint a MaxAI access token. OmniRoute signs each request, routes it through residential egress, and refreshes the token browserlessly, so a connection stays valid for about a year without re-login.",
+  },
   uc: {
     id: "uc",
+    serviceKinds: ["llm"],
     alias: "ucn",
     name: "UC (uncensored.com)",
     icon: "auto_awesome",

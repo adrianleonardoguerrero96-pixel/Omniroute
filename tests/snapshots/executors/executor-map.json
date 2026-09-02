@@ -1,5 +1,10 @@
 {
   "entries": {
+    "1min": {
+      "className": "OneMinAiExecutor",
+      "configSource": "oneminai",
+      "provider": "oneminai"
+    },
     "9router": {
       "className": "NineRouterExecutor",
       "configSource": "<custom-config>",
@@ -84,16 +89,6 @@
       "className": "ChatGptWebCodexExecutor",
       "configSource": "<custom-config>",
       "provider": "chatgpt-web-codex"
-    },
-    "cgpt-web": {
-      "className": "ChatGptWebExecutor",
-      "configSource": "<custom-config>",
-      "provider": "chatgpt-web"
-    },
-    "chatgpt-web": {
-      "className": "ChatGptWebExecutor",
-      "configSource": "<custom-config>",
-      "provider": "chatgpt-web"
     },
     "chatgpt-web-codex": {
       "className": "ChatGptWebCodexExecutor",
@@ -280,16 +275,6 @@
       "configSource": "freebuff",
       "provider": "freebuff"
     },
-    "felo": {
-      "className": "FeloWebExecutor",
-      "configSource": "<custom-config>",
-      "provider": "felo-web"
-    },
-    "felo-web": {
-      "className": "FeloWebExecutor",
-      "configSource": "<custom-config>",
-      "provider": "felo-web"
-    },
     "firefly": {
       "className": "AdobeFireflyExecutor",
       "configSource": "<custom-config>",
@@ -375,11 +360,6 @@
       "configSource": "<custom-config>",
       "provider": "hyperagent"
     },
-    "hailuo-web": {
-      "className": "HailuoWebExecutor",
-      "configSource": "<custom-config>",
-      "provider": "hailuo-web"
-    },
     "hc": {
       "className": "HuggingChatExecutor",
       "configSource": "<custom-config>",
@@ -440,10 +420,10 @@
       "configSource": "<custom-config>",
       "provider": "lmarena"
     },
-    "microsoft-designer-web": {
-      "className": "MicrosoftDesignerWebExecutor",
-      "configSource": "<custom-config>",
-      "provider": "microsoft-designer-web"
+    "maxai": {
+      "className": "MaxAiExecutor",
+      "configSource": "maxai",
+      "provider": "maxai"
     },
     "moonshot": {
       "className": "MoonshotExecutor",
@@ -454,11 +434,6 @@
       "className": "MuseSparkWebExecutor",
       "configSource": "<custom-config>",
       "provider": "muse-spark-web"
-    },
-    "msdesigner": {
-      "className": "MicrosoftDesignerWebExecutor",
-      "configSource": "<custom-config>",
-      "provider": "microsoft-designer-web"
     },
     "muse-spark-web": {
       "className": "MuseSparkWebExecutor",
@@ -484,6 +459,11 @@
       "className": "NotionWebExecutor",
       "configSource": "<custom-config>",
       "provider": "notion-web"
+    },
+    "oneminai": {
+      "className": "OneMinAiExecutor",
+      "configSource": "oneminai",
+      "provider": "oneminai"
     },
     "opencode": {
       "className": "OpencodeExecutor",
@@ -545,26 +525,6 @@
       "configSource": "qoder",
       "provider": "qoder"
     },
-    "qw": {
-      "className": "QwenWebExecutor",
-      "configSource": "<custom-config>",
-      "provider": "qwen-web"
-    },
-    "qwen-web": {
-      "className": "QwenWebExecutor",
-      "configSource": "<custom-config>",
-      "provider": "qwen-web"
-    },
-    "raycast": {
-      "className": "RaycastExecutor",
-      "configSource": "raycast",
-      "provider": "raycast"
-    },
-    "rc": {
-      "className": "RaycastExecutor",
-      "configSource": "raycast",
-      "provider": "raycast"
-    },
     "t3-web": {
       "className": "T3ChatWebExecutor",
       "configSource": "<custom-config>",
@@ -609,6 +569,11 @@
       "className": "TraeExecutor",
       "configSource": "trae",
       "provider": "trae"
+    },
+    "uc": {
+      "className": "UcExecutor",
+      "configSource": "uc",
+      "provider": "uc"
     },
     "v0": {
       "className": "V0VercelWebExecutor",
@@ -711,6 +676,6 @@
       "provider": "zai-web"
     }
   },
-  "keyCount": 142,
+  "keyCount": 135,
   "sharedInstances": []
 }

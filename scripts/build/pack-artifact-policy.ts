@@ -140,7 +140,7 @@ export const PACK_ARTIFACT_ROOT_ALLOWED_EXACT_PATHS: string[] = [
   "scripts/build/postinstallSupport.mjs",
   "scripts/build/colocateOptionals.mjs",
   // #7802: imported by scripts/build/postinstall.mjs to repair tls-client-node's
-  // native binary (chatgpt-web/claude-web/grok-web/lmarena/perplexity-web transport).
+  // native binary (claude-web/grok-web/lmarena/perplexity-web transport).
   "scripts/build/fixTlsClientNodeBinary.mjs",
   // #8859: imported by scripts/build/postinstall.mjs to repair playwright-core's
   // browser resolution on Termux/Android (no glibc, no bundled browsers).
@@ -207,6 +207,8 @@ export const PACK_ARTIFACT_REQUIRED_PATHS: string[] = [
   "bin/cli/utils/parseEnvValue.mjs",
   "bin/cli/utils/storageKeyProvision.mjs",
   "bin/cli/utils/versionFastPath.mjs",
+  // #11437 import — `describeVolatileEnvWarning`, called on every CLI boot.
+  "bin/cli/utils/volatileEnvPath.mjs",
   "bin/mcp-server.mjs",
   // #9281: stdout/stderr console guard preloaded via `node --import` by
   // bin/mcp-server.mjs before the MCP entry's module graph evaluates — without it
@@ -214,6 +216,12 @@ export const PACK_ARTIFACT_REQUIRED_PATHS: string[] = [
   "bin/mcpStdioConsoleGuard.mjs",
   "bin/nodeRuntimeSupport.mjs",
   "bin/omniroute.mjs",
+  // #11437: bin/omniroute.mjs imports ./cli/utils/volatileEnvPath.mjs at startup
+  // (describeVolatileEnvWarning — flags a .env living inside the installed package).
+  // bin/cli/ is only an allowlist PREFIX, so its absence would never fail the
+  // unexpected-paths check; list it REQUIRED so a regression is loud (#7065 class,
+  // enforced by tests/unit/pack-artifact-entrypoint-closures.test.ts).
+  "bin/cli/utils/volatileEnvPath.mjs",
   // #7808: aliasResolver + its hook file. bin/omniroute.mjs imports
   // bin/aliasResolver.mjs at startup, which in turn registers
   // bin/aliasResolverHook.mjs as the ESM loader. Both must ship in the tarball
