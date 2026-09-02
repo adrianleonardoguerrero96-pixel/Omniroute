@@ -29,8 +29,8 @@ function render(props: Partial<React.ComponentProps<typeof AllowedCombosSection>
   document.body.appendChild(el);
   const root = createRoot(el);
   const handlers = {
-    onAllowAllCombosChange: vi.fn(),
-    onSelectedCombosChange: vi.fn(),
+    onAllowAll: vi.fn(),
+    onRestrict: vi.fn(),
     onToggleCombo: vi.fn(),
   };
   act(() => {
@@ -94,36 +94,34 @@ describe("AllowedCombosSection keeps unrenderable allowedCombos entries (#12267)
     expect(buttonByText(el, "cb-gpt-5.6-sol2 models").className).toContain("bg-primary/10");
   });
 
-  it("keeps the rule-layer entries when the All toggle clears the picker selection", () => {
-    const { el, onAllowAllCombosChange, onSelectedCombosChange } = render();
+  it("hands the rule-layer entries to onAllowAll when the All toggle clears the picker", () => {
+    const { el, onAllowAll, onRestrict } = render();
 
     click(buttonByText(el, "all"));
 
-    expect(onAllowAllCombosChange).toHaveBeenCalledWith(true);
-    expect(onSelectedCombosChange).toHaveBeenCalledTimes(1);
-    expect(onSelectedCombosChange).toHaveBeenCalledWith(["rt-gpt-5.6-sol", "rt-claude-opus-5"]);
+    expect(onAllowAll).toHaveBeenCalledTimes(1);
+    expect(onAllowAll).toHaveBeenCalledWith(["rt-gpt-5.6-sol", "rt-claude-opus-5"]);
+    expect(onRestrict).not.toHaveBeenCalled();
   });
 
-  it("clears the whole selection on All when every entry is renderable", () => {
-    const { el, onSelectedCombosChange } = render({ selectedCombos: ["cb-gpt-5.6-sol"] });
+  it("hands an empty selection to onAllowAll when every entry is renderable", () => {
+    const { el, onAllowAll } = render({ selectedCombos: ["cb-gpt-5.6-sol"] });
 
     click(buttonByText(el, "all"));
 
-    expect(onSelectedCombosChange).toHaveBeenCalledWith([]);
+    expect(onAllowAll).toHaveBeenCalledWith([]);
   });
 
   it("switches back to Restrict without touching the selection", () => {
-    const { el, onAllowAllCombosChange, onSelectedCombosChange } = render({
-      allowAllCombos: true,
-    });
+    const { el, onAllowAll, onRestrict } = render({ allowAllCombos: true });
 
     expect(preservedChips(el)).toEqual([]);
     expect(el.textContent).toContain("allCombosAllowed");
 
     click(buttonByText(el, "restrict"));
 
-    expect(onAllowAllCombosChange).toHaveBeenCalledWith(false);
-    expect(onSelectedCombosChange).not.toHaveBeenCalled();
+    expect(onRestrict).toHaveBeenCalledTimes(1);
+    expect(onAllowAll).not.toHaveBeenCalled();
   });
 
   it("delegates rendered combo toggles to onToggleCombo", () => {

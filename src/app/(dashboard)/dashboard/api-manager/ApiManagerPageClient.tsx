@@ -3023,8 +3023,11 @@ const PermissionsModal = memo(function PermissionsModal({
           allCombos={allCombos}
           allowAllCombos={allowAllCombos}
           selectedCombos={selectedCombos}
-          onAllowAllCombosChange={setAllowAllCombos}
-          onSelectedCombosChange={setSelectedCombos}
+          onAllowAll={(preservedRules) => {
+            setAllowAllCombos(true);
+            setSelectedCombos(preservedRules);
+          }}
+          onRestrict={() => setAllowAllCombos(false)}
           onToggleCombo={handleToggleCombo}
         />
 

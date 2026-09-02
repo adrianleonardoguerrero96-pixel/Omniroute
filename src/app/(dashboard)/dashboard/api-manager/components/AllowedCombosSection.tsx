@@ -122,20 +122,25 @@ function PreservedComboRules({ rules }: { rules: string[] }) {
  * round-trips them, are shown read-only so the header count and the list agree,
  * and survive the "All" toggle — so switching back to Restrict cannot turn a
  * working key into deny-all (#12267).
+ *
+ * The modal owns the All/Restrict state: `onAllowAll` receives the entries this
+ * picker cannot render (empty when every selected entry is a loaded combo, so the
+ * "All" selection serialises exactly as before), and `onRestrict` leaves the
+ * selection untouched.
  */
 export function AllowedCombosSection({
   allCombos,
   allowAllCombos,
   selectedCombos,
-  onAllowAllCombosChange,
-  onSelectedCombosChange,
+  onAllowAll,
+  onRestrict,
   onToggleCombo,
 }: {
   allCombos: AllowedComboOption[];
   allowAllCombos: boolean;
   selectedCombos: string[];
-  onAllowAllCombosChange: (allowAll: boolean) => void;
-  onSelectedCombosChange: (next: string[]) => void;
+  onAllowAll: (preservedRules: string[]) => void;
+  onRestrict: () => void;
   onToggleCombo: (comboName: string) => void;
 }) {
   const t = useTranslations("apiManager");
@@ -157,11 +162,8 @@ export function AllowedCombosSection({
         <p className="text-sm font-medium text-text-main">{t("allowedCombos")}</p>
         <ComboAccessModeToggle
           allowAllCombos={allowAllCombos}
-          onAllowAll={() => {
-            onAllowAllCombosChange(true);
-            onSelectedCombosChange(preservedRules);
-          }}
-          onRestrict={() => onAllowAllCombosChange(false)}
+          onAllowAll={() => onAllowAll(preservedRules)}
+          onRestrict={onRestrict}
         />
       </div>
       <p className="text-xs text-text-muted">
