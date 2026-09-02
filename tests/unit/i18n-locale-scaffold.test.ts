@@ -211,15 +211,15 @@ test("flagFileFor rejects anything that is not a regional-indicator pair unless 
   assert.equal(flagFileFor({ ...el, flag: "🏳️", flagFile: "custom.svg" }), "custom.svg");
 });
 
-test("flagFileFor reproduces the README flag file of every configured locale (legacy `in`/`sw` need flagFile)", () => {
+test("flagFileFor reproduces the README flag file of every configured locale (legacy `sw` needs flagFile)", () => {
   const readme = readRepo("README.md");
-  // Pre-existing README drift, exactly what the flagFile override is for: the legacy Hindi
-  // code `in` keeps in.svg although its emoji is 🇮🇩, and Kiswahili uses tz.svg for 🇰🇪.
-  const overrides: Record<string, string> = { in: "in.svg", sw: "tz.svg" };
+  // Pre-existing README drift, exactly what the flagFile override is for: Kiswahili
+  // uses tz.svg although its emoji is 🇰🇪.
+  const overrides: Record<string, string> = { sw: "tz.svg" };
   for (const entry of realConfig().locales) {
     const href = entry.code === "en" ? "README.md" : `docs/i18n/${entry.code}/README.md`;
     const pattern = new RegExp(
-      `<a href="${href.replace(/\./g, "\\.")}"><img src="docs/assets/flags/([a-z]+\\.svg)"`
+      `<a href="${escapeRegExp(href)}"><img src="docs/assets/flags/([a-z]+\\.svg)"`
     );
     const match = readme.match(pattern);
     assert.ok(match, `README has no flag link for ${entry.code}`);
@@ -510,7 +510,7 @@ test("insertI18nGuideRow on the real docs/guides/I18N.md adds one aligned row at
   assert.match(
     after[at],
     new RegExp(
-      `^\\| \`${entry.code}\` +\\| ${escapeRegExp(entry.native)} +\\| ${rtl} +\\| \`${entry.code}\` +\\|$`
+      `^\\| \`${escapeRegExp(entry.code)}\` +\\| ${escapeRegExp(entry.native)} +\\| ${rtl} +\\| \`${escapeRegExp(entry.code)}\` +\\|$`
     )
   );
   // Aligned with the table: the same pipe columns as its (ASCII) header and separator lines.

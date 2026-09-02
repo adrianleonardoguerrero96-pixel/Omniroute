@@ -80,6 +80,10 @@ const MIRROR_STUBS = [
 ];
 const PLACEHOLDER_PREFIX = "__MISSING__:";
 const LOCALE_CODE = /^[a-z]{2,3}(-[A-Z][A-Za-z]{1,3})?$/;
+// docs/guides/I18N.md locale table row, capturing the code between backticks.
+// Static on purpose: the code is compared as a string, so no CLI value ever
+// reaches a RegExp constructor.
+const I18N_GUIDE_ROW_RE = /^\| `([^`]+)` +\|/;
 const ALIAS = /^[a-z]{2,3}(-[a-z0-9]{2,8})*$/;
 const FORBIDDEN_KEYS = new Set(["__proto__", "prototype", "constructor"]);
 const DEFAULT_BATCH_SIZE = 40;
@@ -585,7 +589,9 @@ async function phaseCli(ctx) {
 
 async function phaseReadme(ctx) {
   const { entry, total, code } = ctx;
-  const guideRow = new RegExp(`^\\| \`${code}\` +\\|`, "m");
+  // Static pattern + string comparison: never build a RegExp from the CLI --code value.
+  const hasGuideRow = (text) =>
+    text.split("\n").some((line) => I18N_GUIDE_ROW_RE.exec(line)?.[1] === code);
   const edits = [
     [
       "README.md",
@@ -600,7 +606,7 @@ async function phaseReadme(ctx) {
     ],
     [
       "docs/guides/I18N.md",
-      (t) => (guideRow.test(t) ? t : insertI18nGuideRow(t, entry, total, ctx.config.rtl)),
+      (t) => (hasGuideRow(t) ? t : insertI18nGuideRow(t, entry, total, ctx.config.rtl)),
     ],
     ["llm.txt", (t) => bumpCounts(t, total)],
     [
