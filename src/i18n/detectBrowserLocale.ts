@@ -21,6 +21,10 @@
  *     → `zh-CN`.
  *  4. No match → `null` (caller should keep the existing default).
  *
+ * The three steps live in `matchExactOrAlias` / `matchTraditionalChineseFold` /
+ * `matchRegionalFallback` below; each returns the supported locale in its
+ * original casing, or `null` when that step does not decide.
+ *
  * Kept dependency-free (no DOM/`navigator` access) so it is trivially unit
  * testable and reusable from both client components and future server code.
  */
@@ -34,53 +38,86 @@ export function detectBrowserLocale(
   }
 
   const normalizedLocales = locales.map((locale) => locale.toLowerCase());
+  const aliasIndex = buildAliasIndex(locales, normalizedLocales, aliases);
 
-  // alias tag (lower-case) → supported locale, only for locales actually offered.
+  for (const rawLanguage of languages) {
+    if (!rawLanguage) continue;
+    const language = rawLanguage.toLowerCase();
+    const match =
+      matchExactOrAlias(lookupCandidates(language), normalizedLocales, locales, aliasIndex) ??
+      matchTraditionalChineseFold(language, normalizedLocales, locales) ??
+      matchRegionalFallback(language.split("-")[0], normalizedLocales, locales);
+    if (match) return match;
+  }
+
+  return null;
+}
+
+/**
+ * alias tag (lower-case) → supported locale, only for locales actually offered:
+ * an alias whose target is not in `locales` is dropped, so it can never win a
+ * match. Values keep the original casing of `locales`.
+ */
+function buildAliasIndex(
+  locales: readonly string[],
+  normalizedLocales: readonly string[],
+  aliases: Readonly<Record<string, readonly string[]>>
+): Map<string, string> {
   const aliasIndex = new Map<string, string>();
   for (const [code, tags] of Object.entries(aliases)) {
     const index = normalizedLocales.indexOf(code.toLowerCase());
     if (index === -1) continue;
     for (const tag of tags) aliasIndex.set(tag.toLowerCase(), locales[index]);
   }
+  return aliasIndex;
+}
 
-  for (const rawLanguage of languages) {
-    if (!rawLanguage) continue;
-    const language = rawLanguage.toLowerCase();
-    const prefix = language.split("-")[0];
-
-    // 1. RFC 4647 lookup: full tag → … → base language. At every level an
-    //    exact supported locale wins, then a declared alias.
-    for (const candidate of lookupCandidates(language)) {
-      const exactIndex = normalizedLocales.indexOf(candidate);
-      if (exactIndex !== -1) {
-        return locales[exactIndex];
-      }
-      const aliased = aliasIndex.get(candidate);
-      if (aliased) {
-        return aliased;
-      }
-    }
-
-    // 2. zh-HK / zh-MO fold to zh-TW when zh-TW is supported (kept for callers
-    //    that do not pass aliases).
-    if (language === "zh-hk" || language === "zh-mo") {
-      const zhTwIndex = normalizedLocales.indexOf("zh-tw");
-      if (zhTwIndex !== -1) {
-        return locales[zhTwIndex];
-      }
-    }
-
-    // 3. Base language → first supported regional locale of that language
-    //    ("uk" -> "uk-UA", "zh" -> "zh-CN"). Config order decides the tie.
-    const regionalIndex = normalizedLocales.findIndex(
-      (locale) => locale.includes("-") && locale.split("-")[0] === prefix
-    );
-    if (regionalIndex !== -1) {
-      return locales[regionalIndex];
-    }
+/**
+ * Step 1 — RFC 4647 lookup: full tag → … → base language. At every level an
+ * exact supported locale wins, then a declared alias.
+ */
+function matchExactOrAlias(
+  candidates: readonly string[],
+  normalizedLocales: readonly string[],
+  locales: readonly string[],
+  aliasIndex: ReadonlyMap<string, string>
+): string | null {
+  for (const candidate of candidates) {
+    const exactIndex = normalizedLocales.indexOf(candidate);
+    if (exactIndex !== -1) return locales[exactIndex];
+    const aliased = aliasIndex.get(candidate);
+    if (aliased) return aliased;
   }
-
   return null;
+}
+
+/**
+ * Step 2 — zh-HK / zh-MO fold to zh-TW when zh-TW is supported (kept for
+ * callers that do not pass aliases).
+ */
+function matchTraditionalChineseFold(
+  language: string,
+  normalizedLocales: readonly string[],
+  locales: readonly string[]
+): string | null {
+  if (language !== "zh-hk" && language !== "zh-mo") return null;
+  const zhTwIndex = normalizedLocales.indexOf("zh-tw");
+  return zhTwIndex === -1 ? null : locales[zhTwIndex];
+}
+
+/**
+ * Step 3 — base language → first supported regional locale of that language
+ * ("uk" -> "uk-UA", "zh" -> "zh-CN"). Config order decides the tie.
+ */
+function matchRegionalFallback(
+  prefix: string,
+  normalizedLocales: readonly string[],
+  locales: readonly string[]
+): string | null {
+  const regionalIndex = normalizedLocales.findIndex(
+    (locale) => locale.includes("-") && locale.split("-")[0] === prefix
+  );
+  return regionalIndex === -1 ? null : locales[regionalIndex];
 }
 
 /**
