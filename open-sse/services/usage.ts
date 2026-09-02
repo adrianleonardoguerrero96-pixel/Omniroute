@@ -49,6 +49,7 @@ import { getKiroUsage, buildKiroUsageResult, discoverKiroProfileArn } from "./us
 export { buildKiroUsageResult, discoverKiroProfileArn } from "./usage/kiro.ts";
 import { getAdobeFireflyUsage } from "./usage/adobeFirefly.ts";
 import { getOpenrouterUsage } from "./usage/openrouter.ts";
+import { getLyceumUsage } from "./usage/lyceum.ts";
 import { getOllamaCloudUsage } from "./opencodeOllamaUsage.ts";
 import { getCodeBuddyCnUsage } from "./usage/codebuddy-cn.ts";
 import { getPromptQlUsage } from "./usage/promptql.ts";
@@ -170,6 +171,8 @@ export async function getUsageForProvider(
       return await getDeepseekUsage(id || "", apiKey || "");
     case "openrouter":
       return await getOpenrouterUsage(id || "", apiKey || "", providerSpecificData);
+    case "lyceum":
+      return await getLyceumUsage(id || "", apiKey || "");
     case "opencode":
     case "opencode-zen":
       return await getOpencodeUsage(id || "", apiKey || "");

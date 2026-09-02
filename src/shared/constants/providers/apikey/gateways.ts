@@ -15,7 +15,8 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     color: "#6366F1",
     textIcon: "1M",
     website: "https://1min.ai",
-    authHint: "Create an API key at https://docs.1min.ai/docs/api/create-api-key, then paste it here.",
+    authHint:
+      "Create an API key at https://docs.1min.ai/docs/api/create-api-key, then paste it here.",
     apiHint:
       "1min.ai uses a proprietary chat API (single prompt string + SSE) instead of OpenAI chat/completions. OmniRoute flattens OpenAI messages into a labeled prompt and translates the SSE stream.",
     passthroughModels: true,
@@ -47,7 +48,8 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     website: "https://freebuff.com",
     hasFree: true,
     serviceKinds: ["llm"],
-    authHint: "Enter Freebuff / Codebuff Auth Token (obtained via CLI login or automated harvester).",
+    authHint:
+      "Enter Freebuff / Codebuff Auth Token (obtained via CLI login or automated harvester).",
     freeNote: "Free Codebuff / Freebuff AI models.",
     apiHint: "Token is authenticated against Codebuff upstream session pool.",
     passthroughModels: true,
@@ -231,6 +233,21 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
       "Hosted Free plan: free-priced models are limited to 5 requests per 10 minutes when the account has no credits.",
     apiHint:
       "Create an LLM Gateway API key, then use https://api.llmgateway.io/v1 as the OpenAI-compatible base URL.",
+  },
+  lyceum: {
+    id: "lyceum",
+    serviceKinds: ["llm"],
+    alias: "lyceum",
+    name: "Lyceum",
+    icon: "router",
+    color: "#4F46E5",
+    textIcon: "LY",
+    passthroughModels: true,
+    website: "https://lyceum.technology",
+    hasFree: true,
+    freeNote: "Includes monthly free credits toward serverless inference usage.",
+    apiHint:
+      "Create a Lyceum API key (lk_…), then use https://api.lyceum.technology/openai/v1 as the OpenAI-compatible base URL.",
   },
   "llm-kiwi": {
     id: "llm-kiwi",
