@@ -289,15 +289,24 @@ function useTwoClickConfirm(onConfirm: () => void) {
   return { confirming, onClick };
 }
 
-/** Repeat button: two-click confirm, disabled + tooltip when the input isn't recoverable. */
+/**
+ * Repeat button: two-click confirm, disabled + tooltip when the input isn't recoverable.
+ * `canRepeat` already folds in `!busy` (so the button is disabled while a repeat POST is
+ * in flight), but the tooltip must not claim the input is unrecoverable in that case — a
+ * successful repeat is legitimately busy, not unavailable. `busy` is threaded through
+ * separately so the title can tell the two apart: silent (no title) while busy, the real
+ * `repeatUnavailable` message only when the input truly can't be recovered.
+ */
 function RepeatButton({
   canRepeat,
+  busy,
   repeat,
   onActionDone,
   onToast,
   t,
 }: {
   canRepeat: boolean;
+  busy: boolean;
   repeat: () => Promise<boolean>;
   onActionDone: () => void;
   onToast: (text: string) => void;
@@ -316,7 +325,7 @@ function RepeatButton({
       className="text-xs rounded border border-border px-2 py-1 disabled:opacity-50"
       onClick={onClick}
       disabled={!canRepeat}
-      title={canRepeat ? undefined : t("repeatUnavailable")}
+      title={canRepeat || busy ? undefined : t("repeatUnavailable")}
     >
       {confirming ? t("repeatConfirm") : t("actionRepeat")}
     </button>
@@ -380,6 +389,7 @@ function DrawerActions({
         {showRepeat && (
           <RepeatButton
             canRepeat={canRepeat}
+            busy={busy}
             repeat={repeat}
             onActionDone={onActionDone}
             onToast={onToast}

@@ -486,6 +486,57 @@ describe("repeatReqFor", () => {
     expect(repeatReqFor(node as never, { source: {}, options: {}, activities: [] })).toBeNull();
   });
 
+  it("returns null for cloud-agent when providerId is the only missing field", () => {
+    const node = {
+      id: "cloud-agent:t1",
+      kind: "work",
+      source: "cloud-agent",
+      state: "succeeded",
+      label: "x",
+    };
+    const detail = {
+      prompt: "do the thing",
+      source: { repoName: "r", repoUrl: "https://x" },
+      options: {},
+      activities: [],
+    };
+    expect(repeatReqFor(node as never, detail)).toBeNull();
+  });
+
+  it("returns null for cloud-agent when prompt is the only missing field", () => {
+    const node = {
+      id: "cloud-agent:t1",
+      kind: "work",
+      source: "cloud-agent",
+      state: "succeeded",
+      label: "x",
+    };
+    const detail = {
+      providerId: "devin",
+      source: { repoName: "r", repoUrl: "https://x" },
+      options: {},
+      activities: [],
+    };
+    expect(repeatReqFor(node as never, detail)).toBeNull();
+  });
+
+  it("returns null for cloud-agent when source is the only missing field (CreateCloudAgentTaskSchema also requires it — the field this fix started checking)", () => {
+    const node = {
+      id: "cloud-agent:t1",
+      kind: "work",
+      source: "cloud-agent",
+      state: "succeeded",
+      label: "x",
+    };
+    const detail = {
+      providerId: "devin",
+      prompt: "do the thing",
+      options: {},
+      activities: [],
+    };
+    expect(repeatReqFor(node as never, detail)).toBeNull();
+  });
+
   it("builds the a2a repeat request as a message/send JSON-RPC call from detail.input", () => {
     const node = { id: "a2a:1", kind: "work", source: "a2a", state: "succeeded", label: "x" };
     const detail = {
@@ -548,6 +599,30 @@ describe("repeatReqFor", () => {
       label: "x",
     };
     expect(repeatReqFor(node as never, { mode: "auto" })).toBeNull();
+  });
+
+  it("returns null for conductor when prompt is the only missing field (a hub task with repo but no spec.prompt must not POST prompt:null — HTTP 400)", () => {
+    const node = {
+      id: "conductor:task:1",
+      kind: "work",
+      source: "conductor",
+      state: "succeeded",
+      label: "x",
+    };
+    const detail = { repo: "https://github.com/x/y", prompt: null, base_ref: "main", mode: "auto" };
+    expect(repeatReqFor(node as never, detail)).toBeNull();
+  });
+
+  it("returns null for conductor when repo is the only missing field", () => {
+    const node = {
+      id: "conductor:task:1",
+      kind: "work",
+      source: "conductor",
+      state: "succeeded",
+      label: "x",
+    };
+    const detail = { repo: null, prompt: "fix the bug", base_ref: "main", mode: "auto" };
+    expect(repeatReqFor(node as never, detail)).toBeNull();
   });
 
   it("returns null for a source with no known repeat contract (runner/overflow)", () => {
@@ -684,6 +759,68 @@ describe("OrchestrationDrawer repeat action (two-click confirm)", () => {
     });
     expect(findRepeatButton(c).textContent).toContain("actionRepeat");
     cleanup();
+  });
+
+  it("a click after the 3s window expired re-arms the confirm instead of posting (it is a fresh first click, not a stale second click)", async () => {
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ task: A2A_TASK }) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const node = { id: "a2a:1", kind: "work", source: "a2a", state: "running", label: "x" };
+    const { c, cleanup } = render(
+      <OrchestrationDrawer node={node as never} onClose={() => {}} onActionDone={() => {}} />
+    );
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      findRepeatButton(c).click();
+    });
+    expect(findRepeatButton(c).textContent).toContain("repeatConfirm");
+
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(findRepeatButton(c).textContent).toContain("actionRepeat");
+
+    // The window has expired — this click must be treated as a fresh first click
+    // (arm + wait), never as the stale second click that would fire the POST.
+    await act(async () => {
+      findRepeatButton(c).click();
+    });
+    expect(fetchMock.mock.calls.some(([, init]) => (init as RequestInit)?.method === "POST")).toBe(
+      false
+    );
+    expect(findRepeatButton(c).textContent).toContain("repeatConfirm");
+    cleanup();
+  });
+
+  it("clears the pending 3s confirm timer on unmount so it can never fire after teardown", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ task: A2A_TASK }) }))
+    );
+    const node = { id: "a2a:1", kind: "work", source: "a2a", state: "running", label: "x" };
+    const { c, cleanup } = render(
+      <OrchestrationDrawer node={node as never} onClose={() => {}} onActionDone={() => {}} />
+    );
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      findRepeatButton(c).click();
+    });
+    expect(vi.getTimerCount()).toBeGreaterThan(0);
+
+    cleanup();
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("shows actionFailed when the repeat POST fails, without touching onActionDone", async () => {

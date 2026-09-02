@@ -63,11 +63,20 @@ function routeFor(node: OrchNode): SourceRoute {
  * DETAIL — never from `node` (the node only carries display fields, not the full
  * original request). Returns `null` when the original input cannot be recovered, so
  * the caller can render the "Repeat" action disabled instead of firing a bad request.
- * Contracts, verified against the live routes (not assumed):
+ * Contracts, verified against the live routes (not assumed) — the null-guard requires
+ * EVERY field the target route treats as mandatory, not merely one of them (a partially
+ * recoverable detail is not recoverable: a POST missing one required field 400s, which is
+ * an enabled button that cannot work):
  *   - cloud-agent → `POST /api/v1/agents/tasks`, `CreateCloudAgentTaskSchema` shape
- *     (`src/lib/cloudAgent/types.ts`).
- *   - a2a → `POST /a2a`, JSON-RPC `message/send` (`src/app/a2a/route.ts`).
- *   - conductor → `POST /api/conductor/tasks` (D1, `src/app/api/conductor/tasks/route.ts`).
+ *     (`src/lib/cloudAgent/types.ts`) — `providerId`, `prompt` and `source` are all
+ *     required there; `options` is optional.
+ *   - a2a → `POST /a2a`, JSON-RPC `message/send` (`src/app/a2a/route.ts`) — only
+ *     `messages` is required (`skill` defaults to `"smart-routing"`, `metadata` is
+ *     optional), so that is the only field guarded here.
+ *   - conductor → `POST /api/conductor/tasks` (D1, `src/app/api/conductor/tasks/route.ts`)
+ *     — `repoUrl` and `prompt` are both `z.string().min(1)` (required); `ConductorTaskDetail`
+ *     leaves `repo`/`prompt` independently nullable, so either one missing must null out
+ *     the whole request.
  */
 export function repeatReqFor(
   node: OrchNode,
@@ -80,7 +89,7 @@ export function repeatReqFor(
   });
   if (node.id.startsWith("cloud-agent:")) {
     const d = detail as CloudAgentTask | null;
-    if (!(d?.providerId || d?.prompt)) return null;
+    if (!d?.providerId || !d?.prompt || !d?.source) return null;
     return {
       url: "/api/v1/agents/tasks",
       init: post({
@@ -106,7 +115,7 @@ export function repeatReqFor(
   }
   if (node.id.startsWith("conductor:task:")) {
     const d = detail as ConductorTaskDetail | null;
-    if (!(d?.repo || d?.prompt)) return null;
+    if (!d?.repo || !d?.prompt) return null;
     return {
       url: "/api/conductor/tasks",
       init: post({
