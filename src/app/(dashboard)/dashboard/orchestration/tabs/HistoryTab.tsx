@@ -18,7 +18,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { OrchestrationDrawer } from "../drawer/OrchestrationDrawer";
-import { orchStateColor, type OrchNode } from "../model/orchestrationTypes";
+import { orchStateColor, type OrchNode, type OrchState } from "../model/orchestrationTypes";
 import {
   buildHistoryGrid,
   historyItemFromA2A,
@@ -39,7 +39,22 @@ const PRESET_KEY: Record<Preset, string> = {
 };
 // Column count per preset — hourly slices for the 1-day view, daily slices otherwise.
 const BUCKET_COUNT: Record<Preset, number> = { "1d": 24, "7d": 7, "30d": 30 };
-const SOURCE_LABEL: Record<SourceKind, string> = { a2a: "A2A", "cloud-agent": "Cloud Agent" };
+// i18n key per source/state — resolved through `t()` inside the component (never at module
+// scope, where no translator exists). `SOURCE_KEY` mirrors `OrchestrationToolbar.tsx:25`
+// (minus `conductor`, which this tab never lists) and `STATE_KEY` mirrors
+// `drawer/OrchestrationDrawer.tsx:35` / `tabs/OverviewTab.tsx:14`.
+const SOURCE_KEY: Record<SourceKind, string> = {
+  a2a: "sourceA2A",
+  "cloud-agent": "sourceCloudAgent",
+};
+const STATE_KEY: Record<OrchState, string> = {
+  queued: "stateQueued",
+  running: "stateRunning",
+  waiting_approval: "stateWaitingApproval",
+  succeeded: "stateSucceeded",
+  failed: "stateFailed",
+  cancelled: "stateCancelled",
+};
 
 interface A2AHistoryRow {
   id: string;
@@ -204,7 +219,7 @@ export function HistoryTab() {
 
       {[...failedSources].map((source) => (
         <div key={source} role="alert" className="text-xs text-error">
-          {t("historySourceFailed", { source: SOURCE_LABEL[source] })}
+          {t("historySourceFailed", { source: t(SOURCE_KEY[source]) })}
         </div>
       ))}
 
@@ -247,14 +262,16 @@ export function HistoryTab() {
                   >
                     <span className="font-medium">{row.identity}</span>{" "}
                     <span className="text-[9px] uppercase text-muted">
-                      {SOURCE_LABEL[row.source]}
+                      {t(SOURCE_KEY[row.source])}
                     </span>
                   </th>
                   {row.cells.map((cell, i) => (
                     <td key={i} className="p-0.5 align-top">
                       <div className="flex flex-wrap gap-0.5">
                         {cell.map((item) => {
-                          const meta = `${item.label} · ${formatDuration(item.durationMs)} · ${item.state}`;
+                          const meta = `${item.label} · ${formatDuration(item.durationMs)} · ${t(
+                            STATE_KEY[item.state]
+                          )}`;
                           return (
                             <button
                               key={item.id}

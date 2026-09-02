@@ -234,6 +234,10 @@ describe("HistoryTab", () => {
 
     const cell = c.querySelector('button[aria-label*="smart-routing"]') as HTMLButtonElement;
     expect(cell).toBeTruthy();
+    // The cell tooltip/aria-label states the run state through the shared `state*` i18n keys
+    // (mock returns the raw key), never the raw upstream string ("succeeded").
+    expect(cell.getAttribute("aria-label")).toMatch(/· stateSucceeded$/);
+    expect(cell.title).toBe(cell.getAttribute("aria-label"));
     act(() => {
       cell.click();
     });
@@ -250,8 +254,12 @@ describe("HistoryTab", () => {
     vi.stubGlobal("fetch", mockFetch({ a2aFail: true, cloudAgentTasks: [cloudAgentTask()] }));
     const { c, cleanup } = render(<HistoryTab />);
     await flush();
-    expect(c.textContent).toContain("historySourceFailed");
+    // The failed source is named through the shared `sourceA2A` key (mock returns the raw
+    // key), never a hardcoded "A2A" literal.
+    expect(c.textContent).toContain('historySourceFailed:{"source":"sourceA2A"}');
     expect(c.textContent).toContain("devin");
+    // The Cloud Agent row label is translated too (`sourceCloudAgent`, not "Cloud Agent").
+    expect(c.querySelector("tbody th")?.textContent).toContain("sourceCloudAgent");
     cleanup();
   });
 
