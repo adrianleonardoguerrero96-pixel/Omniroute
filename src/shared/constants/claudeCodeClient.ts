@@ -4,7 +4,7 @@
  * Keep this leaf dependency-free so server executors, compatibility bridges,
  * and client-facing identity presets can share one source of truth.
  */
-export const CLAUDE_CODE_CLIENT_VERSION = "2.1.220";
+export const CLAUDE_CODE_CLIENT_VERSION = "2.1.258";
 export const CLAUDE_CODE_CLIENT_BUILD_REVISION = "1f2";
 export const CLAUDE_CODE_CLIENT_BILLING_VERSION = `${CLAUDE_CODE_CLIENT_VERSION}.${CLAUDE_CODE_CLIENT_BUILD_REVISION}`;
 export const CLAUDE_CODE_SDK_PACKAGE_VERSION = "0.94.0";
