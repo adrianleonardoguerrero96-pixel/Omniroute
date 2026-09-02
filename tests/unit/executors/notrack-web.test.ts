@@ -215,6 +215,27 @@ test("notrack-web: forwards raw pasted cookie when named cookies are missing", a
   }
 });
 
+test("notrack-web: bulk-imported providerSpecificData.cookie authenticates when apiKey is null", async () => {
+  const mock = mockFetchOnce(200, sseChunks([{ type: "message", content: "ok", turn: 1 }]));
+  try {
+    const exec = new NotrackWebExecutor();
+    const result = await exec.execute({
+      model: "notrack-c",
+      body: { messages: [{ role: "user", content: "hi" }] },
+      stream: false,
+      credentials: {
+        apiKey: "",
+        providerSpecificData: { cookie: VALID_COOKIE },
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+    assert.equal(result.response.status, 200);
+    assert.equal(mock.calls[0].headers.cookie, VALID_COOKIE);
+  } finally {
+    mock.restore();
+  }
+});
+
 // ── Missing-cookie / invalid-cookie errors ───────────────────────────────
 
 test("notrack-web: missing cookie → 401 with instructive message", async () => {
@@ -711,6 +732,51 @@ test("notrack-web: streaming usage chunk emitted when include_usage=true", async
       usageChunk.usage.total_tokens,
       usageChunk.usage.prompt_tokens + usageChunk.usage.completion_tokens
     );
+  } finally {
+    mock.restore();
+  }
+});
+
+test("notrack-web: streaming flushes a final data line with no trailing newline", async () => {
+  const upstreamSse = `data: ${JSON.stringify({ type: "delta", chunk: "tail" })}`;
+  const mock = mockFetchOnce(200, upstreamSse);
+  try {
+    const exec = new NotrackWebExecutor();
+    const result = await exec.execute({
+      model: "notrack-c",
+      body: { messages: [{ role: "user", content: "hi" }] },
+      stream: true,
+      credentials: makeCreds(),
+      signal: AbortSignal.timeout(5000),
+    });
+    const chunks = await collectStreamChunks(result.response);
+    const text = chunks
+      .map(
+        (c) => (c as { choices: Array<{ delta: { content?: string } }> }).choices[0]?.delta?.content
+      )
+      .filter((s): s is string => typeof s === "string")
+      .join("");
+    assert.ok(text.includes("tail"), `final unterminated data line was dropped: "${text}"`);
+  } finally {
+    mock.restore();
+  }
+});
+
+test("notrack-web: non-stream flushes a final message event with no trailing newline", async () => {
+  const upstreamSse = `data: ${JSON.stringify({ type: "message", content: "snap-no-newline", turn: 2 })}`;
+  const mock = mockFetchOnce(200, upstreamSse);
+  try {
+    const exec = new NotrackWebExecutor();
+    const result = await exec.execute({
+      model: "notrack-c",
+      body: { messages: [{ role: "user", content: "hi" }] },
+      stream: false,
+      credentials: makeCreds(),
+      signal: AbortSignal.timeout(5000),
+    });
+    const json = JSON.parse(await result.response.text());
+    assert.equal(json.choices[0].message.content, "snap-no-newline");
+    assert.equal(json.notrack.assistant_turn, 2);
   } finally {
     mock.restore();
   }

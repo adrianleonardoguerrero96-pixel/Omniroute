@@ -87,6 +87,21 @@ function isEncryptedCredentialBlob(value: unknown): boolean {
   return typeof value === "string" && value.trim().startsWith("enc:v1:");
 }
 
+/**
+ * Resolve the pasted cookie for a notrack-web connection. The dashboard add
+ * flow stores it in `apiKey`; the bulk web-session importer (cookie-kind) keeps
+ * `apiKey` null and stores the value in `providerSpecificData.cookie` — read
+ * both so imported sessions authenticate.
+ */
+function resolveNotrackCookieSource(credentials: {
+  apiKey?: string;
+  providerSpecificData?: Record<string, unknown>;
+}): string {
+  if (credentials.apiKey && credentials.apiKey.trim()) return credentials.apiKey;
+  const psdCookie = credentials.providerSpecificData?.cookie;
+  return typeof psdCookie === "string" ? psdCookie : "";
+}
+
 /** Extract plain text from an OpenAI message `content` field. */
 function extractContent(content: unknown): string {
   if (content === null || content === undefined) return "";
@@ -602,7 +617,8 @@ export class NotrackWebExecutor extends BaseExecutor {
       return this.errorResponse(400, "Missing or empty messages array", NOTRACK_DISPATCH_URL);
     }
 
-    if (isEncryptedCredentialBlob(credentials.apiKey)) {
+    const rawCookieSource = resolveNotrackCookieSource(credentials);
+    if (isEncryptedCredentialBlob(rawCookieSource)) {
       return this.errorResponse(
         401,
         "Notrack credentials are encrypted but STORAGE_ENCRYPTION_KEY is not loaded. " +
@@ -611,7 +627,7 @@ export class NotrackWebExecutor extends BaseExecutor {
       );
     }
 
-    const { cookie, hasSession } = buildNotrackCookie(credentials.apiKey || "");
+    const { cookie, hasSession } = buildNotrackCookie(rawCookieSource);
     if (!hasSession) {
       return this.errorResponse(
         401,
@@ -909,6 +925,34 @@ function transformNotrackStream(
         }
       };
 
+      const handleEvent = (event: NotrackEvent) => {
+        if (event.type === "thinking") {
+          ensureRole();
+          emit({ reasoning: "[thinking]" });
+          return;
+        }
+        if (event.type === "delta" && typeof event.chunk === "string") {
+          anyDelta = true;
+          totalChars += event.chunk.length;
+          fullText += event.chunk;
+          ensureRole();
+          emit({ content: event.chunk });
+          return;
+        }
+        if (event.type === "message" && typeof event.content === "string" && !anyDelta) {
+          anyDelta = true;
+          totalChars += event.content.length;
+          fullText += event.content;
+          ensureRole();
+          emit({ content: event.content });
+        }
+      };
+
+      const processLine = (rawLine: string) => {
+        const event = parseNotrackDataLine(rawLine.replace(/\r$/, ""));
+        if (event) handleEvent(event);
+      };
+
       try {
         while (true) {
           if (signal?.aborted) break;
@@ -917,34 +961,12 @@ function transformNotrackStream(
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
           buffer = lines.pop() ?? "";
-          for (const rawLine of lines) {
-            const line = rawLine.replace(/\r$/, "");
-            const event = parseNotrackDataLine(line);
-            if (!event) continue;
-
-            if (event.type === "thinking") {
-              ensureRole();
-              emit({ reasoning: "[thinking]" });
-              continue;
-            }
-            if (event.type === "delta" && typeof event.chunk === "string") {
-              anyDelta = true;
-              totalChars += event.chunk.length;
-              fullText += event.chunk;
-              ensureRole();
-              emit({ content: event.chunk });
-              continue;
-            }
-            if (event.type === "message" && typeof event.content === "string" && !anyDelta) {
-              anyDelta = true;
-              totalChars += event.content.length;
-              fullText += event.content;
-              ensureRole();
-              emit({ content: event.content });
-              continue;
-            }
-          }
+          for (const rawLine of lines) processLine(rawLine);
         }
+        // A stream may end right after a final unterminated data line — flush it.
+        buffer += decoder.decode();
+        if (buffer) processLine(buffer);
+        buffer = "";
       } catch (err) {
         log?.error?.("NOTRACK-WEB", `Stream parse error: ${err}`);
       } finally {
@@ -1001,6 +1023,34 @@ async function collectNotrackResponse(
   let assistantTurn: number | null = null;
   let anyDelta = false;
 
+  const handleEvent = (event: NotrackEvent) => {
+    if (event.type === "chat_meta" && typeof event.chat_id === "string") {
+      chatMeta = event.chat_id;
+      return;
+    }
+    if (event.type === "user" && typeof event.message_id === "string") {
+      userMsgId = event.message_id;
+      return;
+    }
+    if (event.type === "delta") {
+      if (typeof event.chunk === "string") {
+        anyDelta = true;
+        content += event.chunk;
+      }
+      if (typeof event.turn === "number") assistantTurn = event.turn;
+      return;
+    }
+    if (event.type === "message") {
+      if (typeof event.content === "string") fallback = event.content;
+      if (typeof event.turn === "number") assistantTurn = event.turn;
+    }
+  };
+
+  const processLine = (rawLine: string) => {
+    const event = parseNotrackDataLine(rawLine.replace(/\r$/, ""));
+    if (event) handleEvent(event);
+  };
+
   try {
     while (true) {
       if (signal?.aborted) break;
@@ -1009,33 +1059,12 @@ async function collectNotrackResponse(
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
       buffer = lines.pop() ?? "";
-      for (const rawLine of lines) {
-        const line = rawLine.replace(/\r$/, "");
-        const event = parseNotrackDataLine(line);
-        if (!event) continue;
-        if (event.type === "chat_meta" && typeof event.chat_id === "string") {
-          chatMeta = event.chat_id;
-          continue;
-        }
-        if (event.type === "user" && typeof event.message_id === "string") {
-          userMsgId = event.message_id;
-          continue;
-        }
-        if (event.type === "delta") {
-          if (typeof event.chunk === "string") {
-            anyDelta = true;
-            content += event.chunk;
-          }
-          if (typeof event.turn === "number") assistantTurn = event.turn;
-          continue;
-        }
-        if (event.type === "message") {
-          if (typeof event.content === "string") fallback = event.content;
-          if (typeof event.turn === "number") assistantTurn = event.turn;
-          continue;
-        }
-      }
+      for (const rawLine of lines) processLine(rawLine);
     }
+    // A stream may end right after a final unterminated data line — flush it.
+    buffer += decoder.decode();
+    if (buffer) processLine(buffer);
+    buffer = "";
   } catch (err) {
     log?.error?.("NOTRACK-WEB", `Collect parse error: ${err}`);
   } finally {
