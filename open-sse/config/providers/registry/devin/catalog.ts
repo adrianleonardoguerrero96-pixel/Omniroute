@@ -18,6 +18,11 @@ export const DEVIN_MODEL_CATALOG: RegistryModel[] = [
   { id: "claude-opus-5-high", name: "Claude Opus 5 High", contextLength: 1000000 },
   { id: "claude-opus-5-medium", name: "Claude Opus 5 Medium", contextLength: 1000000 },
   { id: "claude-opus-5-low", name: "Claude Opus 5 Low", contextLength: 1000000 },
+  // Claude Opus 5 Max + Effort
+  { id: "claude-opus-5-max-xhigh", name: "Claude Opus 5 Max XHigh", contextLength: 1000000 },
+  { id: "claude-opus-5-max-high", name: "Claude Opus 5 Max High", contextLength: 1000000 },
+  { id: "claude-opus-5-max-medium", name: "Claude Opus 5 Max Medium", contextLength: 1000000 },
+  { id: "claude-opus-5-max-low", name: "Claude Opus 5 Max Low", contextLength: 1000000 },
   // Claude Opus 4.8
   { id: "claude-opus-4-8-max", name: "Claude Opus 4.8 Max", contextLength: 1000000 },
   { id: "claude-opus-4-8-xhigh", name: "Claude Opus 4.8 XHigh", contextLength: 1000000 },
@@ -45,6 +50,11 @@ export const DEVIN_MODEL_CATALOG: RegistryModel[] = [
   { id: "claude-sonnet-5-high", name: "Claude Sonnet 5 High", contextLength: 1000000 },
   { id: "claude-sonnet-5-medium", name: "Claude Sonnet 5 Medium", contextLength: 1000000 },
   { id: "claude-sonnet-5-low", name: "Claude Sonnet 5 Low", contextLength: 1000000 },
+  // Claude Sonnet 5 Max + Effort
+  { id: "claude-sonnet-5-max-xhigh", name: "Claude Sonnet 5 Max XHigh", contextLength: 1000000 },
+  { id: "claude-sonnet-5-max-high", name: "Claude Sonnet 5 Max High", contextLength: 1000000 },
+  { id: "claude-sonnet-5-max-medium", name: "Claude Sonnet 5 Max Medium", contextLength: 1000000 },
+  { id: "claude-sonnet-5-max-low", name: "Claude Sonnet 5 Max Low", contextLength: 1000000 },
   // Claude Sonnet 4.6
   {
     id: "claude-sonnet-4-6-thinking-1m",
