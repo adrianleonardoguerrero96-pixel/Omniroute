@@ -267,15 +267,21 @@ function DrawerResult({
  * trusted at the `A2ATask` type — a malicious/buggy A2A client could post
  * `metadata: { memoryHits: "boom" }` (a string's `.length` is truthy, so a plain
  * `!hits || hits.length === 0` guard would let it through) or an array containing
- * malformed entries. Every entry is validated defensively (array + object + string `id`)
- * before it is ever rendered, so a bad payload silently drops that entry instead of
- * crashing the drawer.
+ * malformed entries. Every entry is validated defensively before it is ever rendered, so a
+ * bad payload silently drops that entry instead of crashing the drawer — and the check
+ * covers ALL FOUR fields, not just `id`: `type`, `key` and `snippet` are rendered as React
+ * children, so `{ id: "x", key: { a: 1 } }` (a validated id next to an object field) would
+ * throw "Objects are not valid as a React child" and take the whole drawer down.
  */
+const MEMORY_HIT_FIELDS = ["id", "key", "type", "snippet"] as const;
+
 function DrawerMemory({ a2a, t }: { a2a: A2ATask | null; t: Translate }) {
   const raw = a2a?.metadata?.memoryHits;
   const hits = (Array.isArray(raw) ? raw : []).filter(
     (h): h is { id: string; key: string; type: string; snippet: string } =>
-      !!h && typeof h === "object" && typeof (h as { id?: unknown }).id === "string"
+      !!h &&
+      typeof h === "object" &&
+      MEMORY_HIT_FIELDS.every((f) => typeof (h as Record<string, unknown>)[f] === "string")
   );
   if (hits.length === 0) return null;
   return (

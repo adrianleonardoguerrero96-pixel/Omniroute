@@ -267,7 +267,22 @@ describe("OrchestrationDrawer", () => {
       input: { skill: "smart-routing", messages: [{ role: "user", content: "route this please" }] },
       artifacts: [],
       events: [],
-      metadata: { memoryHits: [{ notId: "x" }, "nope", 123, null] },
+      // `{ id: "x", key: {...} }` is the dangerous shape: a VALID string id next to an
+      // object field that the section renders as a React child — a guard that only checks
+      // `id` lets it through and React throws "Objects are not valid as a React child",
+      // taking the whole drawer down. Every one of the four rendered fields must be a string.
+      metadata: {
+        memoryHits: [
+          { notId: "x" },
+          "nope",
+          123,
+          null,
+          { id: "x", key: { a: 1 }, type: "factual", snippet: "s" },
+          { id: "y", key: "k", type: ["nope"], snippet: "s" },
+          { id: "z", key: "k", type: "factual", snippet: { toString: "boom" } },
+          { id: "w", key: "k", type: "factual" },
+        ],
+      },
       createdAt: "x",
       updatedAt: "y",
       expiresAt: "z",
@@ -721,6 +736,43 @@ describe("repeatReqFor", () => {
     });
   });
 
+  it("strips memoryHits from the a2a repeat metadata (never re-sends the previous run's memory)", () => {
+    // `memoryHits` is observability written by the PREVIOUS run, never caller input. Tasks
+    // persisted before the createTask copy-fix still carry it inside `input.metadata`, so the
+    // repeat path has to drop it — otherwise the new task is born with the old run's snippets
+    // and shows them in the drawer even with `OMNIROUTE_A2A_MEMORY_HITS=0`.
+    const node = { id: "a2a:1", kind: "work", source: "a2a", state: "succeeded", label: "x" };
+    const detail = {
+      input: {
+        skill: "smart-routing",
+        messages: [{ role: "user", content: "route this please" }],
+        metadata: {
+          role: "general",
+          memoryHits: [{ id: "m1", key: "k1", type: "factual", snippet: "leaked" }],
+        },
+      },
+    };
+    const body = JSON.parse(String(repeatReqFor(node as never, detail)?.init.body));
+    expect(body.params.metadata).toEqual({ role: "general" });
+    expect(JSON.stringify(body)).not.toContain("memoryHits");
+  });
+
+  it("omits metadata entirely when the a2a detail carries none (or a non-object one)", () => {
+    const node = { id: "a2a:1", kind: "work", source: "a2a", state: "succeeded", label: "x" };
+    const messages = [{ role: "user", content: "route this please" }];
+    const bare = JSON.parse(
+      String(repeatReqFor(node as never, { input: { skill: "s", messages } })?.init.body)
+    );
+    expect("metadata" in bare.params).toBe(false);
+    const junk = JSON.parse(
+      String(
+        repeatReqFor(node as never, { input: { skill: "s", messages, metadata: "boom" } })?.init
+          .body
+      )
+    );
+    expect("metadata" in junk.params).toBe(false);
+  });
+
   it("returns null for a2a when input.messages is empty or missing", () => {
     const node = { id: "a2a:1", kind: "work", source: "a2a", state: "succeeded", label: "x" };
     expect(repeatReqFor(node as never, { input: { skill: "s", messages: [] } })).toBeNull();
@@ -826,7 +878,9 @@ describe("OrchestrationDrawer repeat action (two-click confirm)", () => {
     const unrecoverable = { ...A2A_TASK, input: { skill: "smart-routing", messages: [] } };
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ task: unrecoverable }) }))
+      vi.fn(() =>
+        Promise.resolve({ ok: true, json: () => Promise.resolve({ task: unrecoverable }) })
+      )
     );
     const node = { id: "a2a:1", kind: "work", source: "a2a", state: "running", label: "x" };
     const { c, cleanup } = render(
@@ -1018,6 +1072,132 @@ describe("OrchestrationDrawer repeat action (two-click confirm)", () => {
     });
     expect(c.textContent).toContain("actionFailed");
     expect(done).toBe(false);
+    cleanup();
+  });
+  it("does not send the previous run's memoryHits in the repeat POST body", async () => {
+    const withHits = {
+      ...A2A_TASK,
+      input: {
+        ...A2A_TASK.input,
+        metadata: {
+          role: "general",
+          memoryHits: [{ id: "m1", key: "k1", type: "factual", snippet: "leaked" }],
+        },
+      },
+    };
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ task: withHits }) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const node = { id: "a2a:1", kind: "work", source: "a2a", state: "running", label: "x" };
+    const { c, cleanup } = render(
+      <OrchestrationDrawer node={node as never} onClose={() => {}} onActionDone={() => {}} />
+    );
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      findRepeatButton(c).click();
+    });
+    await act(async () => {
+      findRepeatButton(c).click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const post = fetchMock.mock.calls.find(([, init]) => (init as RequestInit)?.method === "POST");
+    expect(post).toBeTruthy();
+    const body = JSON.parse(String((post![1] as RequestInit).body));
+    expect(body.params.metadata).toEqual({ role: "general" });
+    expect(String((post![1] as RequestInit).body)).not.toContain("memoryHits");
+    cleanup();
+  });
+
+  it("treats a JSON-RPC error answered with HTTP 200 as a failure, never as a success toast", async () => {
+    // `/a2a` maps most JSON-RPC error codes to `status: 200` (src/app/a2a/route.ts), so
+    // `res.ok` alone would report a run that never happened as done.
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              jsonrpc: "2.0",
+              id: "a2a:1",
+              error: { code: -32602, message: "segredo interno que NAO pode vazar" },
+            }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ task: A2A_TASK }) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    let done = false;
+    const node = { id: "a2a:1", kind: "work", source: "a2a", state: "running", label: "x" };
+    const { c, cleanup } = render(
+      <OrchestrationDrawer
+        node={node as never}
+        onClose={() => {}}
+        onActionDone={() => {
+          done = true;
+        }}
+      />
+    );
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      findRepeatButton(c).click();
+    });
+    await act(async () => {
+      findRepeatButton(c).click();
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(done).toBe(false);
+    expect(c.textContent).not.toContain("repeatDone");
+    expect(c.textContent).toContain("actionFailed");
+    expect(c.textContent).toContain("RPC -32602");
+    expect(c.textContent).not.toContain("segredo interno");
+    cleanup();
+  });
+
+  it("surfaces the sanitized HTTP status when a secured deployment rejects the a2a repeat (HTTP 400)", async () => {
+    // With REQUIRE_API_KEY / OMNIROUTE_API_KEY set, `/a2a` answers -32600 => HTTP 400 to a
+    // dashboard-session caller. The drawer must say so instead of pretending success.
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        return Promise.resolve({ ok: false, status: 400, json: () => Promise.resolve({}) });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ task: A2A_TASK }) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const node = { id: "a2a:1", kind: "work", source: "a2a", state: "running", label: "x" };
+    const { c, cleanup } = render(
+      <OrchestrationDrawer node={node as never} onClose={() => {}} onActionDone={() => {}} />
+    );
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      findRepeatButton(c).click();
+    });
+    await act(async () => {
+      findRepeatButton(c).click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(c.textContent).toContain("actionFailed");
+    expect(c.textContent).toContain("HTTP 400");
+    expect(c.textContent).not.toContain("repeatDone");
     cleanup();
   });
 });

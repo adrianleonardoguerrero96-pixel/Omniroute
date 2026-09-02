@@ -67,7 +67,10 @@ test("route: requireManagementAuth antes de criar a task no hub", () => {
   assert.match(src, /if \(authError\) return authError;/, "curto-circuito no erro de auth");
   const proxyAt = src.indexOf("createConductorTask(");
   assert.ok(proxyAt > authAt, "proxy ao hub só depois do gate de auth");
-  assert.ok(!src.includes("CONDUCTOR_HUB_TOKEN"), "token nunca manuseado na rota (vive no hubProxy)");
+  assert.ok(
+    !src.includes("CONDUCTOR_HUB_TOKEN"),
+    "token nunca manuseado na rota (vive no hubProxy)"
+  );
 });
 
 test("POST /api/conductor/tasks: body válido + hub ok → 201 {task_id}", async () => {
@@ -116,4 +119,37 @@ test("POST /api/conductor/tasks: JSON malformado → 400", async () => {
     })
   );
   assert.equal(res.status, 400);
+});
+
+/**
+ * Review finding (Minor A): the hub's status was forwarded verbatim as OUR response status.
+ * `Response.json()` throws a `RangeError` for anything outside 200-599, and a 3xx/2xx is
+ * meaningless as an error status anyway — so anything outside 400-599 must become a 502
+ * instead of an unhandled throw. A 302 with no `Location` is returned as-is by fetch (there
+ * is nothing to follow), which reproduces the out-of-band status without a fake fetch impl.
+ */
+test("POST /api/conductor/tasks: status fora de 400-599 vindo do hub é clampado para 502", async () => {
+  process.env.CONDUCTOR_HUB_URL = await fakeHub({
+    "/v1/tasks": { status: 302, body: { error: "segredo interno que NÃO pode vazar" } },
+  });
+  process.env.CONDUCTOR_HUB_TOKEN = "tok";
+
+  const res = await createRoute.POST(
+    postJson({ repoUrl: "https://git.x/repo", prompt: "refaça isso" })
+  );
+  assert.equal(res.status, 502);
+  const text = await res.text();
+  assert.ok(!text.includes("segredo interno"), "corpo do hub NUNCA repassado (HR#12)");
+});
+
+test("POST /api/conductor/tasks: status 4xx/5xx legítimo do hub continua espelhado", async () => {
+  process.env.CONDUCTOR_HUB_URL = await fakeHub({
+    "/v1/tasks": { status: 429, body: { error: "rate limited" } },
+  });
+  process.env.CONDUCTOR_HUB_TOKEN = "tok";
+
+  const res = await createRoute.POST(
+    postJson({ repoUrl: "https://git.x/repo", prompt: "refaça isso" })
+  );
+  assert.equal(res.status, 429);
 });

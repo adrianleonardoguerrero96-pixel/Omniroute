@@ -51,6 +51,20 @@ export interface MemoryHitsDeps {
  * - Owner id = `task.owner ?? "mcp"` — the same keyless fallback the MCP memory tools use
  *   (`open-sse/mcp-server/tools/memoryTools.ts::resolveMemoryOwnerId`).
  * - Any failure in the recall path ⇒ `[]` — this must never fail the caller's task.
+ *
+ * KNOWN LIMITATION — recall only resolves under the KEYLESS posture. `task.owner` is a
+ * SHA-256 PREFIX of the raw API key (`src/lib/a2a/authenticate.ts::resolveA2AOwner`), while
+ * memory rows are keyed by the DB api-key **id** (`String(apiKeyInfo.id)`, the value
+ * `getApiKeyMetadata()` returns — see `open-sse/mcp-server/mcpCallerIdentity.ts`). The two
+ * live in different namespaces, so for a keyed caller the search below matches nothing and
+ * the hits list is always empty; only the keyless case (`owner === undefined` → `"mcp"`)
+ * lines up with the MCP-tool owner id. Bridging them needs a hash→api-key-id lookup that
+ * does NOT exist today: `src/lib/db/apiKeys.ts` only ever looks a key up by its RAW value
+ * (`WHERE key = ? OR key_hash = ?`, with the FULL sha256 hex), and the raw key is long gone
+ * by the time a task executes. Deliberately NOT worked around here — inventing a
+ * prefix-scan lookup over `api_keys` would be a new auth-adjacent surface. Follow-up:
+ * either persist the DB api-key id on the task alongside the hash, or add an explicit
+ * `getApiKeyIdByKeyHashPrefix()` in the db layer.
  */
 export async function collectMemoryHits(
   task: A2ATask,

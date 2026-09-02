@@ -6,10 +6,11 @@ import type { CloudAgentTask } from "@/lib/cloudAgent/types";
 import type { A2ATask } from "@/lib/a2a/taskManager";
 import type { ConductorTaskDetail } from "@/lib/conductor/hubProxy";
 
-// Client-safe stand-in for sanitizeErrorMessage (server-only, breaks the client bundle — #10692): only our own `HTTP <status>` errors and AbortError pass through verbatim, everything else collapses to a generic string.
+// Client-safe stand-in for sanitizeErrorMessage (server-only, breaks the client bundle — #10692): only our own `HTTP <status>` / `RPC <code>` errors and AbortError pass through verbatim, everything else collapses to a generic string. `RPC <code>` carries the JSON-RPC error CODE only — never the upstream `error.message`, which is attacker/upstream-controlled text (Hard Rule #12).
 function toSafeErrorText(err: unknown): string {
   if (err instanceof Error) {
     if (/^HTTP \d{3}$/.test(err.message)) return err.message;
+    if (/^RPC -?\d{1,6}$/.test(err.message)) return err.message;
     if (err.name === "AbortError") return "Request cancelled";
   }
   return "Request failed";
@@ -78,6 +79,24 @@ function routeFor(node: OrchNode): SourceRoute {
  *     leaves `repo`/`prompt` independently nullable, so either one missing must null out
  *     the whole request.
  */
+/**
+ * Strips `memoryHits` from the metadata a repeat re-sends. `metadata.memoryHits` is
+ * OBSERVABILITY written by the previous run (`src/lib/a2a/taskExecution.ts`) — never
+ * caller input — so echoing it back would make the new task be born carrying the old
+ * run's memory snippets, and would keep showing them in the drawer even with the
+ * `OMNIROUTE_A2A_MEMORY_HITS=0` kill-switch on. `taskManager.createTask` no longer aliases
+ * `metadata` into `input`, but historical tasks persisted before that fix still carry the
+ * hits inside `input.metadata`, so the repeat path must drop them too.
+ * Returns `undefined` for a missing/non-object metadata so the JSON body omits the field
+ * entirely (the route treats `params.metadata` as optional).
+ */
+function withoutMemoryHits(metadata: unknown): Record<string, unknown> | undefined {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return undefined;
+  const rest = { ...(metadata as Record<string, unknown>) };
+  delete rest.memoryHits;
+  return rest;
+}
+
 export function repeatReqFor(
   node: OrchNode,
   detail: unknown
@@ -109,7 +128,11 @@ export function repeatReqFor(
         jsonrpc: "2.0",
         id: node.id,
         method: "message/send",
-        params: { skill: d.input.skill, messages: d.input.messages, metadata: d.input.metadata },
+        params: {
+          skill: d.input.skill,
+          messages: d.input.messages,
+          metadata: withoutMemoryHits(d.input.metadata),
+        },
       }),
     };
   }
@@ -212,6 +235,26 @@ function useFetchDetail(
   }, [node?.id]);
 }
 
+/**
+ * A JSON-RPC endpoint can report a failure with an HTTP 200: `/a2a`'s `jsonRpcError()`
+ * only maps a few codes to 4xx/5xx and defaults to `status: 200`
+ * (`src/app/a2a/route.ts`). `res.ok` alone would then render the success toast for a run
+ * that never happened, so the `/a2a` action also inspects the envelope. Only the numeric
+ * `error.code` is surfaced (`RPC <code>`) — never the upstream `error.message`.
+ */
+async function jsonRpcErrorCode(res: {
+  json?: () => Promise<unknown>;
+}): Promise<number | undefined> {
+  try {
+    const body = (await res.json?.()) as { error?: { code?: unknown } } | undefined;
+    const code = body?.error?.code;
+    return typeof code === "number" ? code : body?.error ? -32603 : undefined;
+  } catch {
+    // A non-JSON / already-consumed body is not evidence of failure — the status stands.
+    return undefined;
+  }
+}
+
 async function performAction(
   req: { url: string; init: RequestInit } | null,
   setActionError: (text: string) => void
@@ -220,6 +263,10 @@ async function performAction(
   try {
     const res = await fetch(req.url, req.init);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (req.url === "/a2a") {
+      const code = await jsonRpcErrorCode(res);
+      if (code !== undefined) throw new Error(`RPC ${code}`);
+    }
     return true;
   } catch (err) {
     setActionError(toSafeErrorText(err));

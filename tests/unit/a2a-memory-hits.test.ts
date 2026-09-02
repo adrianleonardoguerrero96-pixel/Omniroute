@@ -16,7 +16,11 @@ import {
   type MemoryHit,
   type MemoryHitsDeps,
 } from "../../src/lib/a2a/taskExecution.ts";
-import type { A2ATask } from "../../src/lib/a2a/taskManager.ts";
+import {
+  A2ATaskManager,
+  type A2APersistence,
+  type A2ATask,
+} from "../../src/lib/a2a/taskManager.ts";
 
 function makeTask(overrides: Partial<A2ATask> = {}): A2ATask {
   return {
@@ -267,4 +271,61 @@ test("executeA2ATaskWithState swallows a throwing appendEvent (best-effort) and 
   assert.deepEqual(task.metadata.memoryHits, [
     { id: "m1", key: "k1", type: "factual", snippet: "hello" },
   ]);
+});
+
+/**
+ * Regression (whole-branch review, Important 1): `createTask` used to store the CALLER's
+ * `input.metadata` object as the task's own `metadata`, so the `memoryHits` written above
+ * landed inside `task.input.metadata` too — from where it was serialized into
+ * `a2a_tasks.input_json` and echoed back by the drawer's "Repeat" body, making the repeated
+ * task be born carrying the previous run's memory snippets (visible even with the
+ * `OMNIROUTE_A2A_MEMORY_HITS=0` kill-switch on). `metadata` must be a COPY.
+ */
+test("executeA2ATaskWithState never leaks memoryHits into task.input.metadata or the persisted input", async () => {
+  const upsertCalls: Array<{ inputJson: string | null }> = [];
+  const persistence: A2APersistence = {
+    upsert: ((row: { inputJson: string | null }) => {
+      upsertCalls.push(row);
+    }) as A2APersistence["upsert"],
+    appendEvent: (() => {}) as A2APersistence["appendEvent"],
+    purge: ((): number => 0) as A2APersistence["purge"],
+  };
+  const tm = new A2ATaskManager(5, persistence);
+  try {
+    const callerMetadata = { role: "general" };
+    const task = tm.createTask({
+      skill: "smart-routing",
+      messages: [{ role: "user", content: "route this please" }],
+      metadata: callerMetadata,
+    });
+
+    await executeA2ATaskWithState(
+      { updateTask: () => {} },
+      task,
+      async () => ({ artifacts: [], metadata: {} }),
+      {
+        search: async () => [{ id: "m1", key: "k1", type: "factual", content: "hello" }],
+        appendEvent: () => {},
+      }
+    );
+
+    // The hits ARE recorded on the task's runtime metadata …
+    assert.deepEqual(task.metadata.memoryHits, [
+      { id: "m1", key: "k1", type: "factual", snippet: "hello" },
+    ]);
+    // … but never on the immutable record of what the caller sent.
+    assert.equal("memoryHits" in (task.input.metadata ?? {}), false);
+    assert.deepEqual(task.input.metadata, { role: "general" });
+    // … nor on the caller's own object (no aliasing in either direction).
+    assert.deepEqual(callerMetadata, { role: "general" });
+
+    // A persist AFTER the hits were recorded must still write a clean input_json.
+    tm.updateTask(task.id, "working");
+    assert.ok(upsertCalls.length >= 2);
+    for (const row of upsertCalls) {
+      assert.ok(!String(row.inputJson).includes("memoryHits"), "input_json carries no memoryHits");
+    }
+  } finally {
+    tm.destroy();
+  }
 });
