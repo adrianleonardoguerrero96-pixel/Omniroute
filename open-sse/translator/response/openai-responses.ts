@@ -504,9 +504,34 @@ function toolCallOutputIndexBase(state) {
   return state.msgItemAdded[msgIdx] ? msgIdx + 1 : msgIdx;
 }
 
+// Live incident (2026-09-02, minimax-m3:free via OpenRouter/GMICloud): the
+// upstream's own tool_calls delta `index` doesn't reliably start at 0 or stay
+// contiguous per turn -- this turn's two calls arrived with raw index 1 and 2
+// (never 0). Adding that raw index straight onto toolCallOutputIndexBase()
+// left a GAP in the emitted output_index sequence (0 for the message, then 2
+// and 3 for the calls -- index 1 never used). A client that reads
+// response.completed's final `output[]` array by ARRAY POSITION and expects
+// position to equal output_index (the Responses API's own contract) reads
+// output[1] (this turn's first call, real output_index 2) while looking it
+// up under output_index 1, misses it, then reads output[2] (the second call,
+// real output_index 3) under output_index 2 -- landing on the FIRST call's
+// tracked slot with a different call_id, which a spec-following client
+// correctly treats as "stream changed output item identity" and aborts.
+// Fix: remap each turn's raw upstream indices to a local, contiguous,
+// 0-based sequence in first-seen order, so gaps in the raw index can never
+// propagate into the emitted output_index sequence.
+function resolveLocalToolCallIndex(state, tcIdx) {
+  if (!state.toolCallLocalIndex) state.toolCallLocalIndex = {};
+  if (state.toolCallLocalIndex[tcIdx] === undefined) {
+    state.toolCallLocalIndex[tcIdx] = state.toolCallLocalIndexNext ?? 0;
+    state.toolCallLocalIndexNext = state.toolCallLocalIndex[tcIdx] + 1;
+  }
+  return state.toolCallLocalIndex[tcIdx];
+}
+
 function emitToolCall(state, emit, tc) {
   const tcIdx = tc.index ?? 0;
-  const outputIndex = toolCallOutputIndexBase(state) + normalizeOutputIndex(tcIdx);
+  const outputIndex = toolCallOutputIndexBase(state) + resolveLocalToolCallIndex(state, tcIdx);
   const newCallId = tc.id;
   const funcName = tc.function?.name;
 
@@ -609,7 +634,7 @@ function emitToolCall(state, emit, tc) {
 function closeToolCall(state, emit, idx, recordAsCompleted = true) {
   const callId = state.funcCallIds[idx];
   if (callId && !state.funcItemDone[idx]) {
-    const normalizedIndex = toolCallOutputIndexBase(state) + normalizeOutputIndex(idx);
+    const normalizedIndex = toolCallOutputIndexBase(state) + resolveLocalToolCallIndex(state, idx);
     const args = state.funcArgsBuf[idx] || "{}";
     const toolName = state.funcNames[idx] || "";
     // See emitToolCall()'s isCustomTool comment — must stay in sync (both compute the
