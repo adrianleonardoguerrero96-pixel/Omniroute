@@ -6171,7 +6171,7 @@
       "glm-cn": "Połącz z GLM Coding (China) za pomocą klucza API.",
       "glmt": "Wstępnie zdefiniowany profil GLM z większym budżetem tokenów, włączonym myśleniem i dłuższym limitem czasu.",
       "getgoapi": "Połącz z GoAPI za pomocą klucza API.",
-      "groq": "Darmowy plan: 30 RPM / 14.4K RPD — bez karty kredytowej",
+      "groq": "__MISSING__:Free plan: per-model caps (30 RPM · 1K RPD · 200K tokens/day per chat model, console.groq.com/docs/rate-limits) — no payment method on file.",
       "haiper": "Pobierz klucz API na haiper.ai/haiper-api",
       "heroku": "Połącz z Heroku AI za pomocą klucza API.",
       "hcnsec": "Pobierz klucz API na api.hcnsec.cn",

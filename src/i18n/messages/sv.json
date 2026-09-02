@@ -6171,7 +6171,7 @@
       "glm-cn": "Anslut GLM Coding (Kina) med en API-nyckel.",
       "glmt": "Förinställd GLM-profil med högre tokenbudget, tänkande aktiverat och längre tidsgräns.",
       "getgoapi": "Anslut GoAPI med en API-nyckel.",
-      "groq": "Gratisnivå: 30 RPM / 14,4K RPD — inget kreditkort",
+      "groq": "__MISSING__:Free plan: per-model caps (30 RPM · 1K RPD · 200K tokens/day per chat model, console.groq.com/docs/rate-limits) — no payment method on file.",
       "haiper": "Hämta API-nyckel på haiper.ai/haiper-api",
       "heroku": "Anslut Heroku AI med en API-nyckel.",
       "hcnsec": "Hämta API-nyckel på api.hcnsec.cn",

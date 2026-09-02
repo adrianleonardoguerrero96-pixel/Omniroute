@@ -6171,7 +6171,7 @@
       "glm-cn": "Yhdistä GLM Coding (China) API-avaimella.",
       "glmt": "Esiasetettu GLM-profiili suuremmalla token-budjetilla, ajattelu käytössä ja pidemmällä aikakatkaisulla.",
       "getgoapi": "Yhdistä GoAPI API-avaimella.",
-      "groq": "Ilmainen taso: 30 RPM / 14,4K RPD — ei luottokorttia",
+      "groq": "__MISSING__:Free plan: per-model caps (30 RPM · 1K RPD · 200K tokens/day per chat model, console.groq.com/docs/rate-limits) — no payment method on file.",
       "haiper": "Hanki API-avain osoitteesta haiper.ai/haiper-api",
       "heroku": "Yhdistä Heroku AI API-avaimella.",
       "hcnsec": "Hanki API-avain osoitteesta api.hcnsec.cn",
