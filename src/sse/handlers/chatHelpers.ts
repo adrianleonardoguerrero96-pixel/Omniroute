@@ -653,34 +653,58 @@ export interface ShadowedProviderNode {
 export async function findShadowedCompatibleNode(
   provider: unknown
 ): Promise<ShadowedProviderNode | null> {
-  if (typeof provider !== "string" || provider.trim().length === 0) return null;
-  const entry = getRegistryEntry(provider) as { id?: unknown; alias?: unknown } | null;
-  if (!entry) return null;
-  const reservedByProvider = new Set<string>();
-  for (const value of [entry.id, entry.alias]) {
-    if (typeof value === "string" && value.length > 0) reservedByProvider.add(value);
-  }
-  if (reservedByProvider.size === 0) return null;
+  const reservedByProvider = reservedPrefixesOf(provider);
+  if (!reservedByProvider) return null;
 
   try {
     const nodes = await getCachedProviderNodes();
     for (const node of Array.isArray(nodes) ? nodes : []) {
-      if (!node || typeof node !== "object") continue;
-      const type = node.type;
-      if (type !== "openai-compatible" && type !== "anthropic-compatible") continue;
-      const prefix = typeof node.prefix === "string" ? node.prefix.trim() : "";
-      const id = typeof node.id === "string" ? node.id.trim() : "";
-      if (!id || !prefix || !reservedByProvider.has(prefix)) continue;
-      return {
-        id,
-        name: typeof node.name === "string" && node.name.trim() ? node.name.trim() : null,
-        prefix,
-      };
+      const shadowed = asShadowedCompatibleNode(node, reservedByProvider);
+      if (shadowed) return shadowed;
     }
   } catch {
     // Diagnostic only — never let a node lookup failure change the error path.
   }
   return null;
+}
+
+/** Node types whose user-configured prefix the reserved-prefix guard can shadow. */
+const SHADOWABLE_NODE_TYPES: ReadonlySet<unknown> = new Set([
+  "openai-compatible",
+  "anthropic-compatible",
+]);
+
+/**
+ * Registry id + alias that `provider` reserves, or null when it is not a
+ * built-in provider (or reserves nothing).
+ */
+function reservedPrefixesOf(provider: unknown): ReadonlySet<string> | null {
+  if (typeof provider !== "string" || provider.trim().length === 0) return null;
+  const entry = getRegistryEntry(provider) as { id?: unknown; alias?: unknown } | null;
+  if (!entry) return null;
+  const reserved = new Set<string>();
+  for (const value of [entry.id, entry.alias]) {
+    if (typeof value === "string" && value.length > 0) reserved.add(value);
+  }
+  return reserved.size > 0 ? reserved : null;
+}
+
+function trimmedString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+/** The node as a `ShadowedProviderNode` when its prefix is one of `reserved`, else null. */
+function asShadowedCompatibleNode(
+  node: unknown,
+  reserved: ReadonlySet<string>
+): ShadowedProviderNode | null {
+  if (!node || typeof node !== "object") return null;
+  const record = node as { type?: unknown; prefix?: unknown; id?: unknown; name?: unknown };
+  if (!SHADOWABLE_NODE_TYPES.has(record.type)) return null;
+  const prefix = trimmedString(record.prefix);
+  const id = trimmedString(record.id);
+  if (!id || !prefix || !reserved.has(prefix)) return null;
+  return { id, name: trimmedString(record.name) || null, prefix };
 }
 
 export function handleNoCredentials(
