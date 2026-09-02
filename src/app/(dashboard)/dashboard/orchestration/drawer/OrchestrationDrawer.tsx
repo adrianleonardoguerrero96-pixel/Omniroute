@@ -9,6 +9,7 @@ import type { CloudAgentTask } from "@/lib/cloudAgent/types";
 import type { A2ATask } from "@/lib/a2a/taskManager";
 
 const TOAST_MS = 2500;
+const REPEAT_CONFIRM_MS = 3000;
 
 /** Timeline normalized by source — the same data the Timeline component displays. */
 function normalizedTimeline(node: OrchNode, detail: unknown): unknown {
@@ -256,27 +257,99 @@ function DrawerResult({
   );
 }
 
-/** Approve/cancel action buttons — omitted when neither action is available. */
+/**
+ * Two-click confirm for a single non-idempotent action — deliberately NOT
+ * `window.confirm`, since modal dialogs block browser automation. The first click
+ * arms `confirming` for `REPEAT_CONFIRM_MS`; a second click within that window runs
+ * `onConfirm`. The timer is cleared before it can fire again (a stale timeout must
+ * never flip an already-fired confirmation back) and on unmount.
+ */
+function useTwoClickConfirm(onConfirm: () => void) {
+  const [confirming, setConfirming] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearTimer = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
+  };
+
+  const onClick = () => {
+    if (confirming) {
+      clearTimer();
+      setConfirming(false);
+      onConfirm();
+      return;
+    }
+    setConfirming(true);
+    timerRef.current = setTimeout(() => setConfirming(false), REPEAT_CONFIRM_MS);
+  };
+
+  useEffect(() => clearTimer, []);
+
+  return { confirming, onClick };
+}
+
+/** Repeat button: two-click confirm, disabled + tooltip when the input isn't recoverable. */
+function RepeatButton({
+  canRepeat,
+  repeat,
+  onActionDone,
+  onToast,
+  t,
+}: {
+  canRepeat: boolean;
+  repeat: () => Promise<boolean>;
+  onActionDone: () => void;
+  onToast: (text: string) => void;
+  t: Translate;
+}) {
+  const { confirming, onClick } = useTwoClickConfirm(() => {
+    void (async () => {
+      if (await repeat()) {
+        onActionDone();
+        onToast(t("repeatDone"));
+      }
+    })();
+  });
+  return (
+    <button
+      className="text-xs rounded border border-border px-2 py-1 disabled:opacity-50"
+      onClick={onClick}
+      disabled={!canRepeat}
+      title={canRepeat ? undefined : t("repeatUnavailable")}
+    >
+      {confirming ? t("repeatConfirm") : t("actionRepeat")}
+    </button>
+  );
+}
+
+/** Approve/cancel/repeat action buttons — omitted when none of them apply. */
 function DrawerActions({
   canApprove,
   canCancel,
+  showRepeat,
+  canRepeat,
   busy,
   approve,
   cancel,
+  repeat,
   onActionDone,
   onToast,
   t,
 }: {
   canApprove: boolean;
   canCancel: boolean;
+  showRepeat: boolean;
+  canRepeat: boolean;
   busy: boolean;
   approve: () => Promise<boolean>;
   cancel: () => Promise<boolean>;
+  repeat: () => Promise<boolean>;
   onActionDone: () => void;
   onToast: (text: string) => void;
   t: Translate;
 }) {
-  if (!canApprove && !canCancel) return null;
+  if (!canApprove && !canCancel && !showRepeat) return null;
   const run = async (fn: () => Promise<boolean>) => {
     if (await fn()) {
       onActionDone();
@@ -303,6 +376,15 @@ function DrawerActions({
           >
             {t("actionCancel")}
           </button>
+        )}
+        {showRepeat && (
+          <RepeatButton
+            canRepeat={canRepeat}
+            repeat={repeat}
+            onActionDone={onActionDone}
+            onToast={onToast}
+            t={t}
+          />
         )}
       </div>
     </Section>
@@ -357,14 +439,27 @@ export function OrchestrationDrawer({
   onActionDone: () => void;
 }) {
   const t = useTranslations("orchestration");
-  const { detail, isLoading, busy, error, errorKind, canApprove, canCancel, approve, cancel } =
-    useDrawerDetail(node);
+  const {
+    detail,
+    isLoading,
+    busy,
+    error,
+    errorKind,
+    canApprove,
+    canCancel,
+    canRepeat,
+    approve,
+    cancel,
+    repeat,
+  } = useDrawerDetail(node);
   useCloseOnEscape(node, onClose);
   const { toast, showToast } = useDrawerToast();
 
   if (!node) return null;
   const state = node.state ?? "queued";
   const { ca, a2a } = narrowDetail(node, detail);
+  const showRepeat =
+    node.source === "cloud-agent" || node.source === "a2a" || node.source === "conductor";
 
   return (
     <>
@@ -400,9 +495,12 @@ export function OrchestrationDrawer({
         <DrawerActions
           canApprove={canApprove}
           canCancel={canCancel}
+          showRepeat={showRepeat}
+          canRepeat={canRepeat}
           busy={busy}
           approve={approve}
           cancel={cancel}
+          repeat={repeat}
           onActionDone={onActionDone}
           onToast={showToast}
           t={t}

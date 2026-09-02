@@ -1,7 +1,10 @@
 "use client";
-/** Fetches per-source task detail on drawer open + approve/cancel actions. */
+/** Fetches per-source task detail on drawer open + approve/cancel/repeat actions. */
 import { useEffect, useState } from "react";
 import type { OrchNode } from "../model/orchestrationTypes";
+import type { CloudAgentTask } from "@/lib/cloudAgent/types";
+import type { A2ATask } from "@/lib/a2a/taskManager";
+import type { ConductorTaskDetail } from "@/lib/conductor/hubProxy";
 
 // Client-safe stand-in for sanitizeErrorMessage (server-only, breaks the client bundle — #10692): only our own `HTTP <status>` errors and AbortError pass through verbatim, everything else collapses to a generic string.
 function toSafeErrorText(err: unknown): string {
@@ -53,6 +56,68 @@ function routeFor(node: OrchNode): SourceRoute {
     };
   }
   return { detailUrl: null, cancelReq: null, approveReq: null }; // runners/overflow: raw only
+}
+
+/**
+ * Builds the POST request that recreates a task with the same input, from the LOADED
+ * DETAIL — never from `node` (the node only carries display fields, not the full
+ * original request). Returns `null` when the original input cannot be recovered, so
+ * the caller can render the "Repeat" action disabled instead of firing a bad request.
+ * Contracts, verified against the live routes (not assumed):
+ *   - cloud-agent → `POST /api/v1/agents/tasks`, `CreateCloudAgentTaskSchema` shape
+ *     (`src/lib/cloudAgent/types.ts`).
+ *   - a2a → `POST /a2a`, JSON-RPC `message/send` (`src/app/a2a/route.ts`).
+ *   - conductor → `POST /api/conductor/tasks` (D1, `src/app/api/conductor/tasks/route.ts`).
+ */
+export function repeatReqFor(
+  node: OrchNode,
+  detail: unknown
+): { url: string; init: RequestInit } | null {
+  const post = (body: unknown): RequestInit => ({
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (node.id.startsWith("cloud-agent:")) {
+    const d = detail as CloudAgentTask | null;
+    if (!(d?.providerId || d?.prompt)) return null;
+    return {
+      url: "/api/v1/agents/tasks",
+      init: post({
+        providerId: d.providerId,
+        prompt: d.prompt,
+        source: d.source,
+        options: d.options,
+      }),
+    };
+  }
+  if (node.id.startsWith("a2a:")) {
+    const d = detail as A2ATask | null;
+    if (!d?.input?.messages?.length) return null;
+    return {
+      url: "/a2a",
+      init: post({
+        jsonrpc: "2.0",
+        id: node.id,
+        method: "message/send",
+        params: { skill: d.input.skill, messages: d.input.messages, metadata: d.input.metadata },
+      }),
+    };
+  }
+  if (node.id.startsWith("conductor:task:")) {
+    const d = detail as ConductorTaskDetail | null;
+    if (!(d?.repo || d?.prompt)) return null;
+    return {
+      url: "/api/conductor/tasks",
+      init: post({
+        repoUrl: d.repo,
+        prompt: d.prompt,
+        baseRef: d.base_ref ?? undefined,
+        mode: d.mode,
+      }),
+    };
+  }
+  return null;
 }
 
 /**
@@ -167,6 +232,7 @@ export function useDrawerDetail(node: OrchNode | null) {
   useFetchDetail(node, route, setDetail, setDetailError, setIsLoading);
 
   const { canApprove, canCancel } = deriveActionAvailability(route, node);
+  const repeatReq = node ? repeatReqFor(node, detail) : null;
 
   const runAction = async (req: { url: string; init: RequestInit } | null): Promise<boolean> => {
     if (busy) return false;
@@ -186,7 +252,9 @@ export function useDrawerDetail(node: OrchNode | null) {
     errorKind: error?.kind ?? null,
     canApprove,
     canCancel,
+    canRepeat: !!repeatReq && !busy,
     approve: () => runAction(route?.approveReq ?? null),
     cancel: () => runAction(route?.cancelReq ?? null),
+    repeat: () => runAction(repeatReq),
   };
 }

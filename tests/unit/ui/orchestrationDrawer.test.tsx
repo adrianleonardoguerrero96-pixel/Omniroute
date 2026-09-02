@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 vi.mock("next-intl", () => ({
   useTranslations: () => (k: string, v?: Record<string, unknown>) =>
@@ -12,6 +12,7 @@ import {
   OrchestrationDrawer,
   buildTraceJson,
 } from "@/app/(dashboard)/dashboard/orchestration/drawer/OrchestrationDrawer";
+import { repeatReqFor } from "@/app/(dashboard)/dashboard/orchestration/drawer/useDrawerDetail";
 
 function render(el: React.ReactElement) {
   const c = document.createElement("div");
@@ -443,5 +444,282 @@ describe("buildTraceJson", () => {
     const parsed = JSON.parse(buildTraceJson(node as never, null));
     expect(parsed.timeline).toBeNull();
     expect(parsed.raw).toEqual({ foo: "bar" });
+  });
+});
+
+describe("repeatReqFor", () => {
+  it("builds the cloud-agent repeat request from the loaded detail (CreateCloudAgentTaskSchema shape)", () => {
+    const node = {
+      id: "cloud-agent:t1",
+      kind: "work",
+      source: "cloud-agent",
+      state: "succeeded",
+      label: "x",
+    };
+    const detail = {
+      id: "t1",
+      providerId: "devin",
+      prompt: "do the thing",
+      source: { repoName: "r", repoUrl: "https://x" },
+      options: { autoCreatePr: true },
+      activities: [],
+    };
+    const req = repeatReqFor(node as never, detail);
+    expect(req?.url).toBe("/api/v1/agents/tasks");
+    expect(req?.init.method).toBe("POST");
+    expect(JSON.parse(String(req?.init.body))).toEqual({
+      providerId: "devin",
+      prompt: "do the thing",
+      source: { repoName: "r", repoUrl: "https://x" },
+      options: { autoCreatePr: true },
+    });
+  });
+
+  it("returns null for cloud-agent when neither providerId nor prompt is recoverable", () => {
+    const node = {
+      id: "cloud-agent:t1",
+      kind: "work",
+      source: "cloud-agent",
+      state: "succeeded",
+      label: "x",
+    };
+    expect(repeatReqFor(node as never, { source: {}, options: {}, activities: [] })).toBeNull();
+  });
+
+  it("builds the a2a repeat request as a message/send JSON-RPC call from detail.input", () => {
+    const node = { id: "a2a:1", kind: "work", source: "a2a", state: "succeeded", label: "x" };
+    const detail = {
+      input: {
+        skill: "smart-routing",
+        messages: [{ role: "user", content: "route this please" }],
+        metadata: { role: "general" },
+      },
+    };
+    const req = repeatReqFor(node as never, detail);
+    expect(req?.url).toBe("/a2a");
+    expect(JSON.parse(String(req?.init.body))).toEqual({
+      jsonrpc: "2.0",
+      id: "a2a:1",
+      method: "message/send",
+      params: {
+        skill: "smart-routing",
+        messages: [{ role: "user", content: "route this please" }],
+        metadata: { role: "general" },
+      },
+    });
+  });
+
+  it("returns null for a2a when input.messages is empty or missing", () => {
+    const node = { id: "a2a:1", kind: "work", source: "a2a", state: "succeeded", label: "x" };
+    expect(repeatReqFor(node as never, { input: { skill: "s", messages: [] } })).toBeNull();
+    expect(repeatReqFor(node as never, {})).toBeNull();
+  });
+
+  it("builds the conductor repeat request against the D1 task-creation route", () => {
+    const node = {
+      id: "conductor:task:1",
+      kind: "work",
+      source: "conductor",
+      state: "succeeded",
+      label: "x",
+    };
+    const detail = {
+      repo: "https://github.com/x/y",
+      prompt: "fix the bug",
+      base_ref: "main",
+      mode: "auto",
+    };
+    const req = repeatReqFor(node as never, detail);
+    expect(req?.url).toBe("/api/conductor/tasks");
+    expect(JSON.parse(String(req?.init.body))).toEqual({
+      repoUrl: "https://github.com/x/y",
+      prompt: "fix the bug",
+      baseRef: "main",
+      mode: "auto",
+    });
+  });
+
+  it("returns null for conductor when neither repo nor prompt is recoverable", () => {
+    const node = {
+      id: "conductor:task:1",
+      kind: "work",
+      source: "conductor",
+      state: "succeeded",
+      label: "x",
+    };
+    expect(repeatReqFor(node as never, { mode: "auto" })).toBeNull();
+  });
+
+  it("returns null for a source with no known repeat contract (runner/overflow)", () => {
+    const node = { id: "overflow:1", kind: "overflow", state: "succeeded", label: "x" };
+    expect(repeatReqFor(node as never, {})).toBeNull();
+  });
+});
+
+describe("OrchestrationDrawer repeat action (two-click confirm)", () => {
+  const A2A_TASK = {
+    id: "1",
+    skill: "smart-routing",
+    state: "working",
+    input: {
+      skill: "smart-routing",
+      messages: [{ role: "user", content: "route this please" }],
+    },
+    artifacts: [],
+    events: [],
+    metadata: {},
+    createdAt: "x",
+    updatedAt: "y",
+    expiresAt: "z",
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function findRepeatButton(c: HTMLElement): HTMLButtonElement {
+    return Array.from(c.querySelectorAll("button")).find(
+      (b) => b.textContent?.includes("actionRepeat") || b.textContent?.includes("repeatConfirm")
+    ) as HTMLButtonElement;
+  }
+
+  it("disables the repeat button with the repeatUnavailable tooltip when the input cannot be recovered", async () => {
+    const unrecoverable = { ...A2A_TASK, input: { skill: "smart-routing", messages: [] } };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ task: unrecoverable }) }))
+    );
+    const node = { id: "a2a:1", kind: "work", source: "a2a", state: "running", label: "x" };
+    const { c, cleanup } = render(
+      <OrchestrationDrawer node={node as never} onClose={() => {}} onActionDone={() => {}} />
+    );
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const btn = findRepeatButton(c);
+    expect(btn.disabled).toBe(true);
+    expect(btn.getAttribute("title")).toBe("repeatUnavailable");
+    cleanup();
+  });
+
+  it("first click arms the confirm label without posting; second click within the window posts and reports success", async () => {
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ task: A2A_TASK }) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    let done = false;
+    const node = { id: "a2a:1", kind: "work", source: "a2a", state: "running", label: "x" };
+    const { c, cleanup } = render(
+      <OrchestrationDrawer
+        node={node as never}
+        onClose={() => {}}
+        onActionDone={() => {
+          done = true;
+        }}
+      />
+    );
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      findRepeatButton(c).click();
+    });
+    expect(fetchMock.mock.calls.some(([, init]) => (init as RequestInit)?.method === "POST")).toBe(
+      false
+    );
+    expect(findRepeatButton(c).textContent).toContain("repeatConfirm");
+
+    await act(async () => {
+      findRepeatButton(c).click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const post = fetchMock.mock.calls.find(([, init]) => (init as RequestInit)?.method === "POST");
+    expect(post).toBeTruthy();
+    expect(post![0]).toBe("/a2a");
+    expect(JSON.parse(String((post![1] as RequestInit).body))).toEqual({
+      jsonrpc: "2.0",
+      id: "a2a:1",
+      method: "message/send",
+      params: {
+        skill: "smart-routing",
+        messages: [{ role: "user", content: "route this please" }],
+      },
+    });
+    expect(done).toBe(true);
+    expect(c.textContent).toContain("repeatDone");
+    cleanup();
+  });
+
+  it("resets the confirm label back to actionRepeat after 3s with no second click", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ task: A2A_TASK }) }))
+    );
+    const node = { id: "a2a:1", kind: "work", source: "a2a", state: "running", label: "x" };
+    const { c, cleanup } = render(
+      <OrchestrationDrawer node={node as never} onClose={() => {}} onActionDone={() => {}} />
+    );
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      findRepeatButton(c).click();
+    });
+    expect(findRepeatButton(c).textContent).toContain("repeatConfirm");
+
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(findRepeatButton(c).textContent).toContain("actionRepeat");
+    cleanup();
+  });
+
+  it("shows actionFailed when the repeat POST fails, without touching onActionDone", async () => {
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ task: A2A_TASK }) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    let done = false;
+    const node = { id: "a2a:1", kind: "work", source: "a2a", state: "running", label: "x" };
+    const { c, cleanup } = render(
+      <OrchestrationDrawer
+        node={node as never}
+        onClose={() => {}}
+        onActionDone={() => {
+          done = true;
+        }}
+      />
+    );
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      findRepeatButton(c).click();
+    });
+    await act(async () => {
+      findRepeatButton(c).click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(c.textContent).toContain("actionFailed");
+    expect(done).toBe(false);
+    cleanup();
   });
 });
