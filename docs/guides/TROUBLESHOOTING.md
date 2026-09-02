@@ -52,7 +52,7 @@ Common problems and solutions for OmniRoute.
 
 ```bash
 export OMNIROUTE_ROTATE_ON_400=true           # hop to another model/provider on 400/401 (skips broken passthrough models)
-export OMNIROUTE_CHAT_MAX_HEAVY_IN_FLIGHT=4   # raise the heavyweight admission ceiling (default 1) so long-context bursts are not rejected
+export OMNIROUTE_CHAT_MAX_HEAVY_IN_FLIGHT=4   # explicit heavyweight admission ceiling (unset by default: no request-count cap, see note below)
 export OMNIROUTE_CHAT_ADMISSION_QUEUE_MS=5000 # longer bounded wait for heavyweight capacity instead of an immediate retryable 503
 ```
 
@@ -556,8 +556,8 @@ The byte-based response body is:
 ```
 
 The structure-based response uses the same type and code, with the message
-`Structurally heavy chat request capacity is busy; retry shortly.` and
-`reason: "structure_limit"`.
+`Local chat admission capacity is busy for this structurally heavy request; upstream provider routing was not attempted. Retry shortly.`
+and `reason: "structure_limit"`.
 At the default thresholds, a request is structurally heavy when it has at least `200` messages,
 at least `64` tools, or at least `32,000` estimated tokens, or when bounded structure estimation
 exhausts its bounds of `10,000` visited nodes or depth `12`.
