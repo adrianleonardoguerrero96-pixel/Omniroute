@@ -1,7 +1,7 @@
 ---
 title: "Free Tiers & Free-Token Budget"
 version: 3.8.50
-lastUpdated: 2026-08-31
+lastUpdated: 2026-09-02
 ---
 
 # Free Tiers & Free-Token Budget

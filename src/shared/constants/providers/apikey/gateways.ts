@@ -1347,7 +1347,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     website: "https://xkiro.com",
     hasFree: true,
     freeNote:
-      "Free plan: 5M tokens/day per account across 40 upstream free models (39 pinned here) (Qwen, MiniMax, DeepSeek, Mistral, SenseNova), no card; past the daily allowance free requests get a 429 until the reset. RPM not published.",
+      "Free plan: 5M tokens/day per account across 40 upstream free models — 39 pinned here (Qwen, MiniMax, DeepSeek, Mistral, SenseNova) — no card; past the daily allowance free requests get a 429 until the reset. RPM not published.",
     authHint:
       "Create a free account at xkiro.com and paste the key here (Bearer; x-api-key also accepted).",
     apiHint:

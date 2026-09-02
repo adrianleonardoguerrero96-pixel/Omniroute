@@ -32,7 +32,7 @@
     <rect x="36" y="212" width="1128" height="42" rx="6" fill="#ffffff" fill-opacity="0.02"/>
     <g opacity="0"><animate attributeName="opacity" values="0;1" dur="0.4s" begin="0.24s" fill="freeze"/>
       <text x="44" y="238" font-size="14.5" fill="#c9d1d9">Free providers built-in</text>
-      <text x="440" y="238" text-anchor="middle" font-family="Inter, 'Segoe UI', Arial, Helvetica, system-ui, sans-serif" font-size="15" font-weight="800" fill="#7ee787">90+</text>
+      <text x="440" y="238" text-anchor="middle" font-family="Inter, 'Segoe UI', Arial, Helvetica, system-ui, sans-serif" font-size="15" font-weight="800" fill="#7ee787">150+</text>
       <use href="#yes" x="604" y="233"/>
       <use href="#mid" x="760" y="233"/>
       <use href="#no" x="916" y="233"/>
