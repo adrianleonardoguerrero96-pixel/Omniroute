@@ -2,18 +2,24 @@
  * Pure browser-language detector used to pick an initial locale on first
  * visit, before the user has made an explicit selection (no cookie set).
  *
- * Matching order:
- *  1. Exact match against `navigator.languages` entries (case-insensitive).
- *  2. `zh-HK` / `zh-MO` are treated as `zh-TW` (Traditional Chinese) since
- *     OmniRoute does not ship a dedicated Hong-Kong/Macau locale.
- *  3. Declared alias — `aliases` has the shape of `LOCALE_ALIASES` from
- *     `@/i18n/config` (locale code → lower-case BCP-47 tags) and is matched on
- *     the full tag or on its base language, e.g. `fil`, `fil-PH`, `tl` → `phi`
- *     and `uk` → `uk-UA`. Aliases of locales not in `locales` are ignored.
- *  4. Language-prefix match — e.g. `en-US` matches a supported `en` locale.
- *  5. Bare base language → first supported regional locale of that language,
- *     in `locales` (config) order — e.g. `uk` → `uk-UA`, `zh` → `zh-CN`.
- *  6. No match → `null` (caller should keep the existing default).
+ * Matching order, per `navigator.languages` entry (all comparisons are
+ * case-insensitive; the first entry that matches wins):
+ *  1. RFC 4647 lookup truncation — the tag is tried from its full form down to
+ *     its base language, dropping one trailing subtag at a time
+ *     (`zh-Hant-TW` → `zh-hant` → `zh`, `en-US` → `en`). Each candidate is
+ *     checked for (a) an exact supported locale, then (b) a declared alias.
+ *     `aliases` has the shape of `LOCALE_ALIASES` from `@/i18n/config` (locale
+ *     code → lower-case BCP-47 tags): `fil`, `fil-PH`, `tl` → `phi`,
+ *     `uk` → `uk-UA`, `zh-Hant`, `zh-Hant-TW`, `zh-Hant-HK` → `zh-TW`. Aliases
+ *     of locales not in `locales` are ignored. The base-language candidate is
+ *     the classic language-prefix match (`en-US` → `en`, `sr-Latn-RS` → `sr`),
+ *     so no separate prefix step is needed after this one.
+ *  2. `zh-HK` / `zh-MO` fold to `zh-TW` (Traditional Chinese) when nothing
+ *     above matched — kept for callers that pass no aliases.
+ *  3. Base language → first supported regional locale of that language, in
+ *     `locales` (config) order — e.g. `uk` → `uk-UA`, `zh` and `zh-Hans-CN`
+ *     → `zh-CN`.
+ *  4. No match → `null` (caller should keep the existing default).
  *
  * Kept dependency-free (no DOM/`navigator` access) so it is trivially unit
  * testable and reusable from both client components and future server code.
@@ -42,10 +48,17 @@ export function detectBrowserLocale(
     const language = rawLanguage.toLowerCase();
     const prefix = language.split("-")[0];
 
-    // 1. Exact match.
-    const exactIndex = normalizedLocales.indexOf(language);
-    if (exactIndex !== -1) {
-      return locales[exactIndex];
+    // 1. RFC 4647 lookup: full tag → … → base language. At every level an
+    //    exact supported locale wins, then a declared alias.
+    for (const candidate of lookupCandidates(language)) {
+      const exactIndex = normalizedLocales.indexOf(candidate);
+      if (exactIndex !== -1) {
+        return locales[exactIndex];
+      }
+      const aliased = aliasIndex.get(candidate);
+      if (aliased) {
+        return aliased;
+      }
     }
 
     // 2. zh-HK / zh-MO fold to zh-TW when zh-TW is supported (kept for callers
@@ -57,19 +70,7 @@ export function detectBrowserLocale(
       }
     }
 
-    // 3. Declared alias, on the full tag or on its base language (fil-PH → phi).
-    const aliased = aliasIndex.get(language) ?? aliasIndex.get(prefix);
-    if (aliased) {
-      return aliased;
-    }
-
-    // 4. Language-prefix match (e.g. "en-US" -> "en").
-    const prefixIndex = normalizedLocales.indexOf(prefix);
-    if (prefixIndex !== -1) {
-      return locales[prefixIndex];
-    }
-
-    // 5. Bare base language → first supported regional locale of that language
+    // 3. Base language → first supported regional locale of that language
     //    ("uk" -> "uk-UA", "zh" -> "zh-CN"). Config order decides the tie.
     const regionalIndex = normalizedLocales.findIndex(
       (locale) => locale.includes("-") && locale.split("-")[0] === prefix
@@ -80,4 +81,18 @@ export function detectBrowserLocale(
   }
 
   return null;
+}
+
+/**
+ * RFC 4647 §3.4 lookup candidates for a lower-cased tag: the full tag, then
+ * each shorter form obtained by dropping the last subtag, down to the base
+ * language — `zh-hant-tw` → `["zh-hant-tw", "zh-hant", "zh"]`.
+ */
+function lookupCandidates(tag: string): string[] {
+  const subtags = tag.split("-");
+  const candidates: string[] = [];
+  for (let length = subtags.length; length >= 1; length -= 1) {
+    candidates.push(subtags.slice(0, length).join("-"));
+  }
+  return candidates;
 }

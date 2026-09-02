@@ -50,8 +50,10 @@ test("locale aliases are lower-case, unique and never collide with a locale code
   }
 });
 
-test("Ukrainian, Filipino and Hong-Kong/Macau browsers resolve through declared aliases", () => {
+test("Ukrainian, Filipino, Hong-Kong/Macau and zh-Hant browsers resolve through declared aliases", () => {
   assert.deepEqual(LOCALE_ALIASES["uk-UA"], ["uk"]);
   assert.deepEqual(LOCALE_ALIASES["phi"], ["fil", "tl"]);
-  assert.deepEqual(LOCALE_ALIASES["zh-TW"], ["zh-hk", "zh-mo"]);
+  // `zh-hant` lets script-tagged Traditional Chinese (`zh-Hant-TW`, `zh-Hant-HK`)
+  // reach zh-TW instead of the first zh-* locale in config order (zh-CN).
+  assert.deepEqual(LOCALE_ALIASES["zh-TW"], ["zh-hk", "zh-mo", "zh-hant"]);
 });

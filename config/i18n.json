@@ -350,7 +350,7 @@
       "native": "中文 (繁體)",
       "english": "Chinese (Traditional)",
       "flag": "🇹🇼",
-      "aliases": ["zh-hk", "zh-mo"]
+      "aliases": ["zh-hk", "zh-mo", "zh-hant"]
     }
   ]
 }
