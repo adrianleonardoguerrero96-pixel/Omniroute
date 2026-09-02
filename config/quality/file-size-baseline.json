@@ -1,4 +1,5 @@
 {
+  "_rebaseline_2026_09_02_11460_flat_rate_estimates": "PR #11460 (xiaoyaner0201, fix/11459-cc-cost-estimates) own growth: src/app/(dashboard)/dashboard/costs/CostOverviewTab.tsx 1283->1319 (+36) — the flat-rate estimate labelling and the includeFlatRateEstimates opt-in on the Costs dashboard. #11460 merged first so this ratchet re-tightening measures the real post-merge LOC; the cap still drops 2002->1319 (-683) versus the 2026-08-10 +30% loosening this PR reverses. Same own-growth rationale as _rebaseline_2026_08_20_10531_freebuff_provider.",
   "_rebaseline_2026_08_31_chatgpt_web_v4_vendor": "Pinned MIT vendor refresh from codex-chatgpt-web 0.1.16 to v4.0.6 (commit 09877fa21ffdbf20979623ef501046fc02a750d7). browser-worker.ts is preserved as the reviewed upstream browser protocol implementation; splitting the vendored file would destroy source parity and make future security/liveness updates unauditable. OmniRoute-specific DATA_DIR, Docker CDP, credential-marker, and XML decoding adaptations are covered by the ChatGPT Web Codex focused suite.",
   "_rebaseline_2026_08_20_10531_freebuff_provider": "PR #10531 (adrianaryaputra, feat/freebuff-provider-support, closes #6793) own growth: src/shared/constants/providers/apikey/gateways.ts 1283->1298 (+15, the freebuff APIKEY_PROVIDERS_GATEWAYS catalog entry, additive data at the existing registry chokepoint, same god-file no-split rationale as prior gateways.ts rebaselines) and src/app/(dashboard)/dashboard/providers/[id]/components/modals/AddApiKeyModal.tsx 1062->1067 (+5, freebuff credential placeholder/hint at the existing per-provider switch chokepoint). Covered by tests/unit/freebuff-provider.test.ts (9/9 passing).",
   "_rebaseline_2026_08_31_12212_openapi_generated": "PR #12212 (docs audit follow-up nº 3): src/app/docs/lib/openapi.generated.ts 171->1347 — the module is emitted by scripts/docs/gen-openapi-module.mjs from docs/openapi.yaml, and the spec now documents all 692 implemented routes (was 276), so the generated output grew with the spec. Frozen at the generator output size; shrink by slimming the spec, never by hand-editing the generated module. Covered by tests/unit/openapi-security-tiers.test.ts (6/6) and the check:api-docs-refs gate (692/692 paths with a real route).",
@@ -421,7 +422,7 @@
     "src/app/(dashboard)/dashboard/HomePageClient.tsx": 1344,
     "src/app/(dashboard)/dashboard/api-manager/ApiManagerPageClient.tsx": 3186,
     "src/app/(dashboard)/dashboard/combos/page.tsx": 5012,
-    "src/app/(dashboard)/dashboard/costs/CostOverviewTab.tsx": 1283,
+    "src/app/(dashboard)/dashboard/costs/CostOverviewTab.tsx": 1319,
     "src/app/(dashboard)/dashboard/endpoint/EndpointPageClient.tsx": 2491,
     "src/app/(dashboard)/dashboard/providers/[id]/components/modals/EditConnectionModal.tsx": 1631,
     "src/app/(dashboard)/dashboard/providers/page.tsx": 2007,
