@@ -63,3 +63,10 @@ test("compression meta present → compression header set", () => {
   );
   assert.ok(Object.values(h).includes("engine:z; source=routing"));
 });
+
+test("forwards fallbackAttempts to buildStreamingResponseHeaders when provided", () => {
+  const { build, calls } = makeBuild();
+  assembleStreamingResponseHeaders(baseArgs({ fallbackAttempts: 2 }), build);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].meta.fallbackAttempts, 2);
+}); 

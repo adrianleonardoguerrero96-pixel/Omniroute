@@ -1,0 +1,1 @@
+- **fix(api):** thread `X-OmniRoute-Fallback-Attempts` through streaming and non-streaming chat completions ([#12339](https://github.com/diegosouzapw/OmniRoute/issues/12339)) 
