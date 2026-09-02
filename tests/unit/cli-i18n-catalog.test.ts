@@ -109,7 +109,7 @@ test("i18n.mjs usa fallback en quando locale não existe", async () => {
   resetForTests();
 });
 
-test("i18n.mjs resolve alias do config: OMNIROUTE_LANG=uk → uk-UA, fil_PH.UTF-8 → phi", async () => {
+test("i18n.mjs resolve alias do config: OMNIROUTE_LANG=uk → uk-UA, fil_PH.UTF-8 → phi, in → id", async () => {
   const { resetForTests, detectLocale } = await import("../../bin/cli/i18n.mjs");
   const orig = process.env.OMNIROUTE_LANG;
   process.env.OMNIROUTE_LANG = "uk";
@@ -121,6 +121,11 @@ test("i18n.mjs resolve alias do config: OMNIROUTE_LANG=uk → uk-UA, fil_PH.UTF-
   process.env.OMNIROUTE_LANG = "uk_UA.UTF-8";
   resetForTests();
   assert.equal(detectLocale(), "uk-UA");
+  // `in` (retired duplicate Indonesian locale) must keep resolving to `id`, otherwise a
+  // saved OMNIROUTE_LANG=in silently falls back to English.
+  process.env.OMNIROUTE_LANG = "in";
+  resetForTests();
+  assert.equal(detectLocale(), "id");
   if (orig === undefined) delete process.env.OMNIROUTE_LANG;
   else process.env.OMNIROUTE_LANG = orig;
   resetForTests();
