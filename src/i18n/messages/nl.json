@@ -6171,7 +6171,7 @@
       "glm-cn": "Verbind GLM Coding (China) met een API-sleutel.",
       "glmt": "Vooraf ingesteld GLM-profiel met een hoger tokenbudget, denken ingeschakeld en een langere time-out.",
       "getgoapi": "Verbind GoAPI met een API-sleutel.",
-      "groq": "Gratis abonnement: 30 RPM / 14,4K RPD — geen creditcard",
+      "groq": "__MISSING__:Free plan: per-model caps (30 RPM · 1K RPD · 200K tokens/day per chat model, console.groq.com/docs/rate-limits) — no payment method on file.",
       "haiper": "Haal de API-sleutel op via haiper.ai/haiper-api",
       "heroku": "Verbind Heroku AI met een API-sleutel.",
       "hcnsec": "Haal de API-sleutel op via api.hcnsec.cn",

@@ -6171,7 +6171,7 @@
       "glm-cn": "একটি API কী দিয়ে GLM Coding (China) কানেক্ট করুন।",
       "glmt": "উচ্চতর টোকেন বাজেট, থিংকিং সক্রিয় এবং দীর্ঘতর টাইমআউট সহ প্রিসেট GLM প্রোফাইল।",
       "getgoapi": "একটি API কী দিয়ে GoAPI কানেক্ট করুন।",
-      "groq": "ফ্রি টিয়ার: 30 RPM / 14.4K RPD — কোনো ক্রেডিট কার্ড লাগবে না",
+      "groq": "__MISSING__:Free plan: per-model caps (30 RPM · 1K RPD · 200K tokens/day per chat model, console.groq.com/docs/rate-limits) — no payment method on file.",
       "haiper": "haiper.ai/haiper-api থেকে API কী পান",
       "heroku": "একটি API কী দিয়ে Heroku AI কানেক্ট করুন।",
       "hcnsec": "api.hcnsec.cn-এ API কী পান",

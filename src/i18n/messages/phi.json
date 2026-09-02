@@ -6171,7 +6171,7 @@
       "glm-cn": "Ikonekta ang GLM Coding (China) gamit ang isang API key.",
       "glmt": "Preset na GLM profile na may mas mataas na token budget, naka-enable ang thinking, at mas mahabang timeout.",
       "getgoapi": "Ikonekta ang GoAPI gamit ang isang API key.",
-      "groq": "Libreng tier: 30 RPM / 14.4K RPD — walang credit card",
+      "groq": "__MISSING__:Free plan: per-model caps (30 RPM · 1K RPD · 200K tokens/day per chat model, console.groq.com/docs/rate-limits) — no payment method on file.",
       "haiper": "Kumuha ng API key sa haiper.ai/haiper-api",
       "heroku": "Ikonekta ang Heroku AI gamit ang isang API key.",
       "hcnsec": "Kumuha ng API key sa api.hcnsec.cn",

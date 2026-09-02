@@ -6171,7 +6171,7 @@
       "glm-cn": "使用 API 密钥连接 GLM Coding (China)。",
       "glmt": "预设 GLM 配置文件，具有更高的 Token 预算、启用思考功能以及更长的超时时间。",
       "getgoapi": "使用 API 密钥连接 GoAPI。",
-      "groq": "免费层：30 RPM / 14.4K RPD — 无需信用卡",
+      "groq": "__MISSING__:Free plan: per-model caps (30 RPM · 1K RPD · 200K tokens/day per chat model, console.groq.com/docs/rate-limits) — no payment method on file.",
       "haiper": "在 haiper.ai/haiper-api 获取 API 密钥",
       "heroku": "使用 API 密钥连接 Heroku AI。",
       "hcnsec": "在 api.hcnsec.cn 获取 API 密钥",

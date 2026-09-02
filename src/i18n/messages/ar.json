@@ -6171,7 +6171,7 @@
       "glm-cn": "ربط GLM Coding (الصين) بمفتاح API.",
       "glmt": "ملف تعريف GLM مسبق الضبط بميزانية رموز أعلى، وتمكين التفكير، ومهلة أطول.",
       "getgoapi": "ربط GoAPI بمفتاح API.",
-      "groq": "الفئة المجانية: 30 طلبًا في الدقيقة / 14.4 ألف طلب في اليوم — بدون بطاقة ائتمان",
+      "groq": "__MISSING__:Free plan: per-model caps (30 RPM · 1K RPD · 200K tokens/day per chat model, console.groq.com/docs/rate-limits) — no payment method on file.",
       "haiper": "احصل على مفتاح API من haiper.ai/haiper-api",
       "heroku": "ربط Heroku AI بمفتاح API.",
       "hcnsec": "احصل على مفتاح API من api.hcnsec.cn",

@@ -6171,7 +6171,7 @@
       "glm-cn": "Conectați GLM Coding (China) cu o cheie API.",
       "glmt": "Profil GLM prestabilit cu un buget de tokenuri mai mare, gândire activată și timeout mai lung.",
       "getgoapi": "Conectați GoAPI cu o cheie API.",
-      "groq": "Nivel gratuit: 30 RPM / 14.4K RPD — fără card de credit",
+      "groq": "__MISSING__:Free plan: per-model caps (30 RPM · 1K RPD · 200K tokens/day per chat model, console.groq.com/docs/rate-limits) — no payment method on file.",
       "haiper": "Obțineți cheia API la haiper.ai/haiper-api",
       "heroku": "Conectați Heroku AI cu o cheie API.",
       "hcnsec": "Obțineți cheia API la api.hcnsec.cn",

@@ -6172,7 +6172,7 @@
       "glm-cn": "Kết nối GLM Coding (China) bằng khóa API.",
       "glmt": "Hồ sơ GLM đặt sẵn với ngân sách token cao hơn, bật thinking và thời gian chờ dài hơn.",
       "getgoapi": "Kết nối GoAPI bằng khóa API.",
-      "groq": "Gói miễn phí: 30 RPM / 14,4 nghìn RPD — không cần thẻ tín dụng",
+      "groq": "Gói miễn phí: giới hạn theo từng mô hình (30 RPM · 1K RPD · 200K token/ngày cho mỗi mô hình chat, console.groq.com/docs/rate-limits) — không cần đăng ký phương thức thanh toán.",
       "haiper": "Lấy khóa API tại haiper.ai/haiper-api",
       "heroku": "Kết nối Heroku AI bằng khóa API.",
       "hcnsec": "Lấy khóa API tại api.hcnsec.cn",
