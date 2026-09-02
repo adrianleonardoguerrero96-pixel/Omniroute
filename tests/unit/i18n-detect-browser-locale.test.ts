@@ -40,4 +40,35 @@ describe("detectBrowserLocale", () => {
   it("is case-insensitive", () => {
     assert.equal(detectBrowserLocale(["PT-br"], SUPPORTED_LOCALES), "pt-BR");
   });
+
+  // Regional-code locales (`uk-UA`, `phi`) plus the alias map shape exported by
+  // `@/i18n/config` (`LOCALE_ALIASES`) — browsers send `uk`, `fil`/`tl`.
+  const REGIONAL_LOCALES = ["en", "uk-UA", "phi", "pt", "pt-BR", "zh-CN", "zh-TW"] as const;
+  const ALIASES = { "uk-UA": ["uk"], phi: ["fil", "tl"] } as const;
+
+  it("resolves a declared alias (fil → phi)", () => {
+    assert.equal(detectBrowserLocale(["fil"], REGIONAL_LOCALES, ALIASES), "phi");
+  });
+
+  it("resolves an alias carried by a regional tag (fil-PH → phi, TL → phi)", () => {
+    assert.equal(detectBrowserLocale(["fil-PH"], REGIONAL_LOCALES, ALIASES), "phi");
+    assert.equal(detectBrowserLocale(["TL"], REGIONAL_LOCALES, ALIASES), "phi");
+  });
+
+  it("matches a bare base language to a regional locale of that language (uk → uk-UA) without aliases", () => {
+    assert.equal(detectBrowserLocale(["uk"], REGIONAL_LOCALES), "uk-UA");
+  });
+
+  it("picks the first regional locale in config order for a bare base language (zh → zh-CN)", () => {
+    assert.equal(detectBrowserLocale(["zh"], REGIONAL_LOCALES), "zh-CN");
+  });
+
+  it("keeps the exact/prefix precedence: pt-PT → pt, pt-BR → pt-BR", () => {
+    assert.equal(detectBrowserLocale(["pt-PT"], REGIONAL_LOCALES, ALIASES), "pt");
+    assert.equal(detectBrowserLocale(["pt-BR"], REGIONAL_LOCALES, ALIASES), "pt-BR");
+  });
+
+  it("still returns null when nothing matches, even with aliases", () => {
+    assert.equal(detectBrowserLocale(["ja-JP"], REGIONAL_LOCALES, ALIASES), null);
+  });
 });
