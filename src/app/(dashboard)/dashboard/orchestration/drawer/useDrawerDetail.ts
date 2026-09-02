@@ -97,58 +97,74 @@ function withoutMemoryHits(metadata: unknown): Record<string, unknown> | undefin
   return rest;
 }
 
+/** Builds the JSON-body `RequestInit` shared by every `repeatReqFor*` source builder below. */
+function postJson(body: unknown): RequestInit {
+  return {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  };
+}
+
+/** cloud-agent repeat builder — `POST /api/v1/agents/tasks`, `CreateCloudAgentTaskSchema` shape. */
+function repeatReqForCloudAgent(detail: unknown): { url: string; init: RequestInit } | null {
+  const d = detail as CloudAgentTask | null;
+  if (!d?.providerId || !d?.prompt || !d?.source) return null;
+  return {
+    url: "/api/v1/agents/tasks",
+    init: postJson({
+      providerId: d.providerId,
+      prompt: d.prompt,
+      source: d.source,
+      options: d.options,
+    }),
+  };
+}
+
+/** a2a repeat builder — `POST /a2a`, JSON-RPC `message/send` from `detail.input`. */
+function repeatReqForA2a(
+  nodeId: string,
+  detail: unknown
+): { url: string; init: RequestInit } | null {
+  const d = detail as A2ATask | null;
+  if (!d?.input?.messages?.length) return null;
+  return {
+    url: "/a2a",
+    init: postJson({
+      jsonrpc: "2.0",
+      id: nodeId,
+      method: "message/send",
+      params: {
+        skill: d.input.skill,
+        messages: d.input.messages,
+        metadata: withoutMemoryHits(d.input.metadata),
+      },
+    }),
+  };
+}
+
+/** conductor repeat builder — `POST /api/conductor/tasks` (D1 task-creation route). */
+function repeatReqForConductor(detail: unknown): { url: string; init: RequestInit } | null {
+  const d = detail as ConductorTaskDetail | null;
+  if (!d?.repo || !d?.prompt) return null;
+  return {
+    url: "/api/conductor/tasks",
+    init: postJson({
+      repoUrl: d.repo,
+      prompt: d.prompt,
+      baseRef: d.base_ref ?? undefined,
+      mode: d.mode,
+    }),
+  };
+}
+
 export function repeatReqFor(
   node: OrchNode,
   detail: unknown
 ): { url: string; init: RequestInit } | null {
-  const post = (body: unknown): RequestInit => ({
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (node.id.startsWith("cloud-agent:")) {
-    const d = detail as CloudAgentTask | null;
-    if (!d?.providerId || !d?.prompt || !d?.source) return null;
-    return {
-      url: "/api/v1/agents/tasks",
-      init: post({
-        providerId: d.providerId,
-        prompt: d.prompt,
-        source: d.source,
-        options: d.options,
-      }),
-    };
-  }
-  if (node.id.startsWith("a2a:")) {
-    const d = detail as A2ATask | null;
-    if (!d?.input?.messages?.length) return null;
-    return {
-      url: "/a2a",
-      init: post({
-        jsonrpc: "2.0",
-        id: node.id,
-        method: "message/send",
-        params: {
-          skill: d.input.skill,
-          messages: d.input.messages,
-          metadata: withoutMemoryHits(d.input.metadata),
-        },
-      }),
-    };
-  }
-  if (node.id.startsWith("conductor:task:")) {
-    const d = detail as ConductorTaskDetail | null;
-    if (!d?.repo || !d?.prompt) return null;
-    return {
-      url: "/api/conductor/tasks",
-      init: post({
-        repoUrl: d.repo,
-        prompt: d.prompt,
-        baseRef: d.base_ref ?? undefined,
-        mode: d.mode,
-      }),
-    };
-  }
+  if (node.id.startsWith("cloud-agent:")) return repeatReqForCloudAgent(detail);
+  if (node.id.startsWith("a2a:")) return repeatReqForA2a(node.id, detail);
+  if (node.id.startsWith("conductor:task:")) return repeatReqForConductor(detail);
   return null;
 }
 
