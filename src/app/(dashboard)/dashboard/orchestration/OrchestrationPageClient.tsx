@@ -8,6 +8,7 @@ import { useOrchestrationSnapshot } from "./hooks/useOrchestrationSnapshot";
 import { AgentsTab } from "./tabs/AgentsTab";
 import { RoutingTab } from "./tabs/RoutingTab";
 import { OverviewTab } from "./tabs/OverviewTab";
+import { HistoryTab } from "./tabs/HistoryTab";
 import { OrchestrationDrawer } from "./drawer/OrchestrationDrawer";
 import { OrchestrationToolbar } from "./OrchestrationToolbar";
 import { collectProviderKeys, filterSnapshot } from "./model/filterSnapshot";
@@ -15,7 +16,7 @@ import type { OrchFilter } from "./model/filterSnapshot";
 import { ORCH_STATES } from "./model/orchestrationTypes";
 import type { OrchSource, OrchState } from "./model/orchestrationTypes";
 
-const TABS = ["agents", "routing", "overview"] as const;
+const TABS = ["agents", "routing", "overview", "history"] as const;
 type Tab = (typeof TABS)[number];
 
 const VALID_STATES: ReadonlySet<OrchState> = new Set(ORCH_STATES);
@@ -44,6 +45,7 @@ const TAB_KEY: Record<Tab, string> = {
   agents: "tabAgents",
   routing: "tabRouting",
   overview: "tabOverview",
+  history: "tabHistory",
 };
 
 /**
@@ -173,6 +175,7 @@ export default function OrchestrationPageClient() {
               onSeeInGraph={(id) => setParams({ tab: "agents", node: id })}
             />
           )}
+          {tab === "history" && <HistoryTab />}
         </div>
       </div>
       <OrchestrationDrawer node={selectedNode} onClose={closeDrawer} onActionDone={refetch} />
