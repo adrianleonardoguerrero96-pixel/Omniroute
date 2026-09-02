@@ -13999,7 +13999,7 @@
     "actionFailed": "Действието се провали: {error}",
     "detailFailed": "Неуспешно зареждане на детайлите: {error}",
     "mirroredInA2A": "Отразено в A2A",
-    "actionRepeat": "Повторение",
+    "actionRepeat": "Повтори",
     "repeatConfirm": "Кликнете отново, за да потвърдите",
     "repeatDone": "Създадено е ново изпълнение",
     "repeatUnavailable": "Оригиналният вход не е наличен"

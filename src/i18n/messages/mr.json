@@ -13999,7 +13999,7 @@
     "actionFailed": "क्रिया अयशस्वी: {error}",
     "detailFailed": "तपशील लोड करण्यात अयशस्वी: {error}",
     "mirroredInA2A": "A2A मध्ये प्रतिबिंबित",
-    "actionRepeat": "पुनरावृत्ती",
+    "actionRepeat": "पुनरावृत्ती करा",
     "repeatConfirm": "पुष्टीसाठी पुन्हा क्लिक करा",
     "repeatDone": "नवीन रन तयार केला",
     "repeatUnavailable": "मूळ इनपुट उपलब्ध नाही"

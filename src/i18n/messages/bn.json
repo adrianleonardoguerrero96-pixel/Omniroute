@@ -13999,7 +13999,7 @@
     "actionFailed": "কার্যক্রম ব্যর্থ হয়েছে: {error}",
     "detailFailed": "বিবরণ লোড করতে ব্যর্থ: {error}",
     "mirroredInA2A": "A2A-তে প্রতিফলিত",
-    "actionRepeat": "পুনরাবৃত্তি",
+    "actionRepeat": "পুনরাবৃত্তি করুন",
     "repeatConfirm": "নিশ্চিত করতে আবার ক্লিক করুন",
     "repeatDone": "নতুন রান তৈরি হয়েছে",
     "repeatUnavailable": "মূল ইনপুট উপলব্ধ নেই"

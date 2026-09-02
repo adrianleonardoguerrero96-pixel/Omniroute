@@ -229,6 +229,66 @@ describe("OrchestrationDrawer", () => {
     cleanup();
   });
 
+  it("renders nothing and does not throw when metadata.memoryHits is a malformed, non-array shape (a string, not an array of hits)", async () => {
+    const a2aTask = {
+      id: "1",
+      skill: "smart-routing",
+      state: "working",
+      input: { skill: "smart-routing", messages: [{ role: "user", content: "route this please" }] },
+      artifacts: [],
+      events: [],
+      metadata: { memoryHits: "boom" },
+      createdAt: "x",
+      updatedAt: "y",
+      expiresAt: "z",
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ task: a2aTask }) }))
+    );
+    const node = { id: "a2a:1", kind: "work", source: "a2a", state: "running", label: "x" };
+    const { c, cleanup } = render(
+      <OrchestrationDrawer node={node as never} onClose={() => {}} onActionDone={() => {}} />
+    );
+    await expect(
+      act(async () => {
+        await Promise.resolve();
+      })
+    ).resolves.not.toThrow();
+    expect(c.textContent).not.toContain("drawerMemory");
+    cleanup();
+  });
+
+  it("filters out malformed entries in metadata.memoryHits (an array of junk) without throwing", async () => {
+    const a2aTask = {
+      id: "1",
+      skill: "smart-routing",
+      state: "working",
+      input: { skill: "smart-routing", messages: [{ role: "user", content: "route this please" }] },
+      artifacts: [],
+      events: [],
+      metadata: { memoryHits: [{ notId: "x" }, "nope", 123, null] },
+      createdAt: "x",
+      updatedAt: "y",
+      expiresAt: "z",
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ task: a2aTask }) }))
+    );
+    const node = { id: "a2a:1", kind: "work", source: "a2a", state: "running", label: "x" };
+    const { c, cleanup } = render(
+      <OrchestrationDrawer node={node as never} onClose={() => {}} onActionDone={() => {}} />
+    );
+    await expect(
+      act(async () => {
+        await Promise.resolve();
+      })
+    ).resolves.not.toThrow();
+    expect(c.textContent).not.toContain("drawerMemory");
+    cleanup();
+  });
+
   it("never shows the memory-used section for non-a2a sources, even with attacker-shaped raw data", async () => {
     const detail = {
       data: {

@@ -261,15 +261,23 @@ function DrawerResult({
  * "Memory used" section (Task D4, PR-C): lists the memories consulted for an a2a task's
  * last user message (`task.metadata.memoryHits`, written by `collectMemoryHits` in
  * `src/lib/a2a/taskExecution.ts` — observability only, never injected into a skill's
- * behavior). `metadata` comes back from JSON, so the hits array is narrowed defensively
- * instead of trusted at the `A2ATask` type. Only the a2a source ever populates it; other
- * sources render nothing, even if their raw payload happens to carry a same-shaped field.
+ * behavior). `metadata` is caller-supplied and unvalidated end to end
+ * (`src/app/a2a/route.ts` passes `params?.metadata` straight through, and
+ * `collectMemoryHits` only overwrites it when it finds hits), so `memoryHits` cannot be
+ * trusted at the `A2ATask` type — a malicious/buggy A2A client could post
+ * `metadata: { memoryHits: "boom" }` (a string's `.length` is truthy, so a plain
+ * `!hits || hits.length === 0` guard would let it through) or an array containing
+ * malformed entries. Every entry is validated defensively (array + object + string `id`)
+ * before it is ever rendered, so a bad payload silently drops that entry instead of
+ * crashing the drawer.
  */
 function DrawerMemory({ a2a, t }: { a2a: A2ATask | null; t: Translate }) {
-  const hits = (a2a?.metadata?.memoryHits ?? null) as
-    | Array<{ id: string; key: string; type: string; snippet: string }>
-    | null;
-  if (!hits || hits.length === 0) return null;
+  const raw = a2a?.metadata?.memoryHits;
+  const hits = (Array.isArray(raw) ? raw : []).filter(
+    (h): h is { id: string; key: string; type: string; snippet: string } =>
+      !!h && typeof h === "object" && typeof (h as { id?: unknown }).id === "string"
+  );
+  if (hits.length === 0) return null;
   return (
     <Section title={t("drawerMemory")}>
       <ul className="text-xs flex flex-col gap-1.5">

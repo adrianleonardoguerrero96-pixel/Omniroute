@@ -13999,7 +13999,7 @@
     "actionFailed": "ક્રિયા નિષ્ફળ: {error}",
     "detailFailed": "વિગતો લોડ કરવામાં નિષ્ફળ: {error}",
     "mirroredInA2A": "A2A માં પ્રતિબિંબિત",
-    "actionRepeat": "પુનરાવર્તન",
+    "actionRepeat": "પુનરાવર્તન કરો",
     "repeatConfirm": "પુષ્ટિ કરવા માટે ફરીથી ક્લિક કરો",
     "repeatDone": "નવું રન બનાવવામાં આવ્યું",
     "repeatUnavailable": "મૂળ ઇનપુટ ઉપલબ્ધ નથી"

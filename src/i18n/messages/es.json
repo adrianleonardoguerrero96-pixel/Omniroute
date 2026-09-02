@@ -14000,7 +14000,7 @@
     "detailFailed": "No se pudieron cargar los detalles: {error}",
     "mirroredInA2A": "Reflejado en A2A",
     "actionRepeat": "Repetir",
-    "repeatConfirm": "Haz clic de nuevo para confirmar",
+    "repeatConfirm": "Hacer clic de nuevo para confirmar",
     "repeatDone": "Nueva ejecución creada",
     "repeatUnavailable": "Entrada original no disponible"
   },

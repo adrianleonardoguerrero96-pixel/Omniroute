@@ -13999,7 +13999,7 @@
     "actionFailed": "చర్య విఫలమైంది: {error}",
     "detailFailed": "వివరాలను లోడ్ చేయడంలో విఫలమైంది: {error}",
     "mirroredInA2A": "A2Aలో ప్రతిబింబించబడింది",
-    "actionRepeat": "పునరావృతం",
+    "actionRepeat": "పునరావృతం చేయండి",
     "repeatConfirm": "నిర్ధారించడానికి మళ్లీ క్లిక్ చేయండి",
     "repeatDone": "కొత్త రన్ సృష్టించబడింది",
     "repeatUnavailable": "అసలు ఇన్‌పుట్ అందుబాటులో లేదు"

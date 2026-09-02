@@ -13999,7 +13999,7 @@
     "actionFailed": "הפעולה נכשלה: {error}",
     "detailFailed": "טעינת הפרטים נכשלה: {error}",
     "mirroredInA2A": "משוקף ב-A2A",
-    "actionRepeat": "חזרה",
+    "actionRepeat": "הרץ שוב",
     "repeatConfirm": "לחץ שוב כדי לאשר",
     "repeatDone": "נוצרה הרצה חדשה",
     "repeatUnavailable": "הקלט המקורי אינו זמין"
