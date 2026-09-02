@@ -65,6 +65,14 @@ vi.mock("@/app/(dashboard)/dashboard/orchestration/tabs/OverviewTab", () => ({
   },
 }));
 
+const drawerCalls: Record<string, unknown>[] = [];
+vi.mock("@/app/(dashboard)/dashboard/orchestration/drawer/OrchestrationDrawer", () => ({
+  OrchestrationDrawer: (props: Record<string, unknown>) => {
+    drawerCalls.push(props);
+    return <div data-testid="drawer-stub" />;
+  },
+}));
+
 import OrchestrationPageClient from "@/app/(dashboard)/dashboard/orchestration/OrchestrationPageClient";
 
 function render(el: React.ReactElement) {
@@ -87,6 +95,7 @@ afterEach(() => {
   snapshot = DEFAULT_SNAPSHOT;
   agentsTabCalls.length = 0;
   overviewTabCalls.length = 0;
+  drawerCalls.length = 0;
 });
 
 describe("OrchestrationPageClient", () => {
@@ -201,5 +210,47 @@ describe("OrchestrationPageClient", () => {
     expect(url).not.toContain("provider=");
     expect(url).toContain("collapsed=a2a");
     r2.cleanup();
+  });
+
+  it("?node=<id> opens the drawer with the matching node; removing the param closes it", () => {
+    snapshot = {
+      nodes: [
+        { id: "orchestrator", kind: "orchestrator", label: "OmniRoute" },
+        {
+          id: "cloud-agent:1",
+          kind: "work",
+          source: "cloud-agent",
+          state: "running",
+          label: "task A",
+        },
+      ],
+      edges: [],
+      sources: [],
+      generatedAt: "x",
+    } as never;
+
+    searchState.current = "tab=agents&node=cloud-agent:1";
+    const r1 = render(<OrchestrationPageClient />);
+    expect((drawerCalls.at(-1) as { node: { id: string } | null }).node?.id).toBe("cloud-agent:1");
+    r1.cleanup();
+
+    searchState.current = "tab=agents";
+    const r2 = render(<OrchestrationPageClient />);
+    expect((drawerCalls.at(-1) as { node: { id: string } | null }).node).toBeNull();
+    r2.cleanup();
+  });
+
+  it("clicking an overflow node (via AgentsTab's onNodeClick) navigates to ?tab=overview and clears ?node", () => {
+    searchState.current = "tab=agents&node=cloud-agent:1";
+    const { cleanup } = render(<OrchestrationPageClient />);
+    const props = agentsTabCalls.at(-1) as { onNodeClick: (id: string) => void };
+    act(() => {
+      props.onNodeClick("overflow:cloud-agent");
+    });
+    expect(replaceMock).toHaveBeenCalledTimes(1);
+    const [url] = replaceMock.mock.calls[0];
+    expect(url).toContain("tab=overview");
+    expect(url).not.toContain("node=");
+    cleanup();
   });
 });

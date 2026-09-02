@@ -152,6 +152,66 @@ describe("AgentsTab", () => {
     expect(onNodeClick).not.toHaveBeenCalled();
     cleanup();
   });
+
+  it("clicking the orchestrator node is a no-op — neither onNodeClick nor onToggleCollapse fires", () => {
+    const toggle = vi.fn();
+    const onNodeClick = vi.fn();
+    const snap = {
+      nodes: [
+        { id: "orchestrator", kind: "orchestrator", label: "OmniRoute" },
+        { id: "a2a:1", kind: "work", source: "a2a", state: "running", label: "a2a task" },
+      ],
+      edges: [],
+      sources: [],
+      generatedAt: "x",
+    };
+    const { cleanup } = render(
+      <AgentsTab
+        snapshot={snap as never}
+        onNodeClick={onNodeClick}
+        showCompleted={false}
+        onToggleCompleted={() => {}}
+        collapsed={new Set()}
+        onToggleCollapse={toggle}
+      />
+    );
+    const handleClick = flowProps.at(-1)?.onNodeClick as (e: unknown, node: unknown) => void;
+    handleClick(undefined, { id: "orchestrator", type: "orchestrator", data: {} });
+    expect(toggle).not.toHaveBeenCalled();
+    expect(onNodeClick).not.toHaveBeenCalled();
+    cleanup();
+  });
+
+  it("toggling the showCompleted checkbox calls onToggleCompleted with the new checked value", () => {
+    const onToggleCompleted = vi.fn();
+    const snap = {
+      nodes: [
+        { id: "orchestrator", kind: "orchestrator", label: "OmniRoute" },
+        { id: "a2a:1", kind: "work", source: "a2a", state: "running", label: "a2a task" },
+      ],
+      edges: [],
+      sources: [],
+      generatedAt: "x",
+    };
+    const { c, cleanup } = render(
+      <AgentsTab
+        snapshot={snap as never}
+        onNodeClick={() => {}}
+        showCompleted={false}
+        onToggleCompleted={onToggleCompleted}
+      />
+    );
+    const checkbox = c.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(checkbox).toBeTruthy();
+    expect(checkbox.checked).toBe(false);
+    act(() => {
+      // React listens to the native "click" event for checkboxes to trigger the
+      // synthetic onChange (same pattern as engineConfigForm.test.tsx).
+      checkbox.click();
+    });
+    expect(onToggleCompleted).toHaveBeenCalledWith(true);
+    cleanup();
+  });
 });
 
 describe("OverviewTab", () => {

@@ -130,6 +130,59 @@ describe("orchestration nodes", () => {
     expect(OverflowNode.displayName).toBe("OverflowNode");
   });
 
+  it("OrchestratorNode renders the label as text content and as aria-label", () => {
+    const data = { id: "orchestrator", kind: "orchestrator", label: "OmniRoute" };
+    const { c, cleanup } = render(<OrchestratorNode data={data as never} />);
+    expect(c.textContent).toContain("OmniRoute");
+    expect(c.querySelector('[aria-label="OmniRoute"]')).toBeTruthy();
+    cleanup();
+  });
+
+  it("ActivityNode renders label + sublabel and exposes the label as aria-label", () => {
+    const data = {
+      id: "cloud-agent:t1:activity",
+      kind: "activity",
+      source: "cloud-agent",
+      label: "npm test",
+      sublabel: "command",
+    };
+    const { c, cleanup } = render(<ActivityNode data={data as never} />);
+    expect(c.textContent).toContain("npm test");
+    expect(c.textContent).toContain("command");
+    expect(c.querySelector('[aria-label="npm test"]')).toBeTruthy();
+    cleanup();
+  });
+
+  it("OverflowNode renders the overflowMore count in text + aria-label and a badge per non-zero state", () => {
+    const data = {
+      id: "overflow:cloud-agent",
+      kind: "overflow",
+      source: "cloud-agent",
+      label: "+7 more",
+      counts: { running: 5, failed: 2, queued: 0 },
+    };
+    const { c, cleanup } = render(<OverflowNode data={data as never} />);
+    // Mocked next-intl `t` returns `${key}:${JSON.stringify(values)}` — asserts the
+    // component forwards the summed total (5 + 2 = 7), not a raw/stale count.
+    const expectedText = `overflowMore:${JSON.stringify({ count: 7 })}`;
+    expect(c.textContent).toContain(expectedText);
+    const labelled = c.querySelector("[aria-label]");
+    expect(labelled?.getAttribute("aria-label")).toBe(expectedText);
+    // One badge span per state with a non-zero count (running, failed) — queued (0) omitted.
+    const badges = Array.from(c.querySelectorAll("div.flex.gap-1 span"));
+    expect(badges.length).toBe(2);
+    expect(badges.map((b) => b.textContent)).toEqual(["5", "2"]);
+    cleanup();
+  });
+
+  it("OverflowNode with no counts renders a zero total and no per-state badges", () => {
+    const data = { id: "overflow:a2a", kind: "overflow", source: "a2a", label: "+0 more" };
+    const { c, cleanup } = render(<OverflowNode data={data as never} />);
+    expect(c.textContent).toContain(`overflowMore:${JSON.stringify({ count: 0 })}`);
+    expect(c.querySelectorAll("div.flex.gap-1 span").length).toBe(0);
+    cleanup();
+  });
+
   it("SourceNode shows a collapse caret + aria-expanded + title reflecting !data.collapsed", () => {
     const expandedData = { id: "source:a2a", kind: "source", source: "a2a", label: "A2A" };
     const r1 = render(<SourceNode data={expandedData as never} />);
