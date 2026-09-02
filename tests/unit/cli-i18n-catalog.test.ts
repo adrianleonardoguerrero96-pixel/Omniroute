@@ -126,6 +126,25 @@ test("i18n.mjs resolve alias do config: OMNIROUTE_LANG=uk → uk-UA, fil_PH.UTF-
   resetForTests();
 });
 
+test("i18n.mjs resolve base→regional e aliases: zh → zh-CN, zh-hant/zh_HK → zh-TW, UK → uk-UA", async () => {
+  const { resetForTests, detectLocale } = await import("../../bin/cli/i18n.mjs");
+  const orig = process.env.OMNIROUTE_LANG;
+  const cases: Array<[string, string]> = [
+    ["zh", "zh-CN"], // bare base language → first regional catalog declared in config/i18n.json
+    ["zh-hant", "zh-TW"], // alias family declared on zh-TW
+    ["zh_HK.UTF-8", "zh-TW"], // POSIX form of the zh-hk alias (charset stripped, _ → -)
+    ["UK", "uk-UA"], // upper-case input canonicalized through the alias map
+  ];
+  for (const [input, expected] of cases) {
+    process.env.OMNIROUTE_LANG = input;
+    resetForTests();
+    assert.equal(detectLocale(), expected, `OMNIROUTE_LANG=${input}`);
+  }
+  if (orig === undefined) delete process.env.OMNIROUTE_LANG;
+  else process.env.OMNIROUTE_LANG = orig;
+  resetForTests();
+});
+
 test("t() interpola variáveis {var}", async () => {
   const { resetForTests, t, setLocale } = await import("../../bin/cli/i18n.mjs");
   resetForTests();

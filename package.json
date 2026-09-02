@@ -21,6 +21,7 @@
     "src/sse/",
     "src/types/",
     ".env.example",
+    "config/i18n.json",
     "scripts/build/postinstall.mjs",
     "scripts/build/fixTlsClientNodeBinary.mjs",
     "scripts/build/fixPlaywrightAndroid.mjs",
