@@ -266,16 +266,18 @@ export const FREE_MODEL_BUDGETS: FreeModelBudget[] = [
   { provider: "llm7", modelId: "deepseek-r1-0528", displayName: "DeepSeek R1 (LLM7)", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-daily", poolKey: "llm7-free", tos: "caution" },
   { provider: "llm7", modelId: "qwen2.5-coder-32b-instruct", displayName: "Qwen2.5 Coder 32B (LLM7)", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-daily", poolKey: "llm7-free", tos: "caution" },
   { provider: "longcat", modelId: "LongCat-2.0", displayName: "LongCat-2.0", monthlyTokens: 0, creditTokens: 10000000, freeType: "one-time-initial", poolKey: "longcat-free", tos: "caution" },
-  // evidence: public-page https://docs.mistral.ai/admin/billing-usage/usage-limits (2026-09-02) — "Free mode lets you
-  // create API keys and use included monthly usage within the limits shown on the Limits page"; help.mistral.ai/698531 —
-  // "Tokens per month: overall consumption cap", "set at the organization level". The numeric cap (1B) is only visible
-  // inside the console and has NOT been console-verified yet ⇒ recurring-uncapped (0) until a dated verification
-  // (`evidence: console-verified AAAA-MM-DD por <quem>`) is recorded here; restoring 1B without it is forbidden.
-  { provider: "mistral", modelId: "mistral-large-latest", displayName: "Mistral Large 3", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-uncapped", poolKey: "mistral", tos: "caution" },
-  { provider: "mistral", modelId: "mistral-medium-3-5", displayName: "Mistral Medium 3.5", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-uncapped", poolKey: "mistral", tos: "caution" },
-  { provider: "mistral", modelId: "mistral-small-latest", displayName: "Mistral Small 4", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-uncapped", poolKey: "mistral", tos: "caution" },
-  { provider: "mistral", modelId: "devstral-latest", displayName: "Devstral 2", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-uncapped", poolKey: "mistral", tos: "caution" },
-  { provider: "mistral", modelId: "codestral-latest", displayName: "Codestral", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-uncapped", poolKey: "mistral", tos: "caution" },
+  // evidence: console-verified 2026-09-02 por diegosouzapw (https://console.mistral.ai → Limits, Free mode,
+  // "Tokens per month" = 1,000,000,000). Public pages only confirm that the cap exists:
+  // https://docs.mistral.ai/admin/billing-usage/usage-limits — "Free mode lets you create API keys and use
+  // included monthly usage within the limits shown on the Limits page";
+  // https://help.mistral.ai/en/articles/698531 — "Tokens per month: overall consumption cap", "set at the
+  // organization level". Re-verify in the console whenever this block is touched; without a dated
+  // console-verified line above, this pool MUST become recurring-uncapped (0).
+  { provider: "mistral", modelId: "mistral-large-latest", displayName: "Mistral Large 3", monthlyTokens: 1000000000, creditTokens: 0, freeType: "recurring-monthly", poolKey: "mistral", tos: "caution" },
+  { provider: "mistral", modelId: "mistral-medium-3-5", displayName: "Mistral Medium 3.5", monthlyTokens: 1000000000, creditTokens: 0, freeType: "recurring-monthly", poolKey: "mistral", tos: "caution" },
+  { provider: "mistral", modelId: "mistral-small-latest", displayName: "Mistral Small 4", monthlyTokens: 1000000000, creditTokens: 0, freeType: "recurring-monthly", poolKey: "mistral", tos: "caution" },
+  { provider: "mistral", modelId: "devstral-latest", displayName: "Devstral 2", monthlyTokens: 1000000000, creditTokens: 0, freeType: "recurring-monthly", poolKey: "mistral", tos: "caution" },
+  { provider: "mistral", modelId: "codestral-latest", displayName: "Codestral", monthlyTokens: 1000000000, creditTokens: 0, freeType: "recurring-monthly", poolKey: "mistral", tos: "caution" },
   { provider: "monsterapi", modelId: "llama-3-8b-fuse", displayName: "Llama 3 8B Fuse", monthlyTokens: 0, creditTokens: 0, freeType: "one-time-initial", poolKey: "monsterapi", tos: "ambiguous" },
   { provider: "morph", modelId: "morph-v3-large", displayName: "morph-v3-large", monthlyTokens: 400000, creditTokens: 0, freeType: "recurring-monthly", poolKey: "morph", tos: "ok" },
   { provider: "morph", modelId: "morph-v3-fast", displayName: "morph-v3-fast", monthlyTokens: 400000, creditTokens: 0, freeType: "recurring-monthly", poolKey: "morph", tos: "ok" },

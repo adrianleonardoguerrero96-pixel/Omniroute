@@ -90,13 +90,22 @@ test("mistral keeps its 1B pool only with a dated console verification on record
   assert.ok(m.length >= 1);
   const pooled = m.filter((r) => r.monthlyTokens > 0);
   if (pooled.length > 0) {
-    assert.ok(pooled.every((r) => r.monthlyTokens === 1_000_000_000 && r.poolKey === "mistral"));
+    // All-or-nothing: a mixed 1B/0 state is neither console-verified nor honestly uncapped.
+    assert.equal(pooled.length, m.length, "every mistral row must carry the pooled 1B");
+    assert.ok(
+      pooled.every(
+        (r) =>
+          r.monthlyTokens === 1_000_000_000 &&
+          r.poolKey === "mistral" &&
+          r.freeType === "recurring-monthly"
+      )
+    );
     assert.match(
       src,
       /evidence: console-verified 20\d\d-\d\d-\d\d por \S+ \(https:\/\/console\.mistral\.ai/
     );
   } else {
-    assert.ok(m.every((r) => r.freeType === "recurring-uncapped"));
+    assert.ok(m.every((r) => r.monthlyTokens === 0 && r.freeType === "recurring-uncapped"));
   }
 });
 
