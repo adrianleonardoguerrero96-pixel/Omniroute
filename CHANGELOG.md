@@ -90,6 +90,10 @@
 - **feat(cli):** run `omniroute serve --tray` as a detached desktop process after server and tray readiness, with graphical login auto-start support.
 - **feat(routing):** add client-, provider-, and model-neutral exclusive managed session connection leases with API-key-bound generation fencing, durable SQLite ownership, explicit allowlist policy, and bounded 429 capacity retry semantics.
 
+### 📝 Maintenance
+
+- **chore(docker):** bump the Devin Claude bridge's real Claude Code install from `2.1.220` to `2.1.258` (`docker/devin-bridge/Dockerfile` default + `compose.yml` build arg) — the same CLI generation OmniRoute's Claude identity now impersonates, and the first line that knows the Fable 5.1 tier natively. The pin only affects the containerized CLI: OmniRoute rewrites the `User-Agent` and the billing line on the Claude OAuth path, so Anthropic's `2.1.251+` gate never sees the bridge's own CLI version. Validated on the pinned base image (`node:26.0.0-bookworm-slim`, arm64): the install layer builds and `claude --version` reports `2.1.258`; the bridge unit suite, `compose config` and the static isolation proof pass. The offline mock e2e and the three-scenario live suite were not re-run on the new pin (the image build needs more than an 8 GB Docker VM) — see the status note in `docs/DEVIN_CLAUDE_BRIDGE.md`.
+
 ## [3.8.51] — TBD
 
 _Living section — cycle opened at the v3.8.50 freeze (parallel-cycle model). Bullets are aggregated from `changelog.d/` fragments at each `/generate-release` phase._
