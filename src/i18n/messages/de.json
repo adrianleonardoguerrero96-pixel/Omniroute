@@ -13995,6 +13995,7 @@
     "drawerTimeline": "Zeitachse",
     "drawerMetrics": "Metriken",
     "drawerResult": "Ergebnis",
+    "drawerMemory": "Genutzte Erinnerungen",
     "drawerActions": "Aktionen",
     "drawerClose": "Schließen",
     "copyTrace": "Trace-JSON kopieren",
@@ -14004,7 +14005,11 @@
     "actionDone": "Aktion angewendet",
     "actionFailed": "Aktion fehlgeschlagen: {error}",
     "detailFailed": "Details konnten nicht geladen werden: {error}",
-    "mirroredInA2A": "In A2A gespiegelt"
+    "mirroredInA2A": "In A2A gespiegelt",
+    "actionRepeat": "Wiederholen",
+    "repeatConfirm": "Zum Bestätigen erneut klicken",
+    "repeatDone": "Neuer Lauf erstellt",
+    "repeatUnavailable": "Ursprüngliche Eingabe nicht verfügbar"
   },
   "cliproxyProviderExposure": {
     "title": "Anbieterexposition",

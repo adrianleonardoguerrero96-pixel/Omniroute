@@ -13988,6 +13988,7 @@
     "drawerTimeline": "Časová os",
     "drawerMetrics": "Metriky",
     "drawerResult": "Výsledok",
+    "drawerMemory": "Použitá pamäť",
     "drawerActions": "Akcie",
     "drawerClose": "Zavrieť",
     "copyTrace": "Kopírovať trasovanie JSON",
@@ -13997,7 +13998,11 @@
     "actionDone": "Akcia použitá",
     "actionFailed": "Akcia zlyhala: {error}",
     "detailFailed": "Nepodarilo sa načítať podrobnosti: {error}",
-    "mirroredInA2A": "Zrkadlené v A2A"
+    "mirroredInA2A": "Zrkadlené v A2A",
+    "actionRepeat": "Opakovať",
+    "repeatConfirm": "Kliknutím znova potvrďte",
+    "repeatDone": "Vytvorené nové spustenie",
+    "repeatUnavailable": "Pôvodný vstup nie je k dispozícii"
   },
   "cliproxyProviderExposure": {
     "title": "Expozícia poskytovateľa",

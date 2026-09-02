@@ -13988,6 +13988,7 @@
     "drawerTimeline": "타임라인",
     "drawerMetrics": "지표",
     "drawerResult": "결과",
+    "drawerMemory": "사용된 메모리",
     "drawerActions": "작업",
     "drawerClose": "닫기",
     "copyTrace": "추적 JSON 복사",
@@ -13997,7 +13998,11 @@
     "actionDone": "작업이 적용됨",
     "actionFailed": "작업 실패: {error}",
     "detailFailed": "세부정보를 불러오지 못했습니다: {error}",
-    "mirroredInA2A": "A2A에 미러링됨"
+    "mirroredInA2A": "A2A에 미러링됨",
+    "actionRepeat": "반복",
+    "repeatConfirm": "확인하려면 다시 클릭하세요",
+    "repeatDone": "새 실행이 생성되었습니다",
+    "repeatUnavailable": "원본 입력을 사용할 수 없습니다"
   },
   "cliproxyProviderExposure": {
     "title": "제공자 노출",

@@ -13988,6 +13988,7 @@
     "drawerTimeline": "ٹائم لائن",
     "drawerMetrics": "میٹرکس",
     "drawerResult": "نتیجہ",
+    "drawerMemory": "استعمال شدہ میموری",
     "drawerActions": "اقدامات",
     "drawerClose": "بند کریں",
     "copyTrace": "ٹریس JSON کاپی کریں",
@@ -13997,7 +13998,11 @@
     "actionDone": "اقدام لاگو ہو گیا",
     "actionFailed": "اقدام ناکام: {error}",
     "detailFailed": "تفصیلات لوڈ کرنے میں ناکامی: {error}",
-    "mirroredInA2A": "A2A میں مطابقت شدہ"
+    "mirroredInA2A": "A2A میں مطابقت شدہ",
+    "actionRepeat": "دہرائیں",
+    "repeatConfirm": "تصدیق کے لیے دوبارہ کلک کریں",
+    "repeatDone": "نئی رن بنائی گئی",
+    "repeatUnavailable": "اصل ان پٹ دستیاب نہیں ہے"
   },
   "cliproxyProviderExposure": {
     "title": "پرووائیڈر ایکسپوژر",

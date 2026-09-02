@@ -13988,6 +13988,7 @@
     "drawerTimeline": "Хронология",
     "drawerMetrics": "Метрики",
     "drawerResult": "Результат",
+    "drawerMemory": "Использованная память",
     "drawerActions": "Действия",
     "drawerClose": "Закрыть",
     "copyTrace": "Скопировать трассировку JSON",
@@ -13997,7 +13998,11 @@
     "actionDone": "Действие применено",
     "actionFailed": "Действие не удалось: {error}",
     "detailFailed": "Не удалось загрузить детали: {error}",
-    "mirroredInA2A": "Отражено в A2A"
+    "mirroredInA2A": "Отражено в A2A",
+    "actionRepeat": "Повторить",
+    "repeatConfirm": "Нажмите ещё раз для подтверждения",
+    "repeatDone": "Создан новый запуск",
+    "repeatUnavailable": "Исходные данные недоступны"
   },
   "cliproxyProviderExposure": {
     "title": "Экспозиция Провайдера",
