@@ -303,7 +303,12 @@ jobs:
             # #8522: file-size is base-relative on PR events (compare against
             # max(frozen, base)) so inherited drift doesn't red an innocent PR;
             # workflow_dispatch (no PR base) falls back to absolute comparison.
-            if [ "$g" = "file-size" ] && [ -n "${PR_BASE_SHA:-}" ]; then
+            # New-code mode (Clean-as-You-Code, 2026-08-30): complexity-ratchets and
+            # dead-code compare the PR's files against the merge-base and block only on
+            # what the PR added; the global totals are advisory on PRs and re-frozen at
+            # release. See scripts/check/newCodeMode.mjs.
+            case "$g" in file-size|complexity-ratchets|dead-code) NEW_CODE=1 ;; *) NEW_CODE= ;; esac
+            if [ -n "$NEW_CODE" ] && [ -n "${PR_BASE_SHA:-}" ]; then
               npm run "check:$g" -- --base-ref "$PR_BASE_SHA" || failed+=("$g")
             else
               npm run "check:$g" || failed+=("$g")
