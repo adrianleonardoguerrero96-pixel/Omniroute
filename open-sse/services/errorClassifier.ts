@@ -202,6 +202,28 @@ export function isCloudflareFingerprintRejection(errorText: string): boolean {
     text.includes("fingerprint_rejection")
   );
 }
+// A fingerprint rejection means the CDN banned our TLS/UA signature — exactly
+// what OmniRoute's optional Chrome-124 impersonation transport fixes
+// (open-sse/utils/tlsClient.ts via wreq-js). That transport is inert unless the
+// optional `wreq-js` dependency is installed and ENABLE_TLS_FINGERPRINT=true,
+// so the first rejection points the operator at the remediation instead of
+// leaving repeated 1010s looking like account trouble (#9929 classified the
+// symptom; this surfaces the fix).
+let fingerprintRemediationHintEmitted = false;
+
+export function resetFingerprintRemediationHintForTest(): void {
+  fingerprintRemediationHintEmitted = false;
+}
+
+function maybeEmitFingerprintRemediationHint(): void {
+  if (fingerprintRemediationHintEmitted || process.env.ENABLE_TLS_FINGERPRINT === "true") return;
+  fingerprintRemediationHintEmitted = true;
+  console.warn(
+    "[errorClassifier] Cloudflare fingerprint rejection (1010 / browser-signature ban) detected. " +
+      "Remediation: install the optional 'wreq-js' dependency and set ENABLE_TLS_FINGERPRINT=true " +
+      "(plus TLS_FINGERPRINT_PROVIDERS=<providers> to cover proxied egress) so egress presents a browser TLS fingerprint."
+  );
+}
 
 function responseBodyToString(responseBody: unknown): string {
   if (typeof responseBody === "string") return responseBody;
@@ -325,6 +347,7 @@ export function classifyProviderError(
   }
 
   if (statusCode === 403 && isCloudflareFingerprintRejection(bodyStr)) {
+    maybeEmitFingerprintRemediationHint();
     // Cloudflare 1010 / error_name "browser_signature_banned": the CDN in front of the
     // upstream (e.g. opencode.ai/zen/v1) rejected the CLIENT's TLS/UA signature, not the
     // account's credentials. It says nothing about account health — a different client on
@@ -363,8 +386,8 @@ export function classifyProviderError(
     if (recoverableProject403) {
       return PROVIDER_ERROR_TYPES.PROJECT_ROUTE_ERROR;
     }
-    // A Cloudflare Sentinel/Turnstile 403 is a TERMINAL block for browser-session
-    // providers: the user's IP/session needs a browser Turnstile challenge, and
+    // #8813 — ChatGPT Web's Cloudflare Sentinel/Turnstile 403 is a TERMINAL
+    // block: the user's IP/session needs a browser Turnstile challenge, and
     // retrying the same connection will keep 403ing. Classify as FORBIDDEN so
     // the connection gets banned and combo routing falls back to other providers.
     // Must be checked BEFORE the generic apikey-403→null return below, which
