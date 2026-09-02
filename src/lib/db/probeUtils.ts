@@ -5,6 +5,9 @@
  * should be retried with backoff instead of immediately renaming the DB away
  * and creating an empty one (data loss under concurrent load, #9541).
  */
+import fs from "node:fs";
+import path from "node:path";
+
 /**
  * Identifies transient SQLite/OS probe errors that should be retried instead of
  * triggering the corruption-rename path.
@@ -19,9 +22,26 @@
  */
 export function isTransientProbeError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
-  return /SQLITE_BUSY|SQLITE_PROTOCOL|SQLITE_IOERR|ENOENT|database(?: table| schema)? is (?:locked|busy)/i.test(
-    message
-  );
+  // #12423 widened the message side: SQLite also reports "database table is
+  // locked", "database schema is locked" and "database is busy" for the same
+  // transient contention that "database is locked" covers.
+  if (
+    /SQLITE_BUSY|SQLITE_PROTOCOL|SQLITE_IOERR|ENOENT|database(?: table| schema)? is (?:locked|busy)/i.test(
+      message
+    )
+  ) {
+    return true;
+  }
+  // The real drivers do not put the result-code name in the message: both
+  // report plain "database is locked" for SQLITE_BUSY. better-sqlite3 carries
+  // the name in `code`, node:sqlite the numeric primary code in `errcode`
+  // (5 BUSY, 10 IOERR, 15 PROTOCOL; extended codes live in the high bits).
+  // Without this, a transient lock during the probe was classified as
+  // corruption and the database was renamed away.
+  if (typeof error !== "object" || error === null) return false;
+  const { code, errcode } = error as { code?: unknown; errcode?: unknown };
+  if (typeof code === "string" && /^SQLITE_(BUSY|PROTOCOL|IOERR)/.test(code)) return true;
+  return typeof errcode === "number" && [5, 10, 15].includes(errcode & 0xff);
 }
 
 /**
@@ -65,10 +85,8 @@ type OpenDbFn = (
  * @param sqliteFile - Path to the SQLite database file
  * @param openDb - Function to open the database (normally openSqliteDatabase)
  * @param closeDb - Function to safely close the probe adapter
- * @returns true if the retry succeeded (transient condition resolved), or false
- *          when the original error is non-transient.
- * @throws when a transient condition remains after every retry, so the caller
- *         cannot mistake an ordinary lock for database corruption.
+ * @returns true if the retry succeeded (transient condition resolved)
+ *          false if all retries were exhausted or error is non-transient
  */
 export function retryProbeIfTransient(
   sqliteFile: string,
@@ -91,12 +109,7 @@ export function retryProbeIfTransient(
   }
 
   console.warn(
-    `[DB] All ${retryDelays.length} transient probe retries exhausted — leaving database in place`
+    `[DB] All ${retryDelays.length} transient probe retries exhausted — declaring corruption`
   );
-  const message = probeError instanceof Error ? probeError.message : String(probeError);
-  throw new Error(
-    `[DB] Existing database remained busy after transient probe retries. ` +
-      `No database files were moved. Restart once the competing process releases its lock. ` +
-      `Original probe error: ${message}`
-  );
+  return false;
 }
