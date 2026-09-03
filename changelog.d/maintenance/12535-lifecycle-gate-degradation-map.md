@@ -4,4 +4,4 @@
   whose source the vendor had retired — `claude-sonnet-4-20250514`, `gemini-3-pro-preview`
   and `gpt-5.1-codex` (whose target `gpt-5.1-codex-mini` is retired too) — were dead code,
   since `checkLifecycle` answers 410 before the redirect runs; they are dropped
-  (#PENDING — thanks @pacocartones)
+  (#12535 — thanks @pacocartones)
