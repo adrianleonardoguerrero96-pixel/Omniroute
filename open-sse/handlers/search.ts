@@ -20,6 +20,9 @@ import { randomUUID } from "crypto";
  * }
  */
 
+export { resolveSearchBaseUrl, SearchBaseUrlOverrideError } from "./search/baseUrl.ts";
+import { resolveSearchBaseUrl } from "./search/baseUrl.ts";
+
 import {
   getSearchProvider,
   isUnconfiguredLoopbackSearchProvider,
@@ -36,7 +39,6 @@ import * as anysearchSearch from "./search/anysearchSearch.ts";
 import { freeWebSearch } from "../services/freeWebSearch.ts";
 import { saveCallLog } from "@/lib/usageDb";
 import { safeOutboundFetch } from "@/shared/network/safeOutboundFetch";
-import { parseAndValidateNonMetadataUrl } from "@/shared/network/outboundUrlGuard";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { z } from "zod";
@@ -302,15 +304,6 @@ function parseDomainFilter(domainFilter?: string[]): {
   return { includes, excludes };
 }
 
-/** Read one string setting from a SINGLE source, so callers can distinguish trust. */
-function readProviderSettingString(
-  source: Record<string, unknown> | undefined,
-  key: string
-): string | undefined {
-  const value = source?.[key];
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
-}
-
 function getProviderSettingString(
   params: Pick<SearchRequestParams, "providerOptions" | "providerSpecificData">,
   key: string
@@ -326,67 +319,6 @@ function getProviderSettingString(
   }
 
   return undefined;
-}
-
-export function resolveSearchBaseUrl(
-  config: SearchProviderConfig,
-  params: SearchRequestParams
-): string {
-  // The two override sources are NOT equally trusted, and treating them as one
-  // was GHSA-3f8g-pfh9-j687.
-  //
-  // `providerSpecificData` is the stored provider connection (see the
-  // `credentials?.providerSpecificData` wiring below) — operator config. It is
-  // how an operator points at a self-hosted searxng, so loopback/LAN keeps
-  // working under the block-metadata policy: cloud-metadata endpoints (IMDS
-  // credential theft) stay rejected (GHSA-j7j4-g9qc-q69c).
-  const operatorOverride = readProviderSettingString(params.providerSpecificData, "baseUrl");
-  if (operatorOverride) {
-    parseAndValidateNonMetadataUrl(operatorOverride);
-    return operatorOverride.replace(/\/+$/, "");
-  }
-
-  // `providerOptions` is `body.provider_options` — straight off the request, so
-  // tenant input. It is refused outright rather than validated:
-  //
-  //   - For a keyed provider the builder attaches the OPERATOR's API key to
-  //     whatever host this resolves to (`key=`/`api_key=` in the query for
-  //     google-pse/searchapi, `X-API-Key`/`Authorization` for you.com/linkup/
-  //     nimble/ollama), so honoring a caller-chosen host hands the operator's
-  //     third-party key to that host. A block-metadata check does nothing about
-  //     it — the attacker just uses their own public host.
-  //   - For any provider the response body is parsed and returned to the caller,
-  //     so a caller-chosen target is SSRF with readback.
-  //
-  // Only a provider that is BOTH keyless and explicitly opted in
-  // (`allowClientBaseUrlOverride`) may be redirected by its caller. Today that
-  // is SearXNG alone, whose self-hosted flow is documented and tested.
-  const callerOverride = readProviderSettingString(params.providerOptions, "baseUrl");
-  if (callerOverride) {
-    if (!config.allowClientBaseUrlOverride || config.authType === "apikey") {
-      throw new SearchBaseUrlOverrideError(config.id);
-    }
-    // Opted-in keyless provider (self-hosted SearXNG): no operator credential
-    // travels with the request, so the remaining exposure is the fetch target
-    // itself. Block-metadata, matching the operator path — loopback/LAN is the
-    // whole point of a self-hosted instance, IMDS is not.
-    parseAndValidateNonMetadataUrl(callerOverride);
-    return callerOverride.replace(/\/+$/, "");
-  }
-
-  return config.baseUrl.replace(/\/+$/, "");
-}
-
-/** Refusal for a caller-supplied `provider_options.baseUrl` (GHSA-3f8g-pfh9-j687). */
-export class SearchBaseUrlOverrideError extends Error {
-  readonly code = "SEARCH_BASE_URL_OVERRIDE_REFUSED";
-  constructor(providerId: string) {
-    super(
-      `provider_options.baseUrl is not accepted for search provider "${providerId}". ` +
-        `The base URL is operator configuration; set it on the provider connection instead.`
-    );
-    this.name = "SearchBaseUrlOverrideError";
-  }
 }
 
 function toSearchPageNumber(offset: number | undefined, maxResults: number): number | undefined {
