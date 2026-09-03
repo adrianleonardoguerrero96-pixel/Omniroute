@@ -287,4 +287,62 @@ describe("useOrchestrationSnapshot", () => {
     });
     expect(latest!.snapshot).not.toBe(firstSnapshot);
   });
+
+  it("keeps the first staleSince while a source keeps failing and clears it once it recovers (#12392)", async () => {
+    let latest: ReturnType<typeof useOrchestrationSnapshot> | null = null;
+    const fetchMock = okFetchMock();
+    vi.stubGlobal("fetch", fetchMock);
+    const failCloudAgent = () =>
+      fetchMock.mockImplementation((url: string) => {
+        if (url.startsWith("/api/v1/agents/tasks")) return Promise.reject(new Error("boom"));
+        if (url.startsWith("/api/a2a/tasks"))
+          return okJson({ tasks: [], total: 0, limit: 200, offset: 0 });
+        return okJson({ offline: false, runners: [], tasks: [] });
+      });
+    const cloudAgent = () => latest!.snapshot.sources.find((s) => s.source === "cloud-agent");
+
+    // Poll 1: everything healthy — no staleSince.
+    await act(async () => {
+      root.render(
+        <HookProbe
+          onRender={(v) => {
+            latest = v;
+          }}
+        />
+      );
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10);
+    });
+    expect(cloudAgent()?.ok).toBe(true);
+    expect(cloudAgent()?.staleSince).toBeUndefined();
+
+    // Poll 2: cloud-agent starts failing — staleSince stamped with this poll's time.
+    failCloudAgent();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_100);
+    });
+    const firstStale = cloudAgent()?.staleSince;
+    expect(cloudAgent()?.ok).toBe(false);
+    expect(typeof firstStale).toBe("string");
+    const snapshotWhileStale = latest!.snapshot;
+
+    // Poll 3: still failing 5s later — the ORIGINAL staleSince must survive (not the latest
+    // poll's time), so the node keeps showing when the source first went stale and the
+    // snapshot content key does not churn every tick.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_100);
+    });
+    expect(cloudAgent()?.ok).toBe(false);
+    expect(cloudAgent()?.staleSince).toBe(firstStale);
+    expect(latest!.snapshot).toBe(snapshotWhileStale);
+
+    // Poll 4: source recovers — staleSince is dropped again.
+    fetchMock.mockImplementation(okFetchMock());
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_100);
+    });
+    expect(cloudAgent()?.ok).toBe(true);
+    expect(cloudAgent()?.staleSince).toBeUndefined();
+  });
 });

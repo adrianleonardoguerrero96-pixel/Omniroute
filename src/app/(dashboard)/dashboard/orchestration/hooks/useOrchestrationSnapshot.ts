@@ -89,6 +89,22 @@ function buildSourceStatuses(
   return next;
 }
 
+/**
+ * Keeps the FIRST `staleSince` a failing source was stamped with while it keeps failing.
+ * `buildSourceStatuses` stamps every failed slot with the current poll's `nowIso`, so
+ * without this the node would read "stale since <last poll>" instead of the first error
+ * and `snapshotContentKey` would churn every tick for as long as the source is down.
+ * A source that recovers (`ok: true`) has no `staleSince`, so the next failure restamps.
+ */
+export function carryStaleSince(prev: SourceStatus[], next: SourceStatus[]): SourceStatus[] {
+  return next.map((status) => {
+    if (status.ok) return status;
+    const before = prev.find((p) => p.source === status.source);
+    if (!before || before.ok || !before.staleSince) return status;
+    return { ...status, staleSince: before.staleSince };
+  });
+}
+
 export function useOrchestrationSnapshot() {
   // `raw` and `polledAt` are React state (not refs) so the merge below reads them
   // during render like any other state — a ref read during render trips the
@@ -133,7 +149,7 @@ export function useOrchestrationSnapshot() {
         a2a: a2a.status === "fulfilled" ? a2a.value.tasks : prev.a2a,
         conductor: cond.status === "fulfilled" ? cond.value : prev.conductor,
       }));
-      setStatuses(next);
+      setStatuses((prev) => carryStaleSince(prev, next));
       setPolledAt(nowMs);
       setIsLoading(false);
     };
