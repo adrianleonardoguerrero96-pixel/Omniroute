@@ -6175,7 +6175,7 @@
       "glm-cn": "เชื่อมต่อ GLM Coding (China) ด้วยคีย์ API",
       "glmt": "โปรไฟล์ GLM ที่ตั้งค่าไว้ล่วงหน้าพร้อมงบประมาณโทเค็นที่สูงขึ้น เปิดใช้งานการคิด และหมดเวลาการทำงานที่นานขึ้น",
       "getgoapi": "เชื่อมต่อ GoAPI ด้วยคีย์ API",
-      "groq": "__MISSING__:Free plan: per-model caps (30 RPM · 1K RPD · 200K tokens/day per chat model, console.groq.com/docs/rate-limits) — no payment method on file.",
+      "groq": "__MISSING__:Free plan: per-model caps (200K tokens/day per chat model; see console.groq.com/docs/rate-limits for RPM/RPD) — no payment method on file.",
       "haiper": "รับคีย์ API ได้ที่ haiper.ai/haiper-api",
       "heroku": "เชื่อมต่อ Heroku AI ด้วยคีย์ API",
       "hcnsec": "รับ API key ได้ที่ api.hcnsec.cn",

@@ -6175,7 +6175,7 @@
       "glm-cn": "GLM Coding (China) کو ایک API کی کے ساتھ منسلک کریں۔",
       "glmt": "زیادہ ٹوکن بجٹ، تھنکنگ فعال، اور طویل ٹائم آؤٹ کے ساتھ پہلے سے سیٹ کردہ GLM پروفائل۔",
       "getgoapi": "GoAPI کو ایک API کی کے ساتھ منسلک کریں۔",
-      "groq": "__MISSING__:Free plan: per-model caps (30 RPM · 1K RPD · 200K tokens/day per chat model, console.groq.com/docs/rate-limits) — no payment method on file.",
+      "groq": "__MISSING__:Free plan: per-model caps (200K tokens/day per chat model; see console.groq.com/docs/rate-limits for RPM/RPD) — no payment method on file.",
       "haiper": "haiper.ai/haiper-api پر API کی حاصل کریں",
       "heroku": "Heroku AI کو ایک API کی کے ساتھ منسلک کریں۔",
       "hcnsec": "api.hcnsec.cn پر API کی حاصل کریں",

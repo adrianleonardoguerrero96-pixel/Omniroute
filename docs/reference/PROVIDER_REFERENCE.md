@@ -210,7 +210,7 @@ Use the dashboard at `/dashboard/providers` to enable, configure, and test each 
 | `glm` | `glm` | GLM Coding | API key | [link](https://z.ai/subscribe) | — |
 | `glm-cn` | `glmcn` | GLM Coding (China) | API key | [link](https://open.bigmodel.cn) | — |
 | `glmt` | `glmt` | GLM Thinking | API key | [link](https://open.bigmodel.cn) | — |
-| `groq` | `groq` | Groq | API key | [link](https://groq.com) | Free plan: per-model caps (30 RPM · 1K RPD · 200K tokens/day per chat model, console.groq.com/docs/rate-limits) — no payment method on file. |
+| `groq` | `groq` | Groq | API key | [link](https://groq.com) | Free plan: per-model caps (200K tokens/day per chat model; see console.groq.com/docs/rate-limits for RPM/RPD) — no payment method on file. |
 | `haiper` | `hp` | Haiper | API key, video | [link](https://haiper.ai) | Get API key at haiper.ai/haiper-api |
 | `hcnsec` | `hcnsec` | Huancheng Public API | API key | [link](https://api.hcnsec.cn) | Get API key at api.hcnsec.cn |
 | `helixmind` | `helixmind` | HelixMind | API key, aggregator | [link](https://helixmind.online) | Previously circulated 3 RPM/50 RPD and no-card claims were not confirmed during the 2026-08-02 audit; current quota and billing require account verification. |
@@ -444,7 +444,7 @@ Use the dashboard at `/dashboard/providers` to enable, configure, and test each 
 
 - Catalog: [`src/shared/constants/providers.ts`](../../src/shared/constants/providers.ts)
 - Registry (per-model details): [`open-sse/config/providerRegistry.ts`](../../open-sse/config/providerRegistry.ts)
-- Executors: [`open-sse/executors/`](../../open-sse/executors/) (108 implementations)
+- Executors: [`open-sse/executors/`](../../open-sse/executors/) (109 implementations)
 - Translators: [`open-sse/translator/`](../../open-sse/translator/)
 
 ## See Also
