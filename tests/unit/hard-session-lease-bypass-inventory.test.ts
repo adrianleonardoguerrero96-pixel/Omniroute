@@ -19,6 +19,9 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "open-sse/services/videoCombo.ts": 2,
     "src/app/api/compression/compare/verify/route.ts": 1,
     "src/app/api/internal/codex-responses-ws/route.ts": 1,
+    // PR #11390: rerank listing endpoint probes configured credentials so the
+    // dashboard rerank selector only offers providers that can actually serve.
+    "src/app/api/memory/rerank-providers/route.ts": 1,
     "src/app/api/search/providers/route.ts": 3,
     "src/app/api/v1/_shared/elevenLabsProxy.ts": 1,
     "src/app/api/v1/audio/speech/route.ts": 1,
@@ -49,7 +52,10 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     // from resolveLocalSyncedEndpointRoute, and handles allRateLimited, so it is
     // fenced the same way as the two pre-existing sites.
     "src/lib/embeddings/service.ts": 3,
-    "src/lib/memory/embedding/index.ts": 1,
+    // PR #11390: second site is the generic derived-provider listing fallback —
+    // read-only key presence probe used to decide whether a configured chat
+    // provider may appear in the memory embedding-source dropdown.
+    "src/lib/memory/embedding/index.ts": 2,
     "src/lib/search/executeWebSearch.ts": 2,
     "src/lib/skills/webFetchExecution.ts": 1,
     "src/sse/handlers/chat.ts": 2,
@@ -60,10 +66,11 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "open-sse/handlers/chatCore.ts": 3,
     "open-sse/handlers/chatCore/cliproxyModelMapping.ts": 1,
     "open-sse/handlers/chatCore/cliproxyapiCredentials.ts": 1,
-    // v3.8.51 #11754: the retired common ChatGPT Web's synthetic
+    // v3.8.51 #11754: the legacy common ChatGPT Web's synthetic
     // image-edit-continuation ChatGptWebExecutor.execute() call (the sole
     // executor.execute() site in this file) was removed with the provider;
-    // no executor site remains here.
+    // no executor site remains here. The clean-room restoration delegates
+    // through its adapter and does not reintroduce this bypass call site.
     // Gemini Web's own image handler+file (open-sse/handlers/imageGeneration/providers/geminiWeb.ts)
     // was already retired by #11708 (its .execute() site removed then too).
     "open-sse/handlers/videoGeneration.ts": 1,
@@ -91,6 +98,7 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "src/app/api/models/route.ts": 1,
     "src/app/api/monitoring/health/route.ts": 1,
     "src/app/api/oauth/[provider]/[action]/route.ts": 4,
+    "src/app/api/oauth/codex/import/route.ts": 1,
     "src/app/api/oauth/kiro/api-key/route.ts": 1,
     "src/app/api/oauth/kiro/auto-import/route.ts": 2,
     "src/app/api/oauth/kiro/import/route.ts": 1,
@@ -147,6 +155,14 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "src/lib/oauth/utils/codexAuthImport.ts": 1,
     "src/lib/providerModels/managedModelImport.ts": 1,
     "src/lib/providers/codexConnectionDefaults.ts": 1,
+    // Volcano Ark plan connect flow (commit d732cf615): both are connection *persistence*
+    // sites, not dispatch. volcenginePlanBinding looks the plan connection up by name to
+    // decide update-vs-create during connect (same shape as oauth/connectionPersistence);
+    // volcPlanAutoSyncBackfill is a one-shot boot backfill that patches a providerSpecificData
+    // flag and issues no upstream call. Neither selects a connection to serve a request, so
+    // both stay class C (see CLASSIFICATION below).
+    "src/lib/providers/volcPlanAutoSyncBackfill.ts": 1,
+    "src/lib/providers/volcenginePlanBinding.ts": 1,
     "src/lib/proxyEgress.ts": 1,
     "src/lib/quota/connectionRecovery.ts": 2,
     "src/lib/sync/bundle.ts": 1,
@@ -194,6 +210,7 @@ const CLASSIFICATION: Record<InventoryKind, Record<string, BypassClass>> = {
       [
         "open-sse/handlers/autoComboCandidates.ts",
         "open-sse/handlers/chatCore.ts",
+        "open-sse/services/combo.ts",
         "open-sse/services/alibabaFreeTier.ts",
         "open-sse/services/alibabaFreeTierQuotaFetcher.ts",
         "open-sse/services/combo.ts",
@@ -301,11 +318,14 @@ test("managed request surfaces are fenced centrally or rejected before independe
     "src/lib/api/modelTestRunner.ts",
     "src/lib/services/quotaAutoPing.ts",
     "src/lib/usage/codexResetCredits.ts",
-    "src/lib/usage/providerLimits.ts",
     "src/lib/vncSession/service.ts",
     "src/lib/warmupScheduler.ts",
     "src/shared/services/modelSyncScheduler.ts",
   ].map((file) => fs.readFileSync(path.join(REPO_ROOT, file), "utf8"));
+  const unfencedUsageRefreshSource = fs.readFileSync(
+    path.join(REPO_ROOT, "src/lib/usage/providerLimits.ts"),
+    "utf8"
+  );
 
   assert.match(chat, /parseManagedLeaseRequestContext\(request\.headers\)/);
   assert.match(chat, /isManagedComboUnsupported/);
@@ -320,6 +340,10 @@ test("managed request surfaces are fenced centrally or rejected before independe
   for (const source of auxiliaryIsolationSources) {
     assert.match(source, /isConnectionUnavailableToAuxiliaryActivity/);
   }
+  // Usage/quota refresh is read-only admin telemetry (#11758) and must not inherit
+  // the exclusive-lease auxiliary fence that blocks model tests, translation, VNC,
+  // reset-credits, and warmup.
+  assert.doesNotMatch(unfencedUsageRefreshSource, /isConnectionUnavailableToAuxiliaryActivity/);
 });
 
 test("SQLite claim-race retry removes only the lost candidate from the same policy-valid set", () => {

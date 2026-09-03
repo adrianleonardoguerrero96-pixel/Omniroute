@@ -45,7 +45,13 @@ export function extractReasoningFields(value: unknown): ReasoningFields {
   const unsupported = reasoningText || thinking || thought || details;
   const any = readable || unsupported;
 
-  const hasUnsupportedSignal = !readable && (reasoningText || thinking || thought || (Array.isArray(record.reasoning_details) && record.reasoning_details.length > 0));
+  const hasUnsupportedSignal = !!(
+    !readable &&
+    (reasoningText ||
+      thinking ||
+      thought ||
+      (Array.isArray(record.reasoning_details) && record.reasoning_details.length > 0))
+  );
   const hasAnySignal = !!any;
 
   return { readable, unsupported, any, hasUnsupportedSignal, hasAnySignal };

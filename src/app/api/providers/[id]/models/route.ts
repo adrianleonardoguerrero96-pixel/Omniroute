@@ -11,11 +11,8 @@ import { resolveAlibabaProviderModelsUrl } from "@/shared/constants/alibabaProvi
 import { getStaticModelsForProvider } from "@/lib/providers/staticModels";
 import { providerUsesCuratedModelsOnly } from "@/lib/providers/modelListingCapability";
 import { mergeModelsWithCustomPrecedence } from "@/lib/providers/modelMetadataPrecedence";
-import {
-  getCachedProviderConnectionById,
-  getModelIsHidden,
-  resolveProxyForProvider,
-} from "@/lib/localDb";
+import { getCachedProviderConnectionById } from "@/lib/db/readCache";
+import { resolveProxyForProvider } from "@/lib/db/proxies";
 import {
   SAFE_OUTBOUND_FETCH_PRESETS,
   SafeOutboundFetchError,
@@ -54,6 +51,10 @@ import {
   NOTION_WEB_FALLBACK_MODELS,
 } from "@omniroute/open-sse/services/notionWebModels.ts";
 import {
+  discoverMaxaiModels,
+  MAXAI_REGISTRY_MODELS,
+} from "@omniroute/open-sse/services/maxaiModels.ts";
+import {
   AZURE_AI_DEFAULT_BASE_URL,
   buildAzureAiModelsUrl,
 } from "@omniroute/open-sse/config/azureAi.ts";
@@ -86,7 +87,7 @@ import {
 import { buildProviderModelsUrl, getDiscoveryClientVersionOptions } from "./discoveryClientVersion";
 import { getAdobeModels } from "./adobeFireflyDiscovery";
 import { parseGeminiModelsList } from "@/lib/providerModels/geminiModelsParser";
-import { getSyncedAvailableModels, getCustomModels } from "@/lib/db/models";
+import { getSyncedAvailableModels, getCustomModels, getModelIsHidden } from "@/lib/db/models";
 import { isConnectionUnavailableToAuxiliaryActivity } from "@/lib/exclusiveLeaseIsolation";
 import { fetchCursorAgentModels } from "@/lib/providerModels/cursorAgent";
 import { fetchCursorAvailableModels } from "@/lib/providerModels/cursorAvailableModels";
@@ -598,6 +599,53 @@ export async function GET(
         });
       }
     }
+
+    // MaxAI: live catalog + per-model context windows from the signed
+    // /models/get_config (the call the web app makes on load). Falls back to the
+    // curated static registry catalog on any auth/transport/shape failure.
+    if (provider === "maxai") {
+      const cachedResponse = maybeReturnCachedDiscovery();
+      if (cachedResponse) return cachedResponse;
+
+      const autoFetchDisabledResponse = maybeReturnAutoFetchDisabled();
+      if (autoFetchDisabledResponse) return autoFetchDisabledResponse;
+
+      try {
+        const discovery = await discoverMaxaiModels({
+          providerSpecificData: connection.providerSpecificData as
+            | Record<string, unknown>
+            | null
+            | undefined,
+          accessToken: apiKey || accessToken,
+          fetchImpl: (url, init) =>
+            safeOutboundFetch(url, {
+              ...SAFE_OUTBOUND_FETCH_PRESETS.modelsDiscovery,
+              guard: getProviderOutboundGuard(),
+              proxyConfig: proxy,
+              ...init,
+            }),
+        });
+        return buildApiDiscoveryResponse(discovery.models, discovery.warning);
+      } catch (error) {
+        console.log("Error fetching models from maxai", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        const fallback = buildDiscoveryFallbackResponse({
+          cacheWarning: "MaxAI models/get_config failed — using cached catalog",
+          localWarning: "MaxAI models/get_config failed — using curated catalog",
+        });
+        if (fallback) return fallback;
+        return buildResponse({
+          provider,
+          connectionId,
+          models: MAXAI_REGISTRY_MODELS,
+          source: "local_catalog",
+          intentional: true,
+          warning: "MaxAI catalog unavailable — using curated model list",
+        });
+      }
+    }
+
     const conolResponse = await maybeHandleConolModelDiscovery({
       provider,
       connectionId,
@@ -1849,28 +1897,17 @@ export async function GET(
         throw error;
       }
 
-      // ponytail: Anthropic partner models via Model Garden publisher endpoint (Bearer only)
+      // Anthropic partner models via Model Garden publisher endpoint (Bearer only).
+      //
+      // Model Garden's publisher-model LIST is served by the v1beta1 API — the v1
+      // API does not support list operations (every /v1/.../publishers/anthropic/models
+      // path 404s at the Google Front End). The list is also global: it returns the
+      // full Anthropic Claude catalog regardless of the connection's project or
+      // region, so no project/region scoping is applied here (execution region is
+      // handled separately by the vertex executor at request time).
       if (bearerToken) {
-        const psd = asRecord(connection.providerSpecificData);
-        const region = (typeof psd.region === "string" && psd.region.trim()) || "us-central1";
-
-        // Extract project_id from SA JSON for project-scoped listing (mirrors executor URL pattern).
-        // Falls back to global publisher endpoint if no project available.
-        let anthropicModelsUrl: string;
-        let projectId: string | null = null;
-        if (credential) {
-          try {
-            const sa = JSON.parse(credential);
-            if (sa?.project_id) projectId = sa.project_id;
-          } catch {
-            /* not SA JSON, skip */
-          }
-        }
-        if (projectId) {
-          anthropicModelsUrl = `https://aiplatform.googleapis.com/v1/projects/${projectId}/locations/${region}/publishers/anthropic/models`;
-        } else {
-          anthropicModelsUrl = `https://aiplatform.googleapis.com/v1/publishers/anthropic/models`;
-        }
+        const anthropicModelsUrl =
+          "https://aiplatform.googleapis.com/v1beta1/publishers/anthropic/models";
 
         try {
           const anthropicResponse = await safeOutboundFetch(anthropicModelsUrl, {
@@ -1891,7 +1928,6 @@ export async function GET(
           } else {
             console.log("[models] Vertex Anthropic partner discovery failed", {
               provider,
-              region,
               status: anthropicResponse.status,
             });
           }
