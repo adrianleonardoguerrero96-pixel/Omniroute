@@ -84,16 +84,39 @@ export const appendWindowsKnownBinPaths = (
 };
 
 /**
- * #12563: prepend existing `%ProgramFiles%\nodejs` dirs so Electron/`where.exe`
- * can see npm-global `.cmd` shims even when the GUI PATH omitted them.
+ * #12563: prepend known Windows npm/nvm/system Node dirs so Electron/`where.exe`
+ * can see `.cmd` shims even when the GUI PATH omitted them.
+ *
+ * Program Files is the stock-MSI safety net; npm-prefix / `%APPDATA%\npm` /
+ * nvm cover custom installs that the hardcoded path alone would miss.
  */
 export const mergeWindowsLookupPath = (
   extraPaths: string[],
   enrichedPath: string,
-  validateEnvPath: ValidateEnvPath
+  validateEnvPath: ValidateEnvPath,
+  options: {
+    npmPrefix?: string;
+    appDataNpm?: string;
+    nvmNodePath?: string | null;
+  } = {}
 ): string => {
-  const systemNodeDirs = getWindowsSystemNodeBinDirs(validateEnvPath).filter((dir) =>
-    fsSync.existsSync(dir)
-  );
-  return [...extraPaths, ...systemNodeDirs, enrichedPath].filter(Boolean).join(path.delimiter);
+  const knownDirs: string[] = [];
+
+  const pushExisting = (dir: string | null | undefined) => {
+    if (!dir) return;
+    const normalized = winPath.normalize(dir);
+    if (!fsSync.existsSync(normalized)) return;
+    const key = normalized.toLowerCase();
+    if (knownDirs.some((existing) => winPath.normalize(existing).toLowerCase() === key)) return;
+    knownDirs.push(normalized);
+  };
+
+  pushExisting(options.npmPrefix);
+  pushExisting(options.appDataNpm);
+  pushExisting(options.nvmNodePath ?? undefined);
+  for (const systemNodeDir of getWindowsSystemNodeBinDirs(validateEnvPath)) {
+    pushExisting(systemNodeDir);
+  }
+
+  return [...extraPaths, ...knownDirs, enrichedPath].filter(Boolean).join(path.delimiter);
 };

@@ -133,6 +133,31 @@ describe("#12563 — Windows npm-global .cmd shim under Program Files\\nodejs", 
     }
   });
 
+  it("prepends custom npm prefix and APPDATA\\npm ahead of a stripped GUI PATH", () => {
+    if (process.platform !== "win32") return;
+    setPlatform("win32");
+    const fakeRoot = fs.mkdtempSync(path.join(os.tmpdir(), "omniroute-12563-custom-"));
+    const npmPrefix = path.join(fakeRoot, "custom-prefix");
+    const appDataNpm = path.join(fakeRoot, "Roaming", "npm");
+    fs.mkdirSync(npmPrefix, { recursive: true });
+    fs.mkdirSync(appDataNpm, { recursive: true });
+    delete process.env.ProgramFiles;
+    delete process.env["ProgramFiles(x86)"];
+
+    try {
+      const merged = mergeWindowsLookupPath([], "C:\\Windows\\System32", () => "", {
+        npmPrefix,
+        appDataNpm,
+      });
+      const segments = merged.split(path.delimiter);
+      assert.equal(segments[0], npmPrefix);
+      assert.equal(segments[1], appDataNpm);
+      assert.ok(segments.includes("C:\\Windows\\System32"));
+    } finally {
+      fs.rmSync(fakeRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    }
+  });
+
   it("skips system Node dirs on non-Windows platforms", () => {
     setPlatform("linux");
     process.env.ProgramFiles = "C:\\Program Files";

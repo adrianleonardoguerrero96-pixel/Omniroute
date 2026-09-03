@@ -10,6 +10,7 @@ import { GROK_BUILD_RUNTIME_ENTRY, AMP_RUNTIME_ENTRY } from "./cliRuntimeGrokBui
 import { isLocationTrusted, findKnownPathMatch } from "./cliRuntimeKnownPath";
 import { buildHealthcheckPath } from "./cliRuntimeHealthcheckPath";
 import { appendWindowsKnownBinPaths, mergeWindowsLookupPath } from "./cliRuntimeWindowsNode";
+import { getNpmGlobalPrefix } from "./cliRuntimeNpmPrefix";
 import {
   describeContainerTarget,
   hasBindMountAt,
@@ -561,43 +562,6 @@ const validateEnvPath = (value: string | undefined, allowedParents: string[]): s
 };
 
 /**
- * Detect the npm global bin directory.
- * Cached on first call — `execFileSync` is expensive, only run once.
- */
-let _npmGlobalPrefix: string | undefined;
-const getNpmGlobalPrefix = (): string => {
-  if (_npmGlobalPrefix !== undefined) return _npmGlobalPrefix;
-
-  const envPrefix = String(process.env.npm_config_prefix || "").trim();
-  if (envPrefix && path.isAbsolute(envPrefix)) {
-    _npmGlobalPrefix = envPrefix;
-    return _npmGlobalPrefix;
-  }
-
-  try {
-    const result = execFileSync("npm", ["config", "get", "prefix"], {
-      windowsHide: true,
-      timeout: 5000,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-      ...(isWindows() ? { shell: true } : {}),
-    });
-    const prefix = result.trim();
-    if (
-      prefix &&
-      path.isAbsolute(prefix) &&
-      !DANGEROUS_PATH_CHARS.some((c) => prefix.includes(c))
-    ) {
-      _npmGlobalPrefix = prefix;
-      return _npmGlobalPrefix;
-    }
-  } catch {}
-
-  _npmGlobalPrefix = "";
-  return _npmGlobalPrefix;
-};
-
-/**
  * Pre-compute expected parent directories at module startup for performance.
  * These are the allowed directories for CLI binary installation locations.
  */
@@ -800,9 +764,22 @@ export const getLookupEnv = () => {
   // Only add user-specified extra paths, NOT generic user directories
   // This is more secure - user explicitly opts in via CLI_EXTRA_PATHS
   if (extraPaths.length > 0 || enrichedPath !== basePath || isWindows()) {
-    const mergedPath = isWindows()
-      ? mergeWindowsLookupPath(extraPaths, enrichedPath, validateEnvPath)
-      : [...extraPaths, enrichedPath].filter(Boolean).join(path.delimiter);
+    let mergedPath: string;
+    if (isWindows()) {
+      // #12563: Windows has no login-shell PATH enrichment; prepend known npm/nvm/
+      // system Node dirs (allowlisted) so custom prefixes survive a failed
+      // `npm config get prefix` and a stripped Electron PATH.
+      const home = os.homedir();
+      const userProfile = process.env.USERPROFILE || home;
+      const appData = validateEnvPath(process.env.APPDATA, [home, userProfile]);
+      mergedPath = mergeWindowsLookupPath(extraPaths, enrichedPath, validateEnvPath, {
+        npmPrefix: getNpmGlobalPrefix() || undefined,
+        appDataNpm: appData ? path.join(appData, "npm") : undefined,
+        nvmNodePath: getNvmNodePath(),
+      });
+    } else {
+      mergedPath = [...extraPaths, enrichedPath].filter(Boolean).join(path.delimiter);
+    }
     if (mergedPath) {
       env.PATH = mergedPath;
       if (isWindows()) {
