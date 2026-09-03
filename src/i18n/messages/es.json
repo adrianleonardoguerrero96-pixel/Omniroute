@@ -13988,6 +13988,7 @@
     "drawerTimeline": "Cronología",
     "drawerMetrics": "Métricas",
     "drawerResult": "Resultado",
+    "drawerMemory": "Memoria utilizada",
     "drawerActions": "Acciones",
     "drawerClose": "Cerrar",
     "copyTrace": "Copiar traza JSON",
@@ -13997,7 +13998,11 @@
     "actionDone": "Acción aplicada",
     "actionFailed": "Error en la acción: {error}",
     "detailFailed": "No se pudieron cargar los detalles: {error}",
-    "mirroredInA2A": "Reflejado en A2A"
+    "mirroredInA2A": "Reflejado en A2A",
+    "actionRepeat": "Repetir",
+    "repeatConfirm": "Hacer clic de nuevo para confirmar",
+    "repeatDone": "Nueva ejecución creada",
+    "repeatUnavailable": "Entrada original no disponible"
   },
   "cliproxyProviderExposure": {
     "title": "Exposición del Proveedor",

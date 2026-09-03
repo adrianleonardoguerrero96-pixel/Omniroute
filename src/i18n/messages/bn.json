@@ -13988,6 +13988,7 @@
     "drawerTimeline": "টাইমলাইন",
     "drawerMetrics": "মেট্রিক্স",
     "drawerResult": "ফলাফল",
+    "drawerMemory": "ব্যবহৃত মেমরি",
     "drawerActions": "কার্যক্রম",
     "drawerClose": "বন্ধ করুন",
     "copyTrace": "ট্রেস JSON কপি করুন",
@@ -13997,7 +13998,11 @@
     "actionDone": "কার্যক্রম প্রয়োগ করা হয়েছে",
     "actionFailed": "কার্যক্রম ব্যর্থ হয়েছে: {error}",
     "detailFailed": "বিবরণ লোড করতে ব্যর্থ: {error}",
-    "mirroredInA2A": "A2A-তে প্রতিফলিত"
+    "mirroredInA2A": "A2A-তে প্রতিফলিত",
+    "actionRepeat": "পুনরাবৃত্তি করুন",
+    "repeatConfirm": "নিশ্চিত করতে আবার ক্লিক করুন",
+    "repeatDone": "নতুন রান তৈরি হয়েছে",
+    "repeatUnavailable": "মূল ইনপুট উপলব্ধ নেই"
   },
   "cliproxyProviderExposure": {
     "title": "প্রদানকারী এক্সপোজার",

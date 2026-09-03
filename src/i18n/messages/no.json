@@ -13988,6 +13988,7 @@
     "drawerTimeline": "Tidslinje",
     "drawerMetrics": "Målinger",
     "drawerResult": "Resultat",
+    "drawerMemory": "Brukt minne",
     "drawerActions": "Handlinger",
     "drawerClose": "Lukk",
     "copyTrace": "Kopiér spor (JSON)",
@@ -13997,7 +13998,11 @@
     "actionDone": "Handling utført",
     "actionFailed": "Handling mislyktes: {error}",
     "detailFailed": "Kunne ikke laste inn detaljer: {error}",
-    "mirroredInA2A": "Speilet i A2A"
+    "mirroredInA2A": "Speilet i A2A",
+    "actionRepeat": "Gjenta",
+    "repeatConfirm": "Klikk igjen for å bekrefte",
+    "repeatDone": "Ny kjøring opprettet",
+    "repeatUnavailable": "Opprinnelig inndata ikke tilgjengelig"
   },
   "cliproxyProviderExposure": {
     "title": "Leverandør Eksponering",

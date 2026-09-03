@@ -13988,6 +13988,7 @@
     "drawerTimeline": "காலவரிசை",
     "drawerMetrics": "அளவீடுகள்",
     "drawerResult": "முடிவு",
+    "drawerMemory": "பயன்படுத்தப்பட்ட நினைவகம்",
     "drawerActions": "செயல்கள்",
     "drawerClose": "மூடு",
     "copyTrace": "ட்ரேஸ் JSON-ஐ நகலெடு",
@@ -13997,7 +13998,11 @@
     "actionDone": "செயல் பயன்படுத்தப்பட்டது",
     "actionFailed": "செயல் தோல்வியடைந்தது: {error}",
     "detailFailed": "விவரங்களை ஏற்ற முடியவில்லை: {error}",
-    "mirroredInA2A": "A2A இல் பிரதிபலிக்கப்பட்டது"
+    "mirroredInA2A": "A2A இல் பிரதிபலிக்கப்பட்டது",
+    "actionRepeat": "மீண்டும் செய்",
+    "repeatConfirm": "உறுதிப்படுத்த மீண்டும் கிளிக் செய்யவும்",
+    "repeatDone": "புதிய இயக்கம் உருவாக்கப்பட்டது",
+    "repeatUnavailable": "அசல் உள்ளீடு கிடைக்கவில்லை"
   },
   "cliproxyProviderExposure": {
     "title": "சேவையாளர் வெளிப்பாடு",

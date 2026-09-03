@@ -13988,6 +13988,7 @@
     "drawerTimeline": "Časová osa",
     "drawerMetrics": "Metriky",
     "drawerResult": "Výsledek",
+    "drawerMemory": "Použitá paměť",
     "drawerActions": "Akce",
     "drawerClose": "Zavřít",
     "copyTrace": "Kopírovat trasování (JSON)",
@@ -13997,7 +13998,11 @@
     "actionDone": "Akce provedena",
     "actionFailed": "Akce selhala: {error}",
     "detailFailed": "Nepodařilo se načíst podrobnosti: {error}",
-    "mirroredInA2A": "Zrcadleno v A2A"
+    "mirroredInA2A": "Zrcadleno v A2A",
+    "actionRepeat": "Opakovat",
+    "repeatConfirm": "Kliknutím znovu potvrdíte",
+    "repeatDone": "Vytvořeno nové spuštění",
+    "repeatUnavailable": "Původní vstup není k dispozici"
   },
   "cliproxyProviderExposure": {
     "title": "Expozice Poskytovatele",

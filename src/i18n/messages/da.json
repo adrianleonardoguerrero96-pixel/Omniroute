@@ -13988,6 +13988,7 @@
     "drawerTimeline": "Tidslinje",
     "drawerMetrics": "Målinger",
     "drawerResult": "Resultat",
+    "drawerMemory": "Anvendt hukommelse",
     "drawerActions": "Handlinger",
     "drawerClose": "Luk",
     "copyTrace": "Kopiér sporing (JSON)",
@@ -13997,7 +13998,11 @@
     "actionDone": "Handling udført",
     "actionFailed": "Handling mislykkedes: {error}",
     "detailFailed": "Kunne ikke indlæse detaljer: {error}",
-    "mirroredInA2A": "Spejlet i A2A"
+    "mirroredInA2A": "Spejlet i A2A",
+    "actionRepeat": "Gentag",
+    "repeatConfirm": "Klik igen for at bekræfte",
+    "repeatDone": "Ny kørsel oprettet",
+    "repeatUnavailable": "Oprindeligt input ikke tilgængeligt"
   },
   "cliproxyProviderExposure": {
     "title": "Udbyder Eksponering",
