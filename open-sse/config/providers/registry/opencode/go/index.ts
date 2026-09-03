@@ -226,6 +226,17 @@ export const opencode_goProvider: RegistryEntry = {
       supportsVideo: true,
       targetFormat: "openai-responses",
     },
+    {
+      id: "muse-spark-1.3-contributor-max",
+      name: "Muse Spark 1.3 Contributor (max effort)",
+      contextLength: 1048576,
+      maxOutputTokens: 131072,
+      supportsReasoning: true,
+      supportsVision: true,
+      supportsAudio: true,
+      supportsVideo: true,
+      targetFormat: "openai-responses",
+    },
     // Muse Spark 1.2 Contributor — base + effort-tier aliases from the OpenCode Go
     // registry (`opencode models opencode-go --verbose`; exact suffix set:
     // minimal/low/medium/high/xhigh, no max).

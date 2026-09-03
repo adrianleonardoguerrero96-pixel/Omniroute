@@ -97,7 +97,7 @@ const EFFORT_TIERS: Record<string, readonly string[]> = {
   "qwen3.6-plus": ["high", "max"],
   "qwen3.7-max": ["high", "max"],
   "qwen3.7-plus": ["high", "max"],
-  "muse-spark-1.3-contributor": ["minimal", "low", "medium", "high", "xhigh"],
+  "muse-spark-1.3-contributor": ["minimal", "low", "medium", "high", "xhigh", "max"],
   "muse-spark-1.2-contributor": ["minimal", "low", "medium", "high", "xhigh"],
 };
 
@@ -116,6 +116,23 @@ export function parseEffortLevel(model: string): { baseModel: string; effort: st
       }
     }
   }
+
+  // Dynamic forward-compatible parsing for future muse-spark-*-contributor models
+  const museMatch = m.match(
+    /^(muse-spark-(?:[0-9]+(?:\.[0-9]+)?|[a-z0-9_-]+)-contributor)-(minimal|low|medium|high|xhigh|max)$/i
+  );
+  if (museMatch) {
+    const baseModel = museMatch[1].toLowerCase();
+    const effort = museMatch[2].toLowerCase();
+    // 1.2 ceiling is xhigh (no max)
+    if (/^muse-spark-1\.2-contributor$/i.test(baseModel)) {
+      if (effort === "max") return null;
+      return { baseModel, effort };
+    }
+    // 1.3+ and future versions support up to max
+    return { baseModel, effort };
+  }
+
   return null;
 }
 
