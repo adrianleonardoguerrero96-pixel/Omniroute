@@ -7,6 +7,7 @@ import { PROVIDER_MODELS } from "../../open-sse/config/providerModels.ts";
 import { DefaultExecutor } from "../../open-sse/executors/default.ts";
 import { parseModel } from "../../open-sse/services/model.ts";
 import { APIKEY_PROVIDERS } from "../../src/shared/constants/providers.ts";
+import { isReservedProviderPrefix } from "../../src/shared/constants/reservedProviderPrefixes.ts";
 
 const BIGMODEL_CHAT_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
 
@@ -29,6 +30,7 @@ test("BigModel.cn uses the documented OpenAI chat endpoint with Bearer authentic
     providerAlias: "bigmodel",
     extendedContext: false,
   });
+  assert.equal(isReservedProviderPrefix("bigmodel"), true);
 
   const executor = new DefaultExecutor("bigmodel");
   assert.equal(executor.buildUrl("glm-5.3", true), BIGMODEL_CHAT_URL);
@@ -58,4 +60,12 @@ test("BigModel.cn and Z.AI expose distinct platform links and localized descript
   assert.match(en.providers.onboardingProviderDescriptions.zai, /z\.ai\/manage-apikey/);
   assert.match(zhCN.providers.onboardingProviderDescriptions.zai, /z\.ai\/manage-apikey/);
   assert.match(zhTW.providers.onboardingProviderDescriptions.zai, /z\.ai\/manage-apikey/);
+
+  const ptBR = JSON.parse(readFileSync("src/i18n/messages/pt-BR.json", "utf8"));
+  const vi = JSON.parse(readFileSync("src/i18n/messages/vi.json", "utf8"));
+  const bigmodelKeyPath = /bigmodel\.cn\/usercenter\/proj-mgmt\/apikeys/;
+  assert.match(ptBR.providers.onboardingProviderDescriptions.bigmodel, bigmodelKeyPath);
+  assert.match(vi.providers.onboardingProviderDescriptions.bigmodel, bigmodelKeyPath);
+  assert.match(ptBR.providers.onboardingProviderDescriptions.zai, /z\.ai\/manage-apikey/);
+  assert.match(vi.providers.onboardingProviderDescriptions.zai, /z\.ai\/manage-apikey/);
 });
