@@ -37,6 +37,7 @@ import { sanitizeResponsesInputItems } from "../services/responsesInputSanitizer
 import { applyReasoningInputPolicy } from "../services/reasoningInputPolicy.ts";
 import { normalizeCodexVerbosity } from "../services/codexVerbosity.ts";
 import { getThinkingBudgetConfig, ThinkingMode } from "../services/thinkingBudget.ts";
+import { stripUnsupportedParams } from "../translator/paramSupport.ts";
 import { CORS_HEADERS } from "../utils/cors.ts";
 import { errorResponse } from "../utils/error.ts";
 import { normalizeCodexResponsesInput } from "../utils/responsesInputNormalization.ts";
@@ -1415,6 +1416,12 @@ export class CodexExecutor extends BaseExecutor {
     delete body.prompt_cache_retention;
     delete body.safety_identifier;
     delete body.user;
+
+    // Codex /responses rejects sampling params (FastAPI
+    // `{"detail":"Unsupported parameter: temperature"}`). Native passthrough
+    // returns before the Responses allowlist, so this must run here — combo
+    // codex-review forwarded client temperature onto sol-xhigh / luna-max.
+    stripUnsupportedParams("codex", cleanModel || model, body);
 
     // Inject prompt_cache_key for Codex prompt caching.
     // The official Codex client sets this to conversation_id (a stable UUID per session).
