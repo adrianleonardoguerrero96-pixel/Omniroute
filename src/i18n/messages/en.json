@@ -13995,16 +13995,21 @@
     "drawerTimeline": "Timeline",
     "drawerMetrics": "Metrics",
     "drawerResult": "Result",
+    "drawerMemory": "Memory used",
     "drawerActions": "Actions",
     "drawerClose": "Close",
     "copyTrace": "Copy trace JSON",
     "actionApprove": "Approve plan",
     "actionCancel": "Cancel",
     "actionSeeInGraph": "See in graph",
+    "actionRepeat": "Repeat",
     "actionDone": "Action applied",
     "actionFailed": "Action failed: {error}",
     "detailFailed": "Failed to load details: {error}",
-    "mirroredInA2A": "Mirrored in A2A"
+    "mirroredInA2A": "Mirrored in A2A",
+    "repeatConfirm": "Click again to confirm",
+    "repeatDone": "New run created",
+    "repeatUnavailable": "Original input not available"
   },
   "cliproxyProviderExposure": {
     "title": "Provider Exposure",

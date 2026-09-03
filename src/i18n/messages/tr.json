@@ -13988,6 +13988,7 @@
     "drawerTimeline": "Zaman Çizelgesi",
     "drawerMetrics": "Metrikler",
     "drawerResult": "Sonuç",
+    "drawerMemory": "Kullanılan bellek",
     "drawerActions": "Eylemler",
     "drawerClose": "Kapat",
     "copyTrace": "İzleme JSON'ını kopyala",
@@ -13997,7 +13998,11 @@
     "actionDone": "İşlem uygulandı",
     "actionFailed": "İşlem başarısız: {error}",
     "detailFailed": "Ayrıntılar yüklenemedi: {error}",
-    "mirroredInA2A": "A2A'da yansıtıldı"
+    "mirroredInA2A": "A2A'da yansıtıldı",
+    "actionRepeat": "Tekrarla",
+    "repeatConfirm": "Onaylamak için tekrar tıklayın",
+    "repeatDone": "Yeni çalıştırma oluşturuldu",
+    "repeatUnavailable": "Orijinal girdi kullanılamıyor"
   },
   "cliproxyProviderExposure": {
     "title": "Sağlayıcı Maruziyeti",
