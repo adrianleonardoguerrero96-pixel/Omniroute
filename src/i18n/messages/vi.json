@@ -13996,6 +13996,7 @@
     "drawerTimeline": "Dòng thời gian",
     "drawerMetrics": "Chỉ số",
     "drawerResult": "Kết quả",
+    "drawerMemory": "Bộ nhớ đã sử dụng",
     "drawerActions": "Hành động",
     "drawerClose": "Đóng",
     "copyTrace": "Sao chép JSON theo dõi",
@@ -14005,7 +14006,11 @@
     "actionDone": "Đã áp dụng hành động",
     "actionFailed": "Hành động thất bại: {error}",
     "detailFailed": "Không tải được chi tiết: {error}",
-    "mirroredInA2A": "Được phản chiếu trong A2A"
+    "mirroredInA2A": "Được phản chiếu trong A2A",
+    "actionRepeat": "Lặp lại",
+    "repeatConfirm": "Nhấp lại để xác nhận",
+    "repeatDone": "Đã tạo lượt chạy mới",
+    "repeatUnavailable": "Không có dữ liệu đầu vào gốc"
   },
   "cliproxyProviderExposure": {
     "title": "Tiếp Xúc Nhà Cung Cấp",

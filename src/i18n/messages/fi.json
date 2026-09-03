@@ -13988,6 +13988,7 @@
     "drawerTimeline": "Aikajana",
     "drawerMetrics": "Mittarit",
     "drawerResult": "Tulos",
+    "drawerMemory": "Käytetty muisti",
     "drawerActions": "Toiminnot",
     "drawerClose": "Sulje",
     "copyTrace": "Kopioi jäljitys-JSON",
@@ -13997,7 +13998,11 @@
     "actionDone": "Toiminto suoritettu",
     "actionFailed": "Toiminto epäonnistui: {error}",
     "detailFailed": "Tietojen lataus epäonnistui: {error}",
-    "mirroredInA2A": "Peilattu A2A:ssa"
+    "mirroredInA2A": "Peilattu A2A:ssa",
+    "actionRepeat": "Toista",
+    "repeatConfirm": "Vahvista napsauttamalla uudelleen",
+    "repeatDone": "Uusi ajo luotu",
+    "repeatUnavailable": "Alkuperäistä syötettä ei ole saatavilla"
   },
   "cliproxyProviderExposure": {
     "title": "Palveluntarjoajan Altistus",
