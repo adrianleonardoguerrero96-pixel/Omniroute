@@ -358,13 +358,20 @@ export function resolveSearchBaseUrl(
   //   - For any provider the response body is parsed and returned to the caller,
   //     so a caller-chosen target is SSRF with readback.
   //
-  // No provider has a legitimate need for a per-request caller-chosen fetch
-  // target; the self-hosted story is served by the operator field above. If one
-  // ever does, it needs an explicit per-provider opt-in plus a host allow-list,
-  // not a validated free-form URL.
-  const tenantOverride = readProviderSettingString(params.providerOptions, "baseUrl");
-  if (tenantOverride) {
-    throw new SearchBaseUrlOverrideError(config.id);
+  // Only a provider that is BOTH keyless and explicitly opted in
+  // (`allowClientBaseUrlOverride`) may be redirected by its caller. Today that
+  // is SearXNG alone, whose self-hosted flow is documented and tested.
+  const callerOverride = readProviderSettingString(params.providerOptions, "baseUrl");
+  if (callerOverride) {
+    if (!config.allowClientBaseUrlOverride || config.authType === "apikey") {
+      throw new SearchBaseUrlOverrideError(config.id);
+    }
+    // Opted-in keyless provider (self-hosted SearXNG): no operator credential
+    // travels with the request, so the remaining exposure is the fetch target
+    // itself. Block-metadata, matching the operator path — loopback/LAN is the
+    // whole point of a self-hosted instance, IMDS is not.
+    parseAndValidateNonMetadataUrl(callerOverride);
+    return callerOverride.replace(/\/+$/, "");
   }
 
   return config.baseUrl.replace(/\/+$/, "");

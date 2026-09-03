@@ -63,21 +63,50 @@ describe("resolveSearchBaseUrl — tenant-supplied baseUrl (GHSA-3f8g-pfh9-j687)
     });
   }
 
-  it("refuses a tenant baseUrl for keyless providers too (SSRF readback)", () => {
-    for (const id of ["searxng-search", "context7", "duckduckgo-free"]) {
-      const config = SEARCH_PROVIDERS[id];
-      if (!config) continue;
-      for (const target of [
-        "https://attacker.example",
-        "http://127.0.0.1:9999",
-        "http://10.0.0.5",
-      ]) {
-        assert.throws(
-          () => resolveSearchBaseUrl(config, { ...base, providerOptions: { baseUrl: target } }),
-          `${id} honored tenant baseUrl ${target}`
-        );
+  it("the opt-in flag is NEVER set on a provider that carries an operator key", () => {
+    // The whole invariant in one assertion: if this ever pairs with authType
+    // "apikey", a caller can redirect the operator's key again.
+    for (const p of Object.values(SEARCH_PROVIDERS)) {
+      if (p.allowClientBaseUrlOverride) {
+        assert.equal(p.authType, "none", `${p.id} opts into a caller baseUrl while holding a key`);
       }
     }
+  });
+
+  it("refuses a caller baseUrl for keyless providers that did NOT opt in", () => {
+    for (const id of ["context7", "duckduckgo-free"]) {
+      const config = SEARCH_PROVIDERS[id];
+      if (!config || config.allowClientBaseUrlOverride) continue;
+      assert.throws(
+        () =>
+          resolveSearchBaseUrl(config, {
+            ...base,
+            providerOptions: { baseUrl: "https://attacker.example" },
+          }),
+        `${id} honored a caller baseUrl without opting in`
+      );
+    }
+  });
+
+  it("SearXNG keeps its documented self-hosted caller override, IMDS still blocked", () => {
+    // Opted in: keyless, so no operator credential travels with the request.
+    // Loopback/LAN is the point of a self-hosted instance (search-route.test.ts
+    // covers the route-level flow); cloud metadata stays rejected.
+    const config = SEARCH_PROVIDERS["searxng-search"];
+    assert.equal(config.allowClientBaseUrlOverride, true);
+    assert.equal(
+      resolveSearchBaseUrl(config, {
+        ...base,
+        providerOptions: { baseUrl: "http://127.0.0.1:8888/search" },
+      }),
+      "http://127.0.0.1:8888/search"
+    );
+    assert.throws(() =>
+      resolveSearchBaseUrl(config, {
+        ...base,
+        providerOptions: { baseUrl: "http://169.254.169.254/latest/meta-data/" },
+      })
+    );
   });
 
   it("keeps the operator-configured override working, including loopback/LAN", () => {
