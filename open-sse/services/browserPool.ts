@@ -26,6 +26,8 @@
 
 import { Buffer } from "node:buffer";
 
+import { connectObscuraBrowser } from "./obscura.ts";
+
 type Browser = import("playwright").Browser;
 type BrowserContext = import("playwright").BrowserContext;
 type Page = import("playwright").Page;
@@ -86,8 +88,12 @@ function createBrowserPoolMetrics(): BrowserPoolMetrics {
   };
 }
 
+type PoolEngine = "obscura" | "cloakbrowser" | "chromium";
+
 interface PoolState {
   browser: Browser | null;
+  /** Engine backing the headless browser, for metrics and stealth detection. */
+  engine: PoolEngine | null;
   headedBrowser: Browser | null;
   contexts: Map<string, PooledContext>;
   pendingContexts: Map<string, Promise<PooledContext>>;
@@ -110,6 +116,7 @@ const DEFAULT_USER_AGENT =
 
 const state: PoolState = {
   browser: null,
+  engine: null,
   headedBrowser: null,
   contexts: new Map(),
   pendingContexts: new Map(),
@@ -288,13 +295,26 @@ async function launchBrowserInstance(
   options: BrowserPoolContextOptions,
   headless: boolean
 ): Promise<Browser> {
+  // A headed browser must be a real windowed Chromium, so the engine
+  // preference below applies to the headless path only.
   if (!headless) {
     const { chromium } = await import("playwright");
     return chromium.launch(resolvePlainBrowserLaunchOptions(options));
   }
 
+  // #12274: prefer Obscura (lightweight, browser-grade CDP) over a full
+  // Chromium; fall back to cloakbrowser, then plain Chromium. Obscura's
+  // lifecycle (one shared `obscura serve` per process) lives in ./obscura.ts,
+  // so executors like cloudflare-playground reuse the same server.
+  const obscura = await connectObscuraBrowser();
+  if (obscura) {
+    state.engine = "obscura";
+    return obscura.browser;
+  }
+
   const cloakLaunch = await resolveCloakLaunch();
   if (cloakLaunch) {
+    state.engine = "cloakbrowser";
     return cloakLaunch({
       headless: true,
       args: ["--no-sandbox", "--disable-dev-shm-usage"],
@@ -303,6 +323,7 @@ async function launchBrowserInstance(
 
   // Fallback: plain Playwright. Works for Claude web (cookie-only auth) but
   // DDG's VQD challenge will detect this Chromium build.
+  state.engine = "chromium";
   const { chromium } = await import("playwright");
   return chromium.launch(resolvePlainBrowserLaunchOptions(options));
 }
@@ -471,7 +492,7 @@ export async function acquireBrowserContext(
       launchBrowser(options),
       resolveBrowserContextProxy(key, options),
     ]);
-    const isStealth = headless && state.cloakLaunch !== null;
+    const isStealth = headless && (state.engine === "obscura" || state.cloakLaunch !== null);
     const context = await browser.newContext({
       userAgent: options.userAgent || DEFAULT_USER_AGENT,
       locale: options.locale || "en-US",
@@ -580,6 +601,10 @@ export async function shutdownPool(reason: string): Promise<void> {
   }
   state.launching = null;
   state.headedLaunching = null;
+  // #12274: the shared Obscura server is owned by ./obscura.ts and reused by
+  // executors (cloudflare-playground), so closing the pool's CDP connection is
+  // enough — never kill the server here.
+  state.engine = null;
   state.lastActivity = Date.now();
   // Avoid unused-parameter lint: log reason via debug if anyone hooks
   // process.on('exit') and prints state.
@@ -590,6 +615,7 @@ export function getBrowserPoolStatus(): {
   enabled: boolean;
   contexts: number;
   browserRunning: boolean;
+  engine: PoolEngine | null;
   stealthAvailable: boolean;
   lastActivityAgoMs: number;
 } {
@@ -597,7 +623,8 @@ export function getBrowserPoolStatus(): {
     enabled: isPoolEnabled(),
     contexts: state.contexts.size,
     browserRunning: state.browser !== null || state.headedBrowser !== null,
-    stealthAvailable: state.cloakLaunch !== null,
+    engine: state.engine,
+    stealthAvailable: state.engine === "obscura" || state.cloakLaunch !== null,
     lastActivityAgoMs: state.lastActivity === 0 ? -1 : Date.now() - state.lastActivity,
   };
 }
