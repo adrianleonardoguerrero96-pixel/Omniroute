@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { getExecutor } from "../../open-sse/executors/index.ts";
 import { GlmExecutor } from "../../open-sse/executors/glm.ts";
+import { CLAUDE_CODE_CLIENT_VERSION } from "../../src/shared/constants/claudeCodeClient.ts";
 
 function makeSseResponse(lines: string[]): Response {
   return new Response(lines.join("\n\n") + "\n\n", {
@@ -130,9 +131,9 @@ test("GlmExecutor normalizes GLM coding and Anthropic URLs without duplicating e
 });
 
 test("GlmExecutor separates OpenAI-compatible coding headers from Anthropic headers", async () => {
-  assert.equal(await getExecutor("glm") instanceof GlmExecutor, true);
-  assert.equal(await getExecutor("glm-cn") instanceof GlmExecutor, true);
-  assert.equal(await getExecutor("glmt") instanceof GlmExecutor, true);
+  assert.equal((await getExecutor("glm")) instanceof GlmExecutor, true);
+  assert.equal((await getExecutor("glm-cn")) instanceof GlmExecutor, true);
+  assert.equal((await getExecutor("glmt")) instanceof GlmExecutor, true);
 
   const executor = new GlmExecutor("glm");
   const codingHeaders = executor.buildHeaders(
@@ -183,7 +184,10 @@ test("GlmExecutor separates OpenAI-compatible coding headers from Anthropic head
   assert.equal(anthropicHeaders["anthropic-version"], "2023-06-01");
   assert.match(anthropicHeaders["anthropic-beta"], /claude-code-20250219/);
   assert.equal(anthropicHeaders["anthropic-dangerous-direct-browser-access"], "true");
-  assert.match(anthropicHeaders["User-Agent"], /^claude-cli\/2\.1\.220 \(external, sdk-cli\)$/);
+  assert.equal(
+    anthropicHeaders["User-Agent"],
+    `claude-cli/${CLAUDE_CODE_CLIENT_VERSION} (external, sdk-cli)`
+  );
   assert.equal(anthropicHeaders["X-Stainless-Lang"], "js");
   assert.equal(anthropicHeaders["X-Stainless-Runtime"], "node");
 });

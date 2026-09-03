@@ -17,6 +17,7 @@ const {
   getClientIdentityProfileHeaders,
   isClientIdentityProfileId,
 } = await import("../../src/shared/constants/clientIdentityProfiles.ts");
+const { getClaudeCodeUserAgent } = await import("../../src/shared/constants/claudeCodeClient.ts");
 const { isForbiddenCustomHeaderName } =
   await import("../../src/shared/constants/upstreamHeaders.ts");
 const { DefaultExecutor } = await import("../../open-sse/executors/default.ts");
@@ -39,7 +40,7 @@ test("getClientIdentityProfileHeaders: unknown profile id falls back to no heade
 
 test("getClientIdentityProfileHeaders: known CLI profiles expose their preset headers", () => {
   const claudeCli = getClientIdentityProfileHeaders("claude-cli");
-  assert.equal(claudeCli["User-Agent"], "claude-cli/2.1.220 (external, cli)");
+  assert.equal(claudeCli["User-Agent"], getClaudeCodeUserAgent("cli"));
   assert.equal(claudeCli["X-App"], "cli");
 
   const codexCli = getClientIdentityProfileHeaders("codex-cli");
@@ -55,7 +56,7 @@ test("getClientIdentityProfileHeaders: returns a fresh mutable copy (catalog sta
   headers["User-Agent"] = "tampered";
   assert.equal(
     CLIENT_IDENTITY_PROFILES["claude-cli"].headers["User-Agent"],
-    "claude-cli/2.1.220 (external, cli)"
+    getClaudeCodeUserAgent("cli")
   );
 });
 
@@ -100,7 +101,7 @@ test("profile headers merged into customHeaders survive applyCustomHeaders sanit
     true
   ) as Record<string, string>;
 
-  assert.equal(headers["User-Agent"], "claude-cli/2.1.220 (external, cli)");
+  assert.equal(headers["User-Agent"], getClaudeCodeUserAgent("cli"));
   assert.equal(headers["X-App"], "cli");
   assert.equal(headers["Authorization"], "Bearer test-key");
 });

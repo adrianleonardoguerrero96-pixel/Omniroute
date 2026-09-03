@@ -19,6 +19,7 @@ import {
   CONTEXT_1M_BETA_HEADER,
 } from "../../open-sse/services/claudeCodeCompatible.ts";
 import { runWithCapture } from "../../open-sse/utils/providerRequestLogging.ts";
+import { CLAUDE_CODE_CLIENT_BILLING_VERSION } from "../../src/shared/constants/claudeCodeClient.ts";
 
 class TestExecutor extends BaseExecutor {
   constructor(config = {}) {
@@ -1576,7 +1577,9 @@ test("DefaultExecutor.execute does not produce duplicate anthropic-version heade
   const sentBody = JSON.parse(capturedBody) as { system?: Array<{ text?: string }> };
   assert.match(
     sentBody.system?.[0]?.text ?? "",
-    /^x-anthropic-billing-header: cc_version=2\.1\.220\.1f2; cc_entrypoint=cli; cch=[0-9a-f]{5};$/
+    new RegExp(
+      `^x-anthropic-billing-header: cc_version=${CLAUDE_CODE_CLIENT_BILLING_VERSION.replaceAll(".", "\\.")}; cc_entrypoint=cli; cch=[0-9a-f]{5};$`
+    )
   );
 });
 
