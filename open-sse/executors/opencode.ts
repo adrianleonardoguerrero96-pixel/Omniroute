@@ -919,12 +919,25 @@ export class OpencodeExecutor extends BaseExecutor {
       if (parsed) {
         const deepseekFamily =
           parsed.baseModel === "deepseek-v4-pro" || parsed.baseModel === "deepseek-v4-flash";
+        const museSparkFamily = parsed.baseModel.startsWith("muse-spark");
         if (deepseekFamily) {
           // DeepSeek via opencode-go proxies the native DeepSeek contract, which
           // accepts a flat reasoning_effort field (#4647).
           mb.model = parsed.baseModel;
           if (mb.reasoning_effort === undefined) {
             mb.reasoning_effort = parsed.effort;
+          }
+        } else if (museSparkFamily) {
+          // Muse Spark on OpenCode is exclusively a Responses API model on /responses.
+          // The /responses upstream strictly expects baseModel in the model field and
+          // reasoning.effort for the tier (rejects suffixed model ids with ModelError 401).
+          // Upstream /responses accepts: minimal, low, medium, high, xhigh (clamps max -> xhigh).
+          mb.model = parsed.baseModel;
+          const responsesEffort = parsed.effort === "max" ? "xhigh" : parsed.effort;
+          if (mb.reasoning && typeof mb.reasoning === "object" && !Array.isArray(mb.reasoning)) {
+            (mb.reasoning as Record<string, unknown>).effort = responsesEffort;
+          } else if (mb.reasoning === undefined) {
+            mb.reasoning = { effort: responsesEffort };
           }
         }
         // #10788: every other family's ONLY native effort mechanism is the

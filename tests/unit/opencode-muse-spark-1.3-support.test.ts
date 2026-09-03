@@ -1,11 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { getModelTargetFormat } from "../../open-sse/config/providerModels.ts";
-import { opencode_goProvider } from "../../open-sse/config/providers/registry/opencode/go/index.ts";
-import { opencode_zenProvider } from "../../open-sse/config/providers/registry/opencode/zen/index.ts";
-import { opencodeProvider } from "../../open-sse/config/providers/registry/opencode/index.ts";
 import { command_codeProvider } from "../../open-sse/config/providers/registry/command-code/index.ts";
-import { parseEffortLevel } from "../../open-sse/executors/opencode.ts";
+import { parseEffortLevel, OpencodeExecutor } from "../../open-sse/executors/opencode.ts";
 import { sanitizeReasoningEffortForProvider } from "../../open-sse/executors/base/reasoningEffort.ts";
 
 test("muse-spark-1.3 models route to Responses API on opencode, opencode-go, and opencode-zen", () => {
@@ -150,4 +147,39 @@ test("command-code registers meta/muse-spark-1.3-contributor", () => {
   assert.ok(model, "meta/muse-spark-1.3-contributor must be in command-code registry");
   assert.equal(model?.supportsReasoning, true);
   assert.equal(model?.supportsVision, true);
+});
+
+test("OpencodeExecutor.transformRequest rewrites muse-spark effort aliases to baseModel + reasoning.effort", () => {
+  const executor = new OpencodeExecutor("opencode-go");
+  const creds = { apiKey: "test", authType: "apikey" } as const;
+
+  // muse-spark-1.3-contributor-max rewrites to baseModel + reasoning.effort: "xhigh" (upstream /responses max capability)
+  const maxReq = executor.transformRequest(
+    "muse-spark-1.3-contributor-max",
+    { model: "muse-spark-1.3-contributor-max", input: [] },
+    true,
+    creds
+  );
+  assert.equal(maxReq.model, "muse-spark-1.3-contributor");
+  assert.deepEqual(maxReq.reasoning, { effort: "xhigh" });
+
+  // muse-spark-1.3-contributor-low rewrites to baseModel + reasoning.effort: "low"
+  const lowReq = executor.transformRequest(
+    "muse-spark-1.3-contributor-low",
+    { model: "muse-spark-1.3-contributor-low", input: [] },
+    true,
+    creds
+  );
+  assert.equal(lowReq.model, "muse-spark-1.3-contributor");
+  assert.deepEqual(lowReq.reasoning, { effort: "low" });
+
+  // muse-spark-1.3-contributor-minimal rewrites to baseModel + reasoning.effort: "minimal"
+  const minReq = executor.transformRequest(
+    "muse-spark-1.3-contributor-minimal",
+    { model: "muse-spark-1.3-contributor-minimal", input: [] },
+    true,
+    creds
+  );
+  assert.equal(minReq.model, "muse-spark-1.3-contributor");
+  assert.deepEqual(minReq.reasoning, { effort: "minimal" });
 });
