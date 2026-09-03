@@ -64,6 +64,16 @@ import {
   MAX_SHORT_RETRY_HINT_MS,
 } from "./retryAfterJson.ts";
 
+// Pre-compiled regex constants for hot-path retry parsing (avoid per-call compilation)
+const RETRY_AFTER_RE = /retry\s+after\s+(\d+)\s*s/i;
+const PLEASE_RETRY_RE = /please retry in\s+([\d.]+\s*s)/i;
+const ISO_RETRY_RE = /\b(?:try again at|wait until|reset(?:s)? at|available at|retry after)\s+(\d{4}-\d{2}-\d{2}[Tt ]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)/i;
+const RESETS_AFTER_RE = /resets? after (\d+h)?(\d+m)?(\d+s)?/i;
+const WILL_RESET_AFTER_RE = /will reset after (\d+h)?(\d+m)?(\d+s)?/i;
+const RESETS_IN_RE = /resets? in (\d+h)?(\d+m)?(\d+s)?/i;
+const RETRY_IN_SEC_RE = /please retry in (\d+(?:\.\d+)?)\s*s/i;
+const COOLDOWN_NUMERIC_RE = /^\d+(\.\d+)?$/;
+
 export type RetryHintProvenance = "header" | "google_rpc_retry_info" | "body";
 
 export function retryHintBypassesMaxCooldownMs(
@@ -600,9 +610,7 @@ export function shouldDeferAntigravityQuotaStateToCaller(
   hasCallerOwner: boolean
 ): boolean {
   const canonicalProvider = getCanonicalLockProvider(provider);
-  return (
-    hasCallerOwner && (canonicalProvider === "antigravity" || canonicalProvider === "agy")
-  );
+  return hasCallerOwner && (canonicalProvider === "antigravity" || canonicalProvider === "agy");
 }
 
 export async function recordCoreOwnedAntigravityQuotaState({
@@ -623,15 +631,7 @@ export async function recordCoreOwnedAntigravityQuotaState({
   profileOverride?: ProviderProfile | null;
 }) {
   const profile = profileOverride ?? (await getRuntimeProviderProfile(provider));
-  const fallback = checkFallbackError(
-    status,
-    errorText,
-    0,
-    model,
-    provider,
-    headers,
-    profile
-  );
+  const fallback = checkFallbackError(status, errorText, 0, model, provider, headers, profile);
   const lockout = recordModelLockoutFailure(
     provider,
     connectionId,
@@ -647,9 +647,7 @@ export async function recordCoreOwnedAntigravityQuotaState({
           : (fallback.quotaResetHintMs ?? null),
       maxCooldownMs: profile.maxCooldownMs,
       scope: "exact",
-      exactCooldownIsUpstreamReset: retryHintBypassesMaxCooldownMs(
-        fallback.retryHintSource
-      ),
+      exactCooldownIsUpstreamReset: retryHintBypassesMaxCooldownMs(fallback.retryHintSource),
     }
   );
   return { cooldownMs: lockout.cooldownMs, failureCount: lockout.failureCount };
@@ -1383,7 +1381,7 @@ export function parseRetryAfterFromBody(responseBody: unknown): {
 
   // OpenAI: "Please retry after 20s" in message
   const msg = String(error.message || body.message || "");
-  const retryMatch = /retry\s+after\s+(\d+)\s*s/i.exec(msg);
+  const retryMatch = RETRY_AFTER_RE.exec(msg);
   if (retryMatch) {
     return {
       retryAfterMs: Number.parseInt(retryMatch[1], 10) * 1000,
@@ -1416,16 +1414,13 @@ export function parseRetryFromErrorText(errorText: unknown): number | null {
   // Gemini free-tier text fallback (no parseable JSON details present):
   // "Please retry in 26.660853464s." Short throttle hint — capped independently of
   // MAX_PROVIDER_COOLDOWN_MS, mirroring the JSON RetryInfo.retryDelay cap (#7940).
-  const pleaseRetryMs = parseDelayString(/please retry in\s+([\d.]+\s*s)/i.exec(msg)?.[1]);
+  const pleaseRetryMs = parseDelayString(PLEASE_RETRY_RE.exec(msg)?.[1]);
   if (pleaseRetryMs !== null && pleaseRetryMs > 0) {
     return Math.min(pleaseRetryMs, MAX_SHORT_RETRY_HINT_MS);
   }
 
   // Issue #2321: parse embedded absolute ISO retry timestamps.
-  const isoMatch =
-    /\b(?:try again at|wait until|reset(?:s)? at|available at|retry after)\s+(\d{4}-\d{2}-\d{2}[Tt ]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)/i.exec(
-      msg
-    );
+  const isoMatch = ISO_RETRY_RE.exec(msg);
   if (isoMatch) {
     const parsedTs = Date.parse(isoMatch[1]);
     if (Number.isFinite(parsedTs)) {
@@ -1434,21 +1429,21 @@ export function parseRetryFromErrorText(errorText: unknown): number | null {
     }
   }
 
-  const match = /resets? after (\d+h)?(\d+m)?(\d+s)?/i.exec(msg);
+  const match = RESETS_AFTER_RE.exec(msg);
   if (match?.[1] || match?.[2] || match?.[3]) return computeDurationMs(match);
 
   // Variant without "reset after": "will reset after XhYmZs"
-  const altMatch = /will reset after (\d+h)?(\d+m)?(\d+s)?/i.exec(msg);
+  const altMatch = WILL_RESET_AFTER_RE.exec(msg);
   if (altMatch?.[1] || altMatch?.[2] || altMatch?.[3]) return computeDurationMs(altMatch);
 
   // Antigravity / Cloud Code phrasing: "Resets in 164h27m24s".
-  const resetsInMatch = /resets? in (\d+h)?(\d+m)?(\d+s)?/i.exec(msg);
+  const resetsInMatch = RESETS_IN_RE.exec(msg);
   if (resetsInMatch?.[1] || resetsInMatch?.[2] || resetsInMatch?.[3]) {
     return computeDurationMs(resetsInMatch);
   }
 
   // Gemini phrasing: "Please retry in 54.472178091s" (fractional seconds).
-  const retryInSecMatch = /please retry in (\d+(?:\.\d+)?)\s*s/i.exec(msg);
+  const retryInSecMatch = RETRY_IN_SEC_RE.exec(msg);
   if (retryInSecMatch?.[1]) {
     const sec = Number.parseFloat(retryInSecMatch[1]);
     if (Number.isFinite(sec) && sec > 0) {
@@ -1693,6 +1688,18 @@ export function checkFallbackError(
     };
   }
 
+  const previousResponseBindingMiss =
+    structuredError?.code === "invalid_previous_response_binding" ||
+    (status === 409 && /previous_response_id does not belong/i.test(String(errorText || "")));
+  if (previousResponseBindingMiss) {
+    return {
+      shouldFallback: false,
+      cooldownMs: 0,
+      reason: "invalid_previous_response_binding",
+      skipProviderBreaker: true,
+    };
+  }
+
   const svc = serviceSupervisorCooldown(status, headers);
   if (svc) return svc;
   const rg = rot.gateFor(status, rotation?.account);
@@ -1753,10 +1760,7 @@ export function checkFallbackError(
       if (waitMs > 0) return { retryAfterMs: waitMs, provenance: "header" };
     }
 
-    const detailedJsonHint = parseDetailedRetryHintFromJsonBody(
-      errorStr,
-      MAX_PROVIDER_COOLDOWN_MS
-    );
+    const detailedJsonHint = parseDetailedRetryHintFromJsonBody(errorStr, MAX_PROVIDER_COOLDOWN_MS);
     if (detailedJsonHint) {
       return {
         retryAfterMs: detailedJsonHint.retryAfterMs,
@@ -2229,7 +2233,7 @@ export function cooldownUntilMs(value: string | number | Date | null | undefined
   if (value instanceof Date) return value.getTime();
   if (typeof value === "number") return value;
   const raw = value.trim();
-  if (/^\d+(\.\d+)?$/.test(raw)) return Number(raw);
+  if (COOLDOWN_NUMERIC_RE.test(raw)) return Number(raw);
   return new Date(raw).getTime();
 }
 

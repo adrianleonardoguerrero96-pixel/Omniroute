@@ -109,6 +109,7 @@ function parseGlmEffortTier(model: string): GlmEffortTier | null {
  * https://docs.z.ai/guides/overview/concept-param
  */
 const GLM_THINKING_MODEL_PATTERN = /^glm-5\.(?:[2-9]|\d{2,})/i;
+const GLM_53_OR_HIGHER_PATTERN = /^glm-5\.(?:[3-9]|\d{2,})/i;
 
 function isGlmThinkingModel(model: string): boolean {
   return GLM_THINKING_MODEL_PATTERN.test(model);
@@ -222,6 +223,8 @@ export function translateSseResponse(
   suppressThinkClose: boolean = false
 ): Response {
   if (!response.body) return response;
+  // GLM is a high-throughput provider — use a larger stream buffer (64KB) to
+  // keep provider → client pacing ahead of the model's token emission rate.
   const transform = createSSETransformStreamWithLogger(
     FORMATS.CLAUDE,
     FORMATS.OPENAI,
@@ -235,7 +238,10 @@ export function translateSseResponse(
     null,
     null,
     false,
-    suppressThinkClose
+    suppressThinkClose,
+    undefined,
+    undefined,
+    65536
   );
   const headers = cloneHeaders(response.headers);
   headers.set("content-type", "text/event-stream");
@@ -348,6 +354,15 @@ export class GlmExecutor extends DefaultExecutor {
     }
 
     if (transport === "openai") {
+      // GLM-5.3+ rejects thinking.type "disabled". Ensure thinking is enabled
+      // when targeting GLM-5.3 or higher.
+      if (record && GLM_53_OR_HIGHER_PATTERN.test(effectiveModel)) {
+        const existingThinking = asRecord(record.thinking);
+        if (existingThinking?.type === "disabled") {
+          record.thinking = { ...existingThinking, type: "enabled" };
+        }
+      }
+
       // GLM-5.3 effort tiers: inject the documented `reasoning_effort` param and
       // force thinking on — 5.3 rejects thinking.type "disabled", and an effort
       // tier without thinking would silently drop the selector upstream.
