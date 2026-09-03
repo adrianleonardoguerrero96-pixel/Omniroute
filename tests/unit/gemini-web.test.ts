@@ -171,8 +171,8 @@ test("Provider: gemini-web has correct models", async () => {
     models.map((m: any) => [m.id, m.name]),
     [
       ["gemini-3.1-pro", "Gemini 3.1 Pro"],
-      ["gemini-3.7-flash", "Gemini 3.7 Flash"],
-      ["gemini-3.1-flash-lite", "Gemini 3.1 Flash-Lite"],
+      ["gemini-3.8-flash", "Gemini 3.8 Flash"],
+      ["gemini-3.5-flash-lite", "Gemini 3.5 Flash-Lite"],
     ]
   );
 });
