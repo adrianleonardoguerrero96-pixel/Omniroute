@@ -400,8 +400,14 @@ import {
   updateFromHeaders,
   updateFromResponseBody,
   initializeRateLimits,
+  resolveRequestQueueMaxWaitMs,
 } from "../services/rateLimitManager.ts";
 import * as localLimiterErrors from "../services/rateLimitManager/errors.ts";
+import {
+  markLocalRateLimitError as markLocalRateLimitErrorFromChatCore,
+  LEGACY_RATE_LIMIT_QUEUE_TIMEOUT_CODE as LEGACY_QUEUE_TIMEOUT_FROM_CHATCORE,
+} from "../services/rateLimitManager/errors.ts";
+import { isLocalStreamLifecycleError as isLocalStreamLifecycleErrorFromChatCore } from "@/shared/utils/circuitBreaker.ts";
 import {
   acquireMany as acquireConcurrencyGates,
   markBlocked as markAccountSemaphoreBlocked,
@@ -3117,28 +3123,61 @@ export async function handleChatCore({
                 stage: "waiting_account_slot",
               });
             }
-            const releaseAccountSemaphore = await acquireConcurrencyGates(
-              [
-                {
-                  key: "global",
-                  maxConcurrency: resilienceSettings.requestQueue.globalConcurrentRequests,
-                },
-                {
-                  key: `provider:${canonicalProviderKey}`,
-                  maxConcurrency: providerConcurrency,
-                },
-                {
-                  key: accountSemaphoreKey || "",
-                  maxConcurrency: accountSemaphoreKey ? accountSemaphoreMaxConcurrency : null,
-                },
-              ],
-              {
-                timeoutMs: resilienceSettings.requestQueue.maxWaitMs,
-                maxQueueSize: resilienceSettings.requestQueue.maxQueueDepth,
-                signal: streamController.signal,
-              }
+            const queueBudgetMs = resolveRequestQueueMaxWaitMs(
+              provider,
+              undefined,
+              attemptConnectionId ?? undefined
             );
-            trace("post_semaphore");
+            const t0 = Date.now();
+            // remainingGate is intentionally queueBudgetMs: t0 was captured just above, so no drift yet.
+            const remainingGate = queueBudgetMs;
+            if (remainingGate <= 0)
+              throw markLocalRateLimitErrorFromChatCore(
+                new Error(`Queue budget exhausted before gate (queueBudgetMs=${queueBudgetMs}ms)`),
+                LEGACY_QUEUE_TIMEOUT_FROM_CHATCORE
+              );
+            let releaseAccountSemaphore: () => void;
+            try {
+              releaseAccountSemaphore = await acquireConcurrencyGates(
+                [
+                  {
+                    key: "global",
+                    maxConcurrency: resilienceSettings.requestQueue.globalConcurrentRequests,
+                  },
+                  {
+                    key: `provider:${canonicalProviderKey}`,
+                    maxConcurrency: providerConcurrency,
+                  },
+                  {
+                    key: accountSemaphoreKey || "",
+                    maxConcurrency: accountSemaphoreKey ? accountSemaphoreMaxConcurrency : null,
+                  },
+                ],
+                {
+                  timeoutMs: remainingGate,
+                  maxQueueSize: resilienceSettings.requestQueue.maxQueueDepth,
+                  signal: streamController.signal,
+                }
+              );
+            } catch (e) {
+              const err = e as any;
+              if (err?.name === "AbortError" || err?.code === "ABORT_ERR") throw e;
+              if (isLocalStreamLifecycleErrorFromChatCore(e)) throw e;
+              // Queue-depth rejection (SEMAPHORE_QUEUE_FULL) and semaphore reset
+              // (SEMAPHORE_RESET) carry a defined code and are intentionally
+              // not re-branded here. Depth is a 429 admission signal handled by
+              // combo cascade (isSemaphoreCapacityError); only bare
+              // time-budget timeouts (no code) are shaped to LEGACY 503 via the
+              // shared remaining budget.
+              if (typeof err?.code === "undefined")
+                throw markLocalRateLimitErrorFromChatCore(
+                  e as Error,
+                  LEGACY_QUEUE_TIMEOUT_FROM_CHATCORE
+                );
+              throw e;
+            }
+            const remainingAfterGate = Math.max(0, queueBudgetMs - (Date.now() - t0));
+            trace("post_semaphore", { queueBudgetMs, remainingAfterGate });
             updatePendingScope(pendingScope, {
               stage: "waiting_rate_limit",
             });
@@ -3187,7 +3226,10 @@ export async function handleChatCore({
                       ),
                   });
                 },
-                streamController.signal
+                streamController.signal,
+                remainingAfterGate,
+                correlationId ?? undefined,
+                { executor: executor as unknown as { getTimeoutMs?: () => unknown }, providerSpecificData: execCreds?.providerSpecificData }
               );
               const res = normalizeExecutorResult(rawExecutorResult);
               trace("post_executor", { status: res?.response?.status });
