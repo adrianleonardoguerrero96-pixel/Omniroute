@@ -71,7 +71,6 @@ export function retryHintBypassesMaxCooldownMs(
 ): boolean {
   return provenance === "header" || provenance === "google_rpc_retry_info";
 }
-
 import {
   isSubscriptionQuotaText,
   buildSubscriptionQuotaFallback,
@@ -82,6 +81,7 @@ import {
 import { parseDayGranularityResetMs, shouldPreserveQuotaSignals } from "./quotaResetParsing.ts";
 import { evictLockoutOverflow } from "./accountFallback/lockoutEviction.ts";
 export { MODEL_LOCKOUT_EVICTION_CAP } from "./accountFallback/lockoutEviction.ts";
+export { hasPerModelFailureScope } from "./accountFallback/perModelFailureScope.ts";
 import { capScaledCooldownMs } from "./accountFallback/cooldownCap.ts";
 import { resolveApiKeyForbiddenFallback } from "./accountFallback/nonRetryableUpstream.ts";
 import * as exactModelLock from "./accountFallback/exactModelLock.ts";
@@ -948,30 +948,6 @@ export function hasPerModelQuota(
   if (isCompatibleProvider(canonicalId)) return true;
   if (isLocalProviderId(canonicalId) || isSelfHostedChatProvider(canonicalId)) return true;
   return false;
-}
-
-/**
- * Whether a NON-QUOTA failure (a 404 for a model the account cannot serve, a 5xx, a
- * stream that ended without content) should be scoped to the model instead of the
- * connection. Quota scope is a separate question answered by {@link hasPerModelQuota}.
- *
- * #12334: a Claude OAuth connection multiplexes Fable 5, Opus 5/4.8/4.7/4.6, Sonnet and
- * Haiku behind one credential, so one model failing says nothing about the others. It is
- * not a per-model *quota* provider — a 429 on a Max subscription is account-wide and
- * `shouldMarkAccountExhaustedFrom429("claude", …)` stays true — but recording a 404 or a
- * 502 against the connection stopped a priority combo at step 1: the failure landed on
- * the connection row and `getPersistedConnectionCooldownSkipReason()` then skipped every
- * sibling step before dispatch.
- */
-export function hasPerModelFailureScope(
-  provider: string | null | undefined,
-  model: string | null | undefined = null,
-  connectionPassthroughModels?: boolean
-): boolean {
-  if (hasPerModelQuota(provider, model, connectionPassthroughModels)) return true;
-  if (typeof connectionPassthroughModels === "boolean") return connectionPassthroughModels;
-  if (!provider) return false;
-  return resolveProviderId(provider) === "claude";
 }
 
 /**

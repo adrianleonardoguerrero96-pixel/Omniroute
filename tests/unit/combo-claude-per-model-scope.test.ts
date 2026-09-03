@@ -19,6 +19,10 @@ test("claude scopes non-quota failures to the model", () => {
 test("claude quota stays account-wide", () => {
   assert.equal(hasPerModelQuota("claude", "claude-opus-5-max"), false);
   assert.equal(shouldMarkAccountExhaustedFrom429("claude", "claude-sonnet-4-6"), true);
+  assert.equal(hasPerModelFailureScope("claude", "claude-opus-5-max", undefined, 429), false);
+  assert.equal(hasPerModelFailureScope("gemini", "gemma-4-31b-it", undefined, 429), true);
+  assert.equal(hasPerModelFailureScope("claude", "claude-opus-5-max", undefined, 404), true);
+  assert.equal(hasPerModelFailureScope("claude", "claude-opus-5-max", undefined, 502), true);
 });
 
 test("providers that already scope per model keep both scopes", () => {
