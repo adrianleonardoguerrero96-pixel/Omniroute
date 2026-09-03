@@ -179,9 +179,13 @@ test("shared set size includes live REGISTRY and retired Designer + Felo + Qwen 
   // alias "gembiz" to the REGISTRY walk (406 → 408).
   // 2026-09-02: a keyless provider was removed at its operator's request, taking its id and
   // alias out of the REGISTRY walk (408 → 406).
+  // #11786: SeekAi adds id "seekai" + alias "ska" (406 → 408).
   // #12343: BigModel.cn (Zhipu) adds registry id "bigmodel"; its alias is the same string,
-  // so the unique reserved-prefix set grows by 1 (406 → 407).
-  assert.equal(RESERVED_PREFIX_COUNT, 407);
+  // so the unique reserved-prefix set grows by 1 (408 → 409).
+  assert.equal(RESERVED_PREFIX_COUNT, 409);
+  assert.equal(isReservedProviderPrefix("bigmodel"), true);
+  assert.equal(RESERVED_PROVIDER_PREFIXES.has("seekai"), true);
+  assert.equal(RESERVED_PROVIDER_PREFIXES.has("ska"), true);
 });
 
 test("isReservedProviderPrefix rejects non-string input", () => {

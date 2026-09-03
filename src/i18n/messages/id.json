@@ -5248,6 +5248,10 @@
     "iconUrlLabel": "URL Ikon",
     "iconUrlHint": "Opsional. URL gambar yang ditampilkan sebagai ikon penyedia ini.",
     "iconUrlInvalid": "URL ikon tidak valid. Gunakan URL http(s):// atau data:image/*;base64.",
+    "dailyQuotaResetTimezoneLabel": "Daily quota reset timezone",
+    "dailyQuotaResetTimezoneHint": "Optional IANA timezone used when the upstream omits X-RateLimit-Reset. Leave empty to keep a short cooldown.",
+    "dailyQuotaResetHourLabel": "Daily quota reset hour",
+    "dailyQuotaResetHourHint": "Local hour 0-23 in the timezone above. Empty means no node-level clock.",
     "anthropicPrefixPlaceholder": "ac-prod",
     "openaiPrefixPlaceholder": "oc-prod",
     "anthropicBaseUrlPlaceholder": "https://api.anthropic.com/v1",
@@ -6240,6 +6244,7 @@
       "requesty": "Buat kunci API di https://app.requesty.ai, lalu tempel di sini sebagai token Bearer. Endpoint yang kompatibel dengan OpenAI di https://router.requesty.ai/v1, dengan katalog /v1/models langsung.",
       "runwayml": "Pembuatan video Runway berbasis tugas. OmniRoute mengirimkan pekerjaan text-to-video atau image-to-video, melakukan polling pada /v1/tasks/[id], dan menormalisasi output video yang selesai kembali ke respons /v1/videos/generations yang mirip OpenAI.",
       "sambanova": "Kredit gratis $5 saat pendaftaran (validitas 30 hari), tidak memerlukan kartu kredit",
+      "seekai": "Create an API key at https://seekai.cc, then paste it here as a Bearer token. OpenAI-compatible base URL: https://seekai.cc/v1.",
       "sap": "Penemuan model menggunakan /v2/lm/scenarios/foundation-models/models pada AI_API_URL. Permintaan chat menggunakan deploymentUrl/chat/completions dan memerlukan AI-Resource-Group.",
       "sarvam": "Sarvam AI kompatibel dengan OpenAI di /v1. OmniRoute memeriksa /v1/models dan mengarahkan lalu lintas obrolan ke /v1/chat/completions. Model disesuaikan untuk bahasa-bahasa India.",
       "scaleway": "1 juta token gratis untuk akun baru — patuh EU/GDPR (Paris), Qwen3 235B & Llama 70B",
@@ -6462,7 +6467,10 @@
     "clearConnectionCooldownInProgress": "Clearing…",
     "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
     "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
-    "failedClearConnectionCooldown": "Failed to clear cooldown"
+    "failedClearConnectionCooldown": "Failed to clear cooldown",
+    "importFromFileDownloadTemplate": "Download CSV template",
+    "importFromFileMoreErrors": "+{count} more",
+    "importFromFileSchemaHint": "CSV columns are positional: provider, name, apiKey, baseUrl (optional), priority (optional). The provider column must be an existing managed provider id or an already-registered OpenAI/Anthropic-compatible node id — this import does not create new endpoint nodes."
   },
   "settings": {
     "title": "Pengaturan",
@@ -7813,6 +7821,14 @@
     "compressionDerivedMode": "mode: {mode}",
     "compressionAdaptiveOff": "Anggaran konteks adaptif: nonaktif (pemicu otomatis warisan)",
     "compressionAdaptiveTarget": "Adaptif ({mode}, kebijakan: {policy}) — target ≈ {target, number} token (untuk jendela {contextLimit, number}-token)",
+    "compressionAdaptiveMode": "__MISSING__:Adaptive context budget",
+    "compressionAdaptiveModeOff": "__MISSING__:Off (legacy auto-trigger)",
+    "compressionAdaptiveModeFloor": "__MISSING__:Floor (always guarantee fit)",
+    "compressionAdaptiveModeReplace": "__MISSING__:Replace auto-trigger",
+    "compressionAdaptivePolicy": "__MISSING__:Budget policy",
+    "compressionAdaptivePolicyReserve": "__MISSING__:Reserve output",
+    "compressionAdaptivePolicyPercentage": "__MISSING__:Percentage of window",
+    "compressionAdaptivePolicyAbsolute": "__MISSING__:Absolute token budget",
     "compressionOutputStylesDescription": "Suntikkan instruksi pembentukan respons tanpa menulis ulang output penyedia. Kombinasikan secara bebas.",
     "mcpAccessibilityDescription": "Membatasi cakupan output alat MCP (penyimpanan terpisah).",
     "compressionStylesTileSummary": "{tokens, number} token disimpan · {runs, plural, one {# eksekusi digayakan} other {# eksekusi digayakan}}",
@@ -8341,7 +8357,15 @@
     "cliproxyapiHealth": "Kesehatan",
     "cliproxyapiPort": "Port",
     "qdrantHost": "Host",
-    "qdrantCollection": "Koleksi"
+    "qdrantCollection": "Koleksi",
+    "headroomProxyTitle": "__MISSING__:Headroom proxy",
+    "headroomProxyDesc": "__MISSING__:URL of the optional Headroom token-saver proxy. Empty uses HEADROOM_URL or http://localhost:8787.",
+    "headroomProxyUrl": "__MISSING__:Headroom URL",
+    "headroomProxyUrlHint": "__MISSING__:Loopback URLs can be started from this page. External URLs are probed only.",
+    "headroomProxySave": "__MISSING__:Save",
+    "headroomProxyStart": "__MISSING__:Start",
+    "headroomProxyStop": "__MISSING__:Stop",
+    "headroomProxyExternalHint": "__MISSING__:This URL is not loopback, so OmniRoute will not spawn the local CLI."
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -9660,7 +9684,14 @@
     "updatedShort": "Diperbarui",
     "lastRefreshed": "Terakhir disegarkan",
     "providerQuota": "Kuota Penyedia",
-    "providerQuotaHomeHint": "Status langsung di seluruh akun yang terhubung"
+    "providerQuotaHomeHint": "Status langsung di seluruh akun yang terhubung",
+    "kiloAccountBalance": "Account Balance",
+    "kiloPassBonus": "Available bonus",
+    "kiloPassMeterLabel": "Kilo Pass usage meter",
+    "kiloPassPaid": "Paid",
+    "kiloPassRemaining": "Remaining",
+    "kiloPassRenews": "Renews {count} days",
+    "kiloPassUsageLabel": "This month's usage"
   },
   "modals": {
     "waitingAuth": "Menunggu Otorisasi",

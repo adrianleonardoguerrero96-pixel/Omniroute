@@ -33,7 +33,8 @@
 // release/v3.8.51 adds Opper (gateways, #11629) and 1min.ai (gateways, #11631) — lands at 235;
 // Perplexity Agent API (#12103) makes it 236;
 // UC Direct (#11513, uncensored.com metered Developer API) adds one frontier-labs entry — 237;
-// BigModel.cn (Zhipu) adds one API-key provider — 238.
+// SeekAi (#11786, QuantumNous New-API gateway) adds one gateways entry — 238.
+// BigModel.cn (Zhipu) adds one regional API-key provider — 239.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
@@ -62,12 +63,14 @@ test("barrel still exports every catalog + key helpers", () => {
   }
 });
 
-test("APIKEY_PROVIDERS merges the 6 family files into 238 entries (no loss / no dup)", async () => {
+test("APIKEY_PROVIDERS merges the 6 family files into 239 entries (no loss / no dup)", async () => {
   const keys = Object.keys((P as Record<string, object>).APIKEY_PROVIDERS);
-  assert.equal(keys.length, 238);
-  assert.equal(new Set(keys).size, 238, "duplicate keys after spread-merge");
-  // The merged object's entry-count equals the sum of the 6 semantic family files; families are a
-  // strict partition (every provider in exactly one), so the sum must be exactly 238.
+  assert.equal(keys.length, 239);
+  assert.equal(new Set(keys).size, 239, "duplicate keys after spread-merge");
+  assert.ok(keys.includes("bigmodel"), "BigModel.cn must remain in the merged catalog");
+  assert.ok(keys.includes("seekai"), "SeekAi must remain in the merged catalog");
+  // the merged object's entry-count equals the sum of the 6 semantic family files; families are a
+  // strict partition (every provider in exactly one), so the sum must be exactly 239.
   const families: [string, string][] = [
     ["gateways", "APIKEY_PROVIDERS_GATEWAYS"],
     ["frontier-labs", "APIKEY_PROVIDERS_FRONTIER"],
@@ -87,7 +90,7 @@ test("APIKEY_PROVIDERS merges the 6 family files into 238 entries (no loss / no 
       seen.add(k);
     }
   }
-  assert.equal(famTotal, 238, "families must partition all 238 providers");
+  assert.equal(famTotal, 239, "families must partition all 239 providers");
 });
 
 test("AI_PROVIDERS Proxy aggregates all sections; lookups resolve", () => {
