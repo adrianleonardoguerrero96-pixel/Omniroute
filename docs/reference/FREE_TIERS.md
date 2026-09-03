@@ -184,7 +184,7 @@ purpose.
 
 ---
 
-## Per-provider free-tier (refreshed 2026-06-17)
+## Per-provider free-tier (refreshed 2026-09-02)
 
 > Regenerated from the per-model catalog (`open-sse/config/freeModelCatalog.ts`), pool-deduped. Sorted by recurring steady tokens/mo. `uncapped*` = permanently free but no published token cap (rate/concurrency-limited) — real access, **not** summed into the headline. `—` = credit-only / keyless / not token-quantifiable.
 
