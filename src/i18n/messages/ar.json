@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "settings.json لاكتشاف نموذج البوابة",
     "ccOnboardingCopy": "نسخ",
     "ccOnboardingCopied": "تم النسخ",
-    "ccOnboardingKeyPlaceholder": "<مفتاح واجهة برمجة تطبيقات OmniRoute الخاص بك>",
+    "ccOnboardingKeyPlaceholder": "'<مفتاح واجهة برمجة تطبيقات OmniRoute الخاص بك>'",
     "ccOnboardingWindowNote": "يفترض Claude Code وجود نافذة سياق تبلغ 200K لأي معرف نموذج لا يتعرف عليه. بالنسبة لنموذج له نافذة حقيقية مختلفة، أضف CLAUDE_CODE_AUTO_COMPACT_WINDOW أسفلها مباشرة حتى لا يتم تشغيل الضغط التلقائي في وقت مبكر جدًا.",
     "failedSave": "فشل الحفظ",
     "profileSyncTitle": "المزامنة التلقائية لملفات تعريف CLI",
@@ -5634,7 +5634,7 @@
     "claudeImportBulkModePaste": "لصق مجموعة JSON",
     "claudeImportBulkModeZip": "تحميل الرمز البريدي",
     "claudeImportBulkUploadHint": "قم بإسقاط أو التقاط ما يصل إلى 50 ملفًا بتنسيق ‎.credentials.json (256 كيلو بايت لكل ملف، بإجمالي 10 ميجابايت).",
-    "claudeImportBulkPasteHint": "لصق مصفوفة من الكائنات: [{ json, name?, email? }، ...]",
+    "claudeImportBulkPasteHint": "لصق مصفوفة من الكائنات: ['{ json, name?, email? }'، ...]",
     "claudeImportBulkZipHint": "ملف مضغوط يحتوي على إدخالات ‎.json. الحد الأقصى 50 إدخالاً، ومساحة 10 ميجابايت مفتوحة.",
     "claudeImportBulkSubmit": "استيراد الكل",
     "claudeImportBulkSuccess": "تم استيراد {count} من اتصالات Claude",
@@ -5666,7 +5666,7 @@
     "geminiImportBulkModePaste": "لصق مجموعة JSON",
     "geminiImportBulkModeZip": "تحميل الرمز البريدي",
     "geminiImportBulkUploadHint": "قم بإسقاط أو التقاط ما يصل إلى 50 ملفًا من ملفات oauth_creds.json (256 كيلو بايت لكل منها، إجمالي 10 ميجابايت).",
-    "geminiImportBulkPasteHint": "لصق مصفوفة من الكائنات: [{ json, name?, email? }، ...]",
+    "geminiImportBulkPasteHint": "لصق مصفوفة من الكائنات: ['{ json, name?, email? }'، ...]",
     "geminiImportBulkZipHint": "ملف مضغوط يحتوي على إدخالات oauth_creds.json. الحد الأقصى 50 إدخالاً، ومساحة 10 ميجابايت مفتوحة.",
     "geminiImportBulkSubmit": "استيراد الكل",
     "geminiImportBulkSuccess": "تم استيراد {count} من اتصالات Gemini",
@@ -5715,7 +5715,7 @@
     "codexImportBulkModePaste": "لصق القائمة",
     "codexImportBulkModeZip": "أرشيف مضغوط",
     "codexImportBulkUploadHint": "حدد ملفات .json متعددة أو قم بالسحب والإسقاط",
-    "codexImportBulkPasteHint": "مصفوفة JSON [ {...}, {...} ] أو عدة JSONs مفصولة --- في سطر خاص بها",
+    "codexImportBulkPasteHint": "مصفوفة JSON [ '{...}', '{...}' ] أو عدة JSONs مفصولة --- في سطر خاص بها",
     "codexImportBulkZipHint": "قم بتحميل ملف .zip يحتوي على ملفات auth.json (بحد أقصى 50 ملفًا، 10 ميجابايت)",
     "codexImportBulkSubmit": "استيراد {count} من الحسابات",
     "codexImportBulkLimit": "الحد الأقصى 50 ملفًا لكل عملية استيراد",
@@ -5947,7 +5947,7 @@
     "validationModelIdHint": "النموذج المستخدم للتحقق من الاتصال",
     "validationModelIdLabel": "معرّف نموذج التحقق",
     "validationModelIdPlaceholder": "مثال: gpt-4o-mini",
-    "vertexServiceAccountPlaceholder": "ألصق JSON لحساب الخدمة ({\"type\":\"service_account\",\"project_id\":\"…\",\"client_email\":\"…\",\"private_key\":\"…\"}) أو OAuth access_token",
+    "vertexServiceAccountPlaceholder": "ألصق JSON لحساب الخدمة ('{\"type\":\"service_account\",\"project_id\":\"…\",\"client_email\":\"…\",\"private_key\":\"…\"}') أو OAuth access_token",
     "webCookieProviders": "مزودو ملفات تعريف ارتباط الويب",
     "weeklyShort": "أسبوعي",
     "xiaomiMimoBaseUrlHint": "عنوان URL الأساسي لـ Xiaomi MiMo",
@@ -9517,7 +9517,7 @@
     "suiteBuilderCaseExpectedPlaceholder": "مثال: def fibonacci",
     "suiteBuilderCaseExpectedPlaceholderContains": "على سبيل المثال ديف فيبوناتشي",
     "suiteBuilderCaseExpectedPlaceholderExact": "الصق الاستجابة المتوقعة بالضبط",
-    "suiteBuilderCaseExpectedPlaceholderRegex": "على سبيل المثال ^\\\\s*\\\\{.*\\\\}\\\\s*$",
+    "suiteBuilderCaseExpectedPlaceholderRegex": "على سبيل المثال ^\\\\s*\\\\'{.*\\\\}'\\\\s*$",
     "suiteBuilderCaseExpectedHintRegex": "استخدم تعبير JavaScript العادي دون التفاف الخطوط المائلة.",
     "suiteBuilderNamePlaceholder": "مثال: حزمة جودة البرمجة",
     "suiteBuilderAddCase": "إضافة حالة",
@@ -10726,7 +10726,7 @@
     "grokAuthJsonDescription": "الصق المحتويات الكاملة لـ ~/.grok/auth.json (ليس فقط حقل \"key\" الخاص بـ JWT). يحتوي JWT العاري على عدم وجود refresh_token، لذا تتوقف الاتصال بعد انتهاء الصلاحية (#7610). يُفضل استخدام نافذة استيراد auth.json المخصصة عند توفرها.",
     "devinDesktopPasteDescription": "قم بلصق مفتاح API الخاص بـ Devin الموجود من جلسة Devin مصدقة. تتفاوت توفر تصدير المفتاح والخطوات حسب إصدار Devin والحساب.",
     "devinPasteDescription": "قدم مفتاح API الخاص بك WINDSURF_API_KEY (الذي تم الحصول عليه عبر `devin auth login`، أو عبر أمر \"Windsurf: Provide Auth Token\" في IDE Windsurf).",
-    "grokAuthJsonPlaceholder": "{\"https://auth.x.ai::clientId\": {\"key\": \"eyJ...\", \"refresh_token\": \"...\"}}",
+    "grokAuthJsonPlaceholder": "'{\"https://auth.x.ai::clientId\": {\"key\": \"eyJ...\", \"refresh_token\": \"...\"}'}",
     "grokAuthJsonLabel": "Grok بناء auth.json",
     "apiTokenPlaceholder": "ws-...",
     "apiKeyTokenLabel": "مفتاح API / رمز",
@@ -12961,7 +12961,7 @@
         "description": "بعد مزامنة المزود والنموذج، أعد إنشاء ملفات التعريف ~/.codex/*.config.toml من الكتالوج المباشر. لا يغير هذا أبداً تكوين Codex النشط أو الافتراضي ويكون معطلاً بشكل افتراضي."
       },
       "OMNIROUTE_AUTO_SYNC_CLAUDE_PROFILES": {
-        "description": "بعد مزامنة المزود والنموذج، أعد إنشاء ملفات التعريف ~/.claude/profiles/<name>/settings.json من الكتالوج المباشر. لا يغير هذا أبداً تكوين Claude النشط أو الافتراضي ويكون معطلاً بشكل افتراضي."
+        "description": "بعد مزامنة المزود والنموذج، أعد إنشاء ملفات التعريف ~/.claude/profiles/'<name>'/settings.json من الكتالوج المباشر. لا يغير هذا أبداً تكوين Claude النشط أو الافتراضي ويكون معطلاً بشكل افتراضي."
       },
       "OMNIROUTE_DISABLE_LOCAL_HEALTHCHECK": {
         "description": "تعطيل نقطة نهاية فحص صحة المثيل المحلي."
@@ -13345,7 +13345,7 @@
     "secondaryNote": "متوفر أيضًا على Open VSX (Cursor، Windsurf، VSCodium…)",
     "dismissAriaLabel": "تجاهل"
   },
-  "featureFlagExposeFunctionalGatewayMirrorsDescription": "قم بالإعلان عن معرفات المرايا <gateway-alias>/<model> على /v1/models للنماذج التي ليس لديها مالك قانوني لديه بيانات اعتماد نشطة ولكن بوابة تمرير مع بيانات اعتماد نشطة توجهها. تحذير: يضيف إدخالات الكتالوج لجميع العملاء عند تمكينه عالميًا.",
+  "featureFlagExposeFunctionalGatewayMirrorsDescription": "قم بالإعلان عن معرفات المرايا '<gateway-alias>'/'<model>' على /v1/models للنماذج التي ليس لديها مالك قانوني لديه بيانات اعتماد نشطة ولكن بوابة تمرير مع بيانات اعتماد نشطة توجهها. تحذير: يضيف إدخالات الكتالوج لجميع العملاء عند تمكينه عالميًا.",
   "radarPage": {
     "title": "كتالوج الرادار",
     "subtitle": "كتالوج نموذج مجاني معزز بذكاء المجتمع",

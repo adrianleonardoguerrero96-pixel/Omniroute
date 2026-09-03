@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "settings.json kwa ugunduzi wa mfano wa lango",
     "ccOnboardingCopy": "Nakili",
     "ccOnboardingCopied": "Imepigwa nakala",
-    "ccOnboardingKeyPlaceholder": "<funguo yako ya OmniRoute API>",
+    "ccOnboardingKeyPlaceholder": "'<funguo yako ya OmniRoute API>'",
     "ccOnboardingWindowNote": "Claude Code inadhania dirisha la muktadha la 200K kwa kitambulisho chochote cha mfano ambacho hakitambui. Kwa mfano wenye dirisha halisi tofauti, ongeza CLAUDE_CODE_AUTO_COMPACT_WINDOW chini yake ili auto-compaction isifanye kazi mapema sana.",
     "failedSave": "Imeshindwa kuhifadhi",
     "profileSyncTitle": "Ulandanishaji wa kiotomatiki wa wasifu wa CLI",
@@ -5634,7 +5634,7 @@
     "claudeImportBulkModePaste": "Bandika safu ya JSON",
     "claudeImportBulkModeZip": "Pakia ZIP",
     "claudeImportBulkUploadHint": "Dondosha au chukua hadi faili 50 za .credentials.json (KB 256 kila moja, jumla ya MB 10).",
-    "claudeImportBulkPasteHint": "Bandika safu ya vitu: [{ json, name?, email? }...]",
+    "claudeImportBulkPasteHint": "Bandika safu ya vitu: ['{ json, name?, email? }'...]",
     "claudeImportBulkZipHint": "ZIP iliyo na maingizo ya .json. Idadi ya juu ya maingizo 50, MB 10 haijapakiwa.",
     "claudeImportBulkSubmit": "Ingiza zote",
     "claudeImportBulkSuccess": "Imeingiza {count} miunganisho ya Claude",
@@ -5666,7 +5666,7 @@
     "geminiImportBulkModePaste": "Bandika safu ya JSON",
     "geminiImportBulkModeZip": "Pakia ZIP",
     "geminiImportBulkUploadHint": "Dondosha au chukua hadi faili 50 za oauth_creds.json (KB 256 kila moja, jumla ya MB 10).",
-    "geminiImportBulkPasteHint": "Bandika safu ya vitu: [{ json, name?, email? }...]",
+    "geminiImportBulkPasteHint": "Bandika safu ya vitu: ['{ json, name?, email? }'...]",
     "geminiImportBulkZipHint": "ZIP iliyo na maingizo ya oauth_creds.json. Idadi ya juu ya maingizo 50, MB 10 haijapakiwa.",
     "geminiImportBulkSubmit": "Ingiza zote",
     "geminiImportBulkSuccess": "Imeingiza {count} miunganisho ya Gemini",
@@ -5715,7 +5715,7 @@
     "codexImportBulkModePaste": "Bandika orodha",
     "codexImportBulkModeZip": "Kumbukumbu ya ZIP",
     "codexImportBulkUploadHint": "Chagua faili nyingi za .json au buruta na uangushe",
-    "codexImportBulkPasteHint": "safu ya JSON [ {...}, {...} ] au JSON nyingi zikitenganishwa na --- kwa njia yake yenyewe",
+    "codexImportBulkPasteHint": "safu ya JSON [ '{...}', '{...}' ] au JSON nyingi zikitenganishwa na --- kwa njia yake yenyewe",
     "codexImportBulkZipHint": "Pakia .zip iliyo na faili za auth.json (faili zisizozidi 50, MB 10)",
     "codexImportBulkSubmit": "Leta akaunti {count}",
     "codexImportBulkLimit": "Upeo wa faili 50 kwa kila uagizaji",
@@ -5947,7 +5947,7 @@
     "validationModelIdHint": "Modeli inayotumika kuthibitisha ufunguo wa API. Acha wazi ili kutumia modeli ya kwanza inayopatikana ya mtoa huduma.",
     "validationModelIdLabel": "Modeli ya uthibitishaji",
     "validationModelIdPlaceholder": "k.m. meta-llama/llama-3.1-8b-instruct",
-    "vertexServiceAccountPlaceholder": "Paste your Service Account JSON ({\"type\":\"service_account\",\"project_id\":\"…\",\"client_email\":\"…\",\"private_key\":\"…\"}) or an OAuth access_token",
+    "vertexServiceAccountPlaceholder": "Paste your Service Account JSON ('{\"type\":\"service_account\",\"project_id\":\"…\",\"client_email\":\"…\",\"private_key\":\"…\"}') or an OAuth access_token",
     "webCookieProviders": "Web Cookie Providers",
     "weeklyShort": "Weekly Short",
     "xiaomiMimoBaseUrlHint": "Xiaomi Mimo Base Url Hint",
@@ -9517,7 +9517,7 @@
     "suiteBuilderCaseExpectedPlaceholder": "e.g. def fibonacci",
     "suiteBuilderCaseExpectedPlaceholderContains": "k.m. def fibonacci",
     "suiteBuilderCaseExpectedPlaceholderExact": "Bandika jibu kamili linalotarajiwa",
-    "suiteBuilderCaseExpectedPlaceholderRegex": "k.m. ^\\\\s*\\\\{.*\\\\}\\\\\\s*$",
+    "suiteBuilderCaseExpectedPlaceholderRegex": "k.m. ^\\\\s*\\\\'{.*\\\\}'\\\\\\s*$",
     "suiteBuilderCaseExpectedHintRegex": "Tumia msemo wa kawaida wa JavaScript bila kukunja mikwaju.",
     "suiteBuilderNamePlaceholder": "e.g. Coding Quality Suite",
     "suiteBuilderAddCase": "Add Case",
@@ -10726,7 +10726,7 @@
     "grokAuthJsonDescription": "Bandika maudhui YOTE ya ~/.grok/auth.json (sio tu uwanja wa JWT \"key\"). JWT tupu haina refresh_token, hivyo muunganisho unakufa baada ya muda wake kumalizika (#7610). Pendelea kidirisha maalum cha Kuagiza auth.json inapopatikana.",
     "devinDesktopPasteDescription": "Pasta funguo ya API ya Devin iliyopo kutoka kwa kikao cha Devin kilichothibitishwa. Upatikanaji wa usafirishaji wa funguo na hatua zinatofautiana kulingana na toleo la Devin na akaunti.",
     "devinPasteDescription": "Toa WINDSURF_API_KEY yako (iliyopatikana kupitia `devin auth login`, au kupitia amri ya Windsurf IDE \"Windsurf: Provide Auth Token\").",
-    "grokAuthJsonPlaceholder": "{\"https://auth.x.ai::clientId\": {\"key\": \"eyJ...\", \"refresh_token\": \"...\"}}",
+    "grokAuthJsonPlaceholder": "'{\"https://auth.x.ai::clientId\": {\"key\": \"eyJ...\", \"refresh_token\": \"...\"}'}",
     "grokAuthJsonLabel": "Grok Build auth.json",
     "apiTokenPlaceholder": "ws-...",
     "apiKeyTokenLabel": "Funguo la API / Token",
@@ -12961,7 +12961,7 @@
         "description": "Baada ya ulandanishi wa mtoa huduma na mfano, zalisha upya wasifu wa ~/.codex/*.config.toml kutoka kwenye katalogi hai. Hii haibadilishi kamwe usanidi amilifu au wa chaguomsingi wa Codex na imezimwa kwa chaguomsingi."
       },
       "OMNIROUTE_AUTO_SYNC_CLAUDE_PROFILES": {
-        "description": "After provider-model synchronization, regenerate ~/.claude/profiles/<name>/settings.json profiles from the live catalog. This never changes the active or default Claude configuration and is off by default."
+        "description": "After provider-model synchronization, regenerate ~/.claude/profiles/'<name>'/settings.json profiles from the live catalog. This never changes the active or default Claude configuration and is off by default."
       },
       "OMNIROUTE_DISABLE_LOCAL_HEALTHCHECK": {
         "description": "Zima kituo cha mwisho cha ukaguzi wa afya wa mfano wa ndani."
@@ -13345,7 +13345,7 @@
     "secondaryNote": "Pia kwenye Open VSX (Cursor, Windsurf, VSCodium…)",
     "dismissAriaLabel": "Ondoa"
   },
-  "featureFlagExposeFunctionalGatewayMirrorsDescription": "Tangaza <gateway-alias>/<model> vitambulisho vya kioo kwenye /v1/models kwa ajili ya mifano ambayo mmiliki wake wa kanuni hana akreditivu hai lakini lango la kupitisha lenye akreditivu hai linaelekeza kwao. Onyo: inaongeza orodha za katalogi kwa wateja wote inapowezeshwa kimataifa.",
+  "featureFlagExposeFunctionalGatewayMirrorsDescription": "Tangaza '<gateway-alias>'/'<model>' vitambulisho vya kioo kwenye /v1/models kwa ajili ya mifano ambayo mmiliki wake wa kanuni hana akreditivu hai lakini lango la kupitisha lenye akreditivu hai linaelekeza kwao. Onyo: inaongeza orodha za katalogi kwa wateja wote inapowezeshwa kimataifa.",
   "radarPage": {
     "title": "Radar Katalog",
     "subtitle": "Gratis modellkatalog berikad med gemenskapsintelligens",

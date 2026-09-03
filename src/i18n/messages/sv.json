@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "settings.json för gateway-modellupptäckten",
     "ccOnboardingCopy": "Kopiera",
     "ccOnboardingCopied": "Kopierad",
-    "ccOnboardingKeyPlaceholder": "<din OmniRoute API-nyckel>",
+    "ccOnboardingKeyPlaceholder": "'<din OmniRoute API-nyckel>'",
     "ccOnboardingWindowNote": "Claude Code förutsätter ett 200K kontextfönster för alla modell-ID:n som det inte känner igen. För en modell med ett annat verkligt fönster, lägg till CLAUDE_CODE_AUTO_COMPACT_WINDOW precis under den så att automatisk komprimering inte aktiveras för tidigt.",
     "failedSave": "Misslyckades med att spara",
     "profileSyncTitle": "Automatisk synkning av CLI-profil",
@@ -5634,7 +5634,7 @@
     "claudeImportBulkModePaste": "Klistra in JSON-array",
     "claudeImportBulkModeZip": "Ladda upp ZIP",
     "claudeImportBulkUploadHint": "Släpp eller hämta upp till 50 .credentials.json-filer (256 KB vardera, totalt 10 MB).",
-    "claudeImportBulkPasteHint": "Klistra in en rad objekt: [{ json, name?, email? }...]",
+    "claudeImportBulkPasteHint": "Klistra in en rad objekt: ['{ json, name?, email? }'...]",
     "claudeImportBulkZipHint": "ZIP som innehåller .json-poster. Max 50 poster, 10MB uppackad.",
     "claudeImportBulkSubmit": "Importera alla",
     "claudeImportBulkSuccess": "Importerade {count} Claude-anslutningar",
@@ -5666,7 +5666,7 @@
     "geminiImportBulkModePaste": "Klistra in JSON-array",
     "geminiImportBulkModeZip": "Ladda upp ZIP",
     "geminiImportBulkUploadHint": "Släpp eller hämta upp till 50 oauth_creds.json-filer (256 KB vardera, totalt 10 MB).",
-    "geminiImportBulkPasteHint": "Klistra in en rad objekt: [{ json, name?, email? }...]",
+    "geminiImportBulkPasteHint": "Klistra in en rad objekt: ['{ json, name?, email? }'...]",
     "geminiImportBulkZipHint": "ZIP som innehåller oauth_creds.json-poster. Max 50 poster, 10MB uppackad.",
     "geminiImportBulkSubmit": "Importera alla",
     "geminiImportBulkSuccess": "Importerade {count} Gemini-anslutningar",
@@ -5715,7 +5715,7 @@
     "codexImportBulkModePaste": "Klistra in lista",
     "codexImportBulkModeZip": "ZIP-arkiv",
     "codexImportBulkUploadHint": "Välj flera .json-filer eller dra och släpp",
-    "codexImportBulkPasteHint": "JSON-array [ {...}, {...} ] eller flera JSON:er separerade med --- på sin egen rad",
+    "codexImportBulkPasteHint": "JSON-array [ '{...}', '{...}' ] eller flera JSON:er separerade med --- på sin egen rad",
     "codexImportBulkZipHint": "Ladda upp en .zip som innehåller auth.json-filer (max 50 filer, 10 MB)",
     "codexImportBulkSubmit": "Importera {count} konton",
     "codexImportBulkLimit": "Max 50 filer per import",
@@ -5947,7 +5947,7 @@
     "validationModelIdHint": "Modell som används för att verifiera API-nyckeln. Lämna tomt för att använda leverantörens första tillgängliga modell.",
     "validationModelIdLabel": "Valideringsmodell",
     "validationModelIdPlaceholder": "t.ex. meta-llama/llama-3.1-8b-instruct",
-    "vertexServiceAccountPlaceholder": "Paste your Service Account JSON ({\"type\":\"service_account\",\"project_id\":\"…\",\"client_email\":\"…\",\"private_key\":\"…\"}) or an OAuth access_token",
+    "vertexServiceAccountPlaceholder": "Paste your Service Account JSON ('{\"type\":\"service_account\",\"project_id\":\"…\",\"client_email\":\"…\",\"private_key\":\"…\"}') or an OAuth access_token",
     "webCookieProviders": "Web Cookie Providers",
     "weeklyShort": "Weekly Short",
     "xiaomiMimoBaseUrlHint": "Xiaomi Mimo Base Url Hint",
@@ -8221,7 +8221,7 @@
     "modalityBridgeStatsBridged": "brottad",
     "modalityBridgeStatsCacheHits": "cache träffar",
     "modalityBridgeStatsFailures": "fel",
-    "modalityBridgeStatsLastUsed": "senast använd{\" \"}",
+    "modalityBridgeStatsLastUsed": "senast använd'{\" \"}'",
     "modalityBridgeStatsNever": "aldrig",
     "modalityBridgeTestButton": "Testa med exempelbild",
     "modalityBridgeTestRunning": "Testar…",
@@ -9517,7 +9517,7 @@
     "suiteBuilderCaseExpectedPlaceholder": "e.g. def fibonacci",
     "suiteBuilderCaseExpectedPlaceholderContains": "t.ex. def fibonacci",
     "suiteBuilderCaseExpectedPlaceholderExact": "Klistra in det exakta förväntade svaret",
-    "suiteBuilderCaseExpectedPlaceholderRegex": "t.ex. ^\\\\s*\\\\{.*\\\\}\\\\s*$",
+    "suiteBuilderCaseExpectedPlaceholderRegex": "t.ex. ^\\\\s*\\\\'{.*\\\\}'\\\\s*$",
     "suiteBuilderCaseExpectedHintRegex": "Använd ett reguljärt JavaScript-uttryck utan att radbryta snedstreck.",
     "suiteBuilderNamePlaceholder": "e.g. Coding Quality Suite",
     "suiteBuilderAddCase": "Add Case",
@@ -10726,7 +10726,7 @@
     "grokAuthJsonDescription": "Klistra in hela innehållet i ~/.grok/auth.json (inte bara JWT \"nyckel\"-fältet). En ren JWT har ingen refresh_token, så anslutningen dör efter utgång (#7610). Föredra den dedikerade Import auth.json-modalen när den är tillgänglig.",
     "devinDesktopPasteDescription": "Klistra in en befintlig Devin API-nyckel från en autentiserad Devin-session. Tillgänglighet för nyckelexport och steg varierar beroende på Devin-version och konto.",
     "devinPasteDescription": "Ange din WINDSURF_API_KEY (erhållen via `devin auth login`, eller via Windsurf IDE-kommandot \"Windsurf: Provide Auth Token\").",
-    "grokAuthJsonPlaceholder": "{\"https://auth.x.ai::clientId\": {\"key\": \"eyJ...\", \"refresh_token\": \"...\"}}",
+    "grokAuthJsonPlaceholder": "'{\"https://auth.x.ai::clientId\": {\"key\": \"eyJ...\", \"refresh_token\": \"...\"}'}",
     "grokAuthJsonLabel": "Grok Bygg auth.json",
     "apiTokenPlaceholder": "ws-...",
     "apiKeyTokenLabel": "API Nyckel / Token",
@@ -12961,7 +12961,7 @@
         "description": "Efter synkronisering av leverantörsmodell, generera om ~/.codex/*.config.toml-profiler från den aktiva katalogen. Detta ändrar aldrig den aktiva eller standardinställda Codex-konfigurationen och är inaktiverat som standard."
       },
       "OMNIROUTE_AUTO_SYNC_CLAUDE_PROFILES": {
-        "description": "Efter synkronisering av leverantörsmodell, generera om ~/.claude/profiles/<name>/settings.json-profiler från den aktiva katalogen. Detta ändrar aldrig den aktiva eller standardinställda Claude-konfigurationen och är inaktiverat som standard."
+        "description": "Efter synkronisering av leverantörsmodell, generera om ~/.claude/profiles/'<name>'/settings.json-profiler från den aktiva katalogen. Detta ändrar aldrig den aktiva eller standardinställda Claude-konfigurationen och är inaktiverat som standard."
       },
       "OMNIROUTE_DISABLE_LOCAL_HEALTHCHECK": {
         "description": "Inaktivera slutpunkten för hälsokontroll av den lokala instansen."
@@ -13345,7 +13345,7 @@
     "secondaryNote": "Finns även på Open VSX (Cursor, Windsurf, VSCodium…)",
     "dismissAriaLabel": "Avvisa"
   },
-  "featureFlagExposeFunctionalGatewayMirrorsDescription": "Annonsera <gateway-alias>/<model> spegel-id på /v1/models för modeller vars kanoniska ägare inte har någon aktiv legitimation men en passthrough-gateway med en aktiv legitimation dirigerar dem. Varning: lägger till katalogposter för alla klienter när det är aktiverat globalt.",
+  "featureFlagExposeFunctionalGatewayMirrorsDescription": "Annonsera '<gateway-alias>'/'<model>' spegel-id på /v1/models för modeller vars kanoniska ägare inte har någon aktiv legitimation men en passthrough-gateway med en aktiv legitimation dirigerar dem. Varning: lägger till katalogposter för alla klienter när det är aktiverat globalt.",
   "radarPage": {
     "title": "Radar Katalog",
     "subtitle": "Gratis modellkatalog berikad med gemenskapsintelligens",

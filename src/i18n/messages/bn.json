@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "gateway মডেল আবিষ্কারের জন্য settings.json",
     "ccOnboardingCopy": "কপি করুন",
     "ccOnboardingCopied": "কপি করা হয়েছে",
-    "ccOnboardingKeyPlaceholder": "<আপনার OmniRoute API কী>",
+    "ccOnboardingKeyPlaceholder": "'<আপনার OmniRoute API কী>'",
     "ccOnboardingWindowNote": "Claude Code একটি 200K প্রসঙ্গ উইন্ডো ধারণ করে যেকোন মডেল আইডির জন্য যা এটি চিনতে পারে না। একটি ভিন্ন বাস্তব উইন্ডো সহ মডেলের জন্য, এর ঠিক নিচে CLAUDE_CODE_AUTO_COMPACT_WINDOW যোগ করুন যাতে স্বয়ংক্রিয় সংকোচন খুব তাড়াতাড়ি শুরু না হয়।",
     "failedSave": "সংরক্ষণ করতে ব্যর্থ হয়েছে",
     "profileSyncTitle": "CLI প্রোফাইল অটো-সিঙ্ক",
@@ -5634,7 +5634,7 @@
     "claudeImportBulkModePaste": "JSON অ্যারে আটকান",
     "claudeImportBulkModeZip": "জিপ আপলোড করুন",
     "claudeImportBulkUploadHint": "50টি .credentials.json ফাইল ড্রপ বা পিক আপ করুন (প্রতিটি 256KB, মোট 10MB)।",
-    "claudeImportBulkPasteHint": "বস্তুর একটি অ্যারে আটকান: [{ json, name?, email? }...]",
+    "claudeImportBulkPasteHint": "বস্তুর একটি অ্যারে আটকান: ['{ json, name?, email? }'...]",
     "claudeImportBulkZipHint": ".json এন্ট্রি ধারণকারী ZIP. সর্বোচ্চ 50টি এন্ট্রি, 10MB আনপ্যাক করা।",
     "claudeImportBulkSubmit": "সব আমদানি করুন",
     "claudeImportBulkSuccess": "আমদানি করা {count} ক্লাউড সংযোগ",
@@ -5666,7 +5666,7 @@
     "geminiImportBulkModePaste": "JSON অ্যারে আটকান",
     "geminiImportBulkModeZip": "জিপ আপলোড করুন",
     "geminiImportBulkUploadHint": "50টি oauth_creds.json ফাইল ড্রপ বা পিক আপ করুন (প্রতিটি 256KB, মোট 10MB)।",
-    "geminiImportBulkPasteHint": "বস্তুর একটি অ্যারে আটকান: [{ json, name?, email? }...]",
+    "geminiImportBulkPasteHint": "বস্তুর একটি অ্যারে আটকান: ['{ json, name?, email? }'...]",
     "geminiImportBulkZipHint": "ZIP-এ oauth_creds.json এন্ট্রি রয়েছে। সর্বোচ্চ 50টি এন্ট্রি, 10MB আনপ্যাক করা।",
     "geminiImportBulkSubmit": "সব আমদানি করুন",
     "geminiImportBulkSuccess": "আমদানি করা {count} মিথুন সংযোগ",
@@ -5715,7 +5715,7 @@
     "codexImportBulkModePaste": "তালিকা পেস্ট করুন",
     "codexImportBulkModeZip": "জিপ সংরক্ষণাগার",
     "codexImportBulkUploadHint": "একাধিক .json ফাইল নির্বাচন করুন বা টেনে আনুন",
-    "codexImportBulkPasteHint": "JSON অ্যারে [ {...}, {...} ] বা একাধিক JSON এর নিজস্ব লাইনে --- দ্বারা বিভক্ত",
+    "codexImportBulkPasteHint": "JSON অ্যারে [ '{...}', '{...}' ] বা একাধিক JSON এর নিজস্ব লাইনে --- দ্বারা বিভক্ত",
     "codexImportBulkZipHint": "auth.json ফাইল ধারণকারী একটি zip আপলোড করুন (সর্বোচ্চ 50 ফাইল, 10 MB)",
     "codexImportBulkSubmit": "{count} অ্যাকাউন্ট আমদানি করুন",
     "codexImportBulkLimit": "প্রতি আমদানি সর্বোচ্চ 50টি ফাইল",
@@ -5947,7 +5947,7 @@
     "validationModelIdHint": "API কী যাচাই করতে ব্যবহৃত মডেল। প্রোভাইডারের প্রথম উপলব্ধ মডেল ব্যবহার করতে ফাঁকা রাখুন।",
     "validationModelIdLabel": "যাচাইকরণ মডেল",
     "validationModelIdPlaceholder": "যেমন: meta-llama/llama-3.1-8b-instruct",
-    "vertexServiceAccountPlaceholder": "Paste your Service Account JSON ({\"type\":\"service_account\",\"project_id\":\"…\",\"client_email\":\"…\",\"private_key\":\"…\"}) or an OAuth access_token",
+    "vertexServiceAccountPlaceholder": "Paste your Service Account JSON ('{\"type\":\"service_account\",\"project_id\":\"…\",\"client_email\":\"…\",\"private_key\":\"…\"}') or an OAuth access_token",
     "webCookieProviders": "Web Cookie Providers",
     "weeklyShort": "Weekly Short",
     "xiaomiMimoBaseUrlHint": "Xiaomi Mimo Base Url Hint",
@@ -9517,7 +9517,7 @@
     "suiteBuilderCaseExpectedPlaceholder": "e.g. def fibonacci",
     "suiteBuilderCaseExpectedPlaceholderContains": "যেমন ডিফ ফিবোনাচি",
     "suiteBuilderCaseExpectedPlaceholderExact": "সঠিক প্রত্যাশিত প্রতিক্রিয়া আটকান",
-    "suiteBuilderCaseExpectedPlaceholderRegex": "যেমন ^\\\\s*\\\\{.*\\\\}\\\\s*$",
+    "suiteBuilderCaseExpectedPlaceholderRegex": "যেমন ^\\\\s*\\\\'{.*\\\\}'\\\\s*$",
     "suiteBuilderCaseExpectedHintRegex": "স্ল্যাশগুলি মোড়ানো ছাড়াই একটি জাভাস্ক্রিপ্ট রেগুলার এক্সপ্রেশন ব্যবহার করুন।",
     "suiteBuilderNamePlaceholder": "e.g. Coding Quality Suite",
     "suiteBuilderAddCase": "Add Case",
@@ -10726,7 +10726,7 @@
     "grokAuthJsonDescription": "~/.grok/auth.json এর সম্পূর্ণ বিষয়বস্তু পেস্ট করুন (শুধু JWT \"key\" ক্ষেত্র নয়)। একটি খালি JWT এর refresh_token নেই, তাই মেয়াদ শেষ হওয়ার পরে সংযোগ বন্ধ হয়ে যায় (#7610)। উপলব্ধ থাকলে নিবেদিত Import auth.json মডালটি ব্যবহার করতে অগ্রাধিকার দিন।",
     "devinDesktopPasteDescription": "একটি প্রমাণীকৃত Devin সেশনের থেকে বিদ্যমান Devin API কী পেস্ট করুন। কী রপ্তানি করার প্রাপ্যতা এবং পদক্ষেপগুলি Devin সংস্করণ এবং অ্যাকাউন্ট অনুযায়ী পরিবর্তিত হয়।",
     "devinPasteDescription": "আপনার WINDSURF_API_KEY প্রদান করুন (যা `devin auth login` এর মাধ্যমে অথবা Windsurf IDE \"Windsurf: Provide Auth Token\" কমান্ডের মাধ্যমে প্রাপ্ত)।",
-    "grokAuthJsonPlaceholder": "{\"https://auth.x.ai::clientId\": {\"key\": \"eyJ...\", \"refresh_token\": \"...\"}}",
+    "grokAuthJsonPlaceholder": "'{\"https://auth.x.ai::clientId\": {\"key\": \"eyJ...\", \"refresh_token\": \"...\"}'}",
     "grokAuthJsonLabel": "Grok Build auth.json",
     "apiTokenPlaceholder": "ws-...",
     "apiKeyTokenLabel": "এপিআই কী / টোকেন",
@@ -12961,7 +12961,7 @@
         "description": "প্রোভাইডার-মডেল সিঙ্ক্রোনাইজেশনের পরে, লাইভ ক্যাটালগ থেকে ~/.codex/*.config.toml প্রোফাইলগুলি পুনরায় তৈরি করুন। এটি সক্রিয় বা ডিফল্ট Codex কনফিগারেশন কখনই পরিবর্তন করে না এবং ডিফল্টভাবে বন্ধ থাকে।"
       },
       "OMNIROUTE_AUTO_SYNC_CLAUDE_PROFILES": {
-        "description": "প্রোভাইডার-মডেল সিঙ্ক্রোনাইজেশনের পরে, লাইভ ক্যাটালগ থেকে ~/.claude/profiles/<name>/settings.json প্রোফাইলগুলি পুনরায় তৈরি করুন। এটি সক্রিয় বা ডিফল্ট Claude কনফিগারেশন কখনই পরিবর্তন করে না এবং ডিফল্টভাবে বন্ধ থাকে।"
+        "description": "প্রোভাইডার-মডেল সিঙ্ক্রোনাইজেশনের পরে, লাইভ ক্যাটালগ থেকে ~/.claude/profiles/'<name>'/settings.json প্রোফাইলগুলি পুনরায় তৈরি করুন। এটি সক্রিয় বা ডিফল্ট Claude কনফিগারেশন কখনই পরিবর্তন করে না এবং ডিফল্টভাবে বন্ধ থাকে।"
       },
       "OMNIROUTE_DISABLE_LOCAL_HEALTHCHECK": {
         "description": "স্থানীয় ইনস্ট্যান্স হেলথ-চেক এন্ডপয়েন্ট নিষ্ক্রিয় করুন।"
@@ -13345,7 +13345,7 @@
     "secondaryNote": "Open VSX-এও পাওয়া যায় (Cursor, Windsurf, VSCodium…)",
     "dismissAriaLabel": "খারিজ করুন"
   },
-  "featureFlagExposeFunctionalGatewayMirrorsDescription": "/gateway-alias/<model> মিরর আইডি গুলি /v1/models এ বিজ্ঞাপন দিন তাদের জন্য মডেল যাদের ক্যানোনিকাল মালিকের কোনো সক্রিয় শংসাপত্র নেই কিন্তু একটি পাসথ্রু গেটওয়ে তাদের সক্রিয় শংসাপত্র দ্বারা রাউট করে। সতর্কতা: এটি বিশ্বব্যাপী সক্ষম হলে সমস্ত ক্লায়েন্টের জন্য ক্যাটালগ এন্ট্রি যোগ করে।",
+  "featureFlagExposeFunctionalGatewayMirrorsDescription": "/gateway-alias/'<model>' মিরর আইডি গুলি /v1/models এ বিজ্ঞাপন দিন তাদের জন্য মডেল যাদের ক্যানোনিকাল মালিকের কোনো সক্রিয় শংসাপত্র নেই কিন্তু একটি পাসথ্রু গেটওয়ে তাদের সক্রিয় শংসাপত্র দ্বারা রাউট করে। সতর্কতা: এটি বিশ্বব্যাপী সক্ষম হলে সমস্ত ক্লায়েন্টের জন্য ক্যাটালগ এন্ট্রি যোগ করে।",
   "radarPage": {
     "title": "রাডার ক্যাটালগ",
     "subtitle": "কমিউনিটি বুদ্ধিমত্তা সমৃদ্ধ ফ্রি মডেল ক্যাটালগ",

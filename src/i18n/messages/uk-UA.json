@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "settings.json для виявлення моделі шлюзу",
     "ccOnboardingCopy": "Копіювати",
     "ccOnboardingCopied": "Скопійовано",
-    "ccOnboardingKeyPlaceholder": "<ваш ключ API OmniRoute>",
+    "ccOnboardingKeyPlaceholder": "'<ваш ключ API OmniRoute>'",
     "ccOnboardingWindowNote": "Claude Code припускає вікно контексту 200K для будь-якого ідентифікатора моделі, який він не розпізнає. Для моделі з іншим реальним вікном додайте CLAUDE_CODE_AUTO_COMPACT_WINDOW безпосередньо під ним, щоб автоматичне стиснення не спрацьовувало занадто рано.",
     "failedSave": "Не вдалося зберегти",
     "profileSyncTitle": "Автосинхронізація профілів CLI",
@@ -5634,7 +5634,7 @@
     "claudeImportBulkModePaste": "Вставити масив JSON",
     "claudeImportBulkModeZip": "Завантажити ZIP",
     "claudeImportBulkUploadHint": "Перемістіть або виберіть до 50 файлів .credentials.json (256 КБ кожен, 10 МБ загалом).",
-    "claudeImportBulkPasteHint": "Вставте масив об’єктів: [{ json, name?, email? }...]",
+    "claudeImportBulkPasteHint": "Вставте масив об’єктів: ['{ json, name?, email? }'...]",
     "claudeImportBulkZipHint": "ZIP із записами .json. Макс. 50 записів, 10 Мб без упаковки.",
     "claudeImportBulkSubmit": "Імпортувати все",
     "claudeImportBulkSuccess": "Імпортовано підключення {count} Claude",
@@ -5666,7 +5666,7 @@
     "geminiImportBulkModePaste": "Вставити масив JSON",
     "geminiImportBulkModeZip": "Завантажити ZIP",
     "geminiImportBulkUploadHint": "Витягніть або виберіть до 50 файлів oauth_creds.json (256 КБ кожен, 10 МБ загалом).",
-    "geminiImportBulkPasteHint": "Вставте масив об’єктів: [{ json, name?, email? }...]",
+    "geminiImportBulkPasteHint": "Вставте масив об’єктів: ['{ json, name?, email? }'...]",
     "geminiImportBulkZipHint": "ZIP із записами oauth_creds.json. Макс. 50 записів, 10 Мб без упаковки.",
     "geminiImportBulkSubmit": "Імпортувати все",
     "geminiImportBulkSuccess": "Імпортовано підключення {count} Gemini",
@@ -5715,7 +5715,7 @@
     "codexImportBulkModePaste": "Вставити список",
     "codexImportBulkModeZip": "ZIP архів",
     "codexImportBulkUploadHint": "Виберіть кілька файлів .json або перетягніть їх",
-    "codexImportBulkPasteHint": "Масив JSON [ {...}, {...} ] або кілька JSON, розділених --- в окремому рядку",
+    "codexImportBulkPasteHint": "Масив JSON [ '{...}', '{...}' ] або кілька JSON, розділених --- в окремому рядку",
     "codexImportBulkZipHint": "Завантажте .zip, що містить файли auth.json (макс. 50 файлів, 10 МБ)",
     "codexImportBulkSubmit": "Імпортувати облікові записи {count}",
     "codexImportBulkLimit": "Максимум 50 файлів на імпорт",
@@ -5947,7 +5947,7 @@
     "validationModelIdHint": "Модель, яка використовується для перевірки ключа API. Залиште порожнім, щоб використовувати першу доступну модель провайдера.",
     "validationModelIdLabel": "Модель для перевірки",
     "validationModelIdPlaceholder": "напр. meta-llama/llama-3.1-8b-instruct",
-    "vertexServiceAccountPlaceholder": "Paste your Service Account JSON ({\"type\":\"service_account\",\"project_id\":\"…\",\"client_email\":\"…\",\"private_key\":\"…\"}) or an OAuth access_token",
+    "vertexServiceAccountPlaceholder": "Paste your Service Account JSON ('{\"type\":\"service_account\",\"project_id\":\"…\",\"client_email\":\"…\",\"private_key\":\"…\"}') or an OAuth access_token",
     "webCookieProviders": "Web Cookie Providers",
     "weeklyShort": "Weekly Short",
     "xiaomiMimoBaseUrlHint": "Xiaomi Mimo Base Url Hint",
@@ -9517,7 +9517,7 @@
     "suiteBuilderCaseExpectedPlaceholder": "e.g. def fibonacci",
     "suiteBuilderCaseExpectedPlaceholderContains": "напр. визначення фібоначчі",
     "suiteBuilderCaseExpectedPlaceholderExact": "Вставте точну очікувану відповідь",
-    "suiteBuilderCaseExpectedPlaceholderRegex": "напр. ^\\\\s*\\\\{.*\\\\}\\\\s*$",
+    "suiteBuilderCaseExpectedPlaceholderRegex": "напр. ^\\\\s*\\\\'{.*\\\\}'\\\\s*$",
     "suiteBuilderCaseExpectedHintRegex": "Використовуйте регулярний вираз JavaScript без похилих рис.",
     "suiteBuilderNamePlaceholder": "e.g. Coding Quality Suite",
     "suiteBuilderAddCase": "Add Case",
@@ -10726,7 +10726,7 @@
     "grokAuthJsonDescription": "Вставте повний вміст ~/.grok/auth.json (не лише поле \"key\" JWT). Простий JWT не має refresh_token, тому з'єднання припиняється після закінчення терміну дії (#7610). Виберіть спеціальне вікно імпорту auth.json, коли це можливо.",
     "devinDesktopPasteDescription": "Вставте існуючий ключ API Devin з автентифікованої сесії Devin. Доступність експорту ключа та кроки можуть відрізнятися в залежності від версії Devin та облікового запису.",
     "devinPasteDescription": "Надайте свій WINDSURF_API_KEY (отриманий через `devin auth login`, або через команду \"Windsurf: Provide Auth Token\" у Windsurf IDE).",
-    "grokAuthJsonPlaceholder": "{\"https://auth.x.ai::clientId\": {\"key\": \"eyJ...\", \"refresh_token\": \"...\"}}",
+    "grokAuthJsonPlaceholder": "'{\"https://auth.x.ai::clientId\": {\"key\": \"eyJ...\", \"refresh_token\": \"...\"}'}",
     "grokAuthJsonLabel": "Grok Build auth.json",
     "apiTokenPlaceholder": "ws-...",
     "apiKeyTokenLabel": "API Ключ / Токен",
@@ -12961,7 +12961,7 @@
         "description": "Після синхронізації моделей провайдерів повторно генерувати профілі ~/.codex/*.config.toml з актуального каталогу. Це ніколи не змінює активну або стандартну конфігурацію Codex і вимкнено за замовчуванням."
       },
       "OMNIROUTE_AUTO_SYNC_CLAUDE_PROFILES": {
-        "description": "Після синхронізації моделей провайдерів повторно генерувати профілі ~/.claude/profiles/<name>/settings.json з актуального каталогу. Це ніколи не змінює активну або стандартну конфігурацію Claude і вимкнено за замовчуванням."
+        "description": "Після синхронізації моделей провайдерів повторно генерувати профілі ~/.claude/profiles/'<name>'/settings.json з актуального каталогу. Це ніколи не змінює активну або стандартну конфігурацію Claude і вимкнено за замовчуванням."
       },
       "OMNIROUTE_DISABLE_LOCAL_HEALTHCHECK": {
         "description": "Вимкнути кінцеву точку перевірки працездатності локального екземпляра."
@@ -13345,7 +13345,7 @@
     "secondaryNote": "Також доступно на Open VSX (Cursor, Windsurf, VSCodium…)",
     "dismissAriaLabel": "Закрити"
   },
-  "featureFlagExposeFunctionalGatewayMirrorsDescription": "Рекламуйте <gateway-alias>/<model> ідентифікатори дзеркал на /v1/models для моделей, власник яких не має активних облікових даних, але шлюз з пропуском з активними обліковими даними їх маршрутизує. Увага: додає записи каталогу для всіх клієнтів, коли увімкнено глобально.",
+  "featureFlagExposeFunctionalGatewayMirrorsDescription": "Рекламуйте '<gateway-alias>'/'<model>' ідентифікатори дзеркал на /v1/models для моделей, власник яких не має активних облікових даних, але шлюз з пропуском з активними обліковими даними їх маршрутизує. Увага: додає записи каталогу для всіх клієнтів, коли увімкнено глобально.",
   "radarPage": {
     "title": "Каталог Радар",
     "subtitle": "Безкоштовний каталог моделей, збагачений інтелектом спільноти",

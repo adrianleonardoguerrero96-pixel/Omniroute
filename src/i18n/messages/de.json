@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "settings.json für die Entdeckung des Gateway-Modells",
     "ccOnboardingCopy": "Kopieren",
     "ccOnboardingCopied": "Kopiert",
-    "ccOnboardingKeyPlaceholder": "<dein OmniRoute API-Schlüssel>",
+    "ccOnboardingKeyPlaceholder": "'<dein OmniRoute API-Schlüssel>'",
     "ccOnboardingWindowNote": "Claude Code geht von einem 200K-Kontextfenster für jede Modell-ID aus, die es nicht erkennt. Für ein Modell mit einem anderen tatsächlichen Fenster fügen Sie CLAUDE_CODE_AUTO_COMPACT_WINDOW direkt darunter hinzu, damit die automatische Komprimierung nicht zu früh ausgelöst wird.",
     "failedSave": "Speichern fehlgeschlagen",
     "profileSyncTitle": "Automatische Synchronisierung von CLI-Profilen",
@@ -5634,7 +5634,7 @@
     "claudeImportBulkModePaste": "JSON-Array einfügen",
     "claudeImportBulkModeZip": "ZIP hochladen",
     "claudeImportBulkUploadHint": "Legen Sie bis zu 50 .credentials.json-Dateien ab oder holen Sie sie ab (jeweils 256 KB, insgesamt 10 MB).",
-    "claudeImportBulkPasteHint": "Fügen Sie ein Array von Objekten ein: [{ json, name?, email? }...]",
+    "claudeImportBulkPasteHint": "Fügen Sie ein Array von Objekten ein: ['{ json, name?, email? }'...]",
     "claudeImportBulkZipHint": "ZIP-Datei mit .json-Einträgen. Maximal 50 Einträge, 10 MB entpackt.",
     "claudeImportBulkSubmit": "Alles importieren",
     "claudeImportBulkSuccess": "Importierte {count} Claude-Verbindungen",
@@ -5666,7 +5666,7 @@
     "geminiImportBulkModePaste": "JSON-Array einfügen",
     "geminiImportBulkModeZip": "ZIP hochladen",
     "geminiImportBulkUploadHint": "Legen Sie bis zu 50 oauth_creds.json-Dateien ab oder holen Sie sie ab (jeweils 256 KB, insgesamt 10 MB).",
-    "geminiImportBulkPasteHint": "Fügen Sie ein Array von Objekten ein: [{ json, name?, email? }...]",
+    "geminiImportBulkPasteHint": "Fügen Sie ein Array von Objekten ein: ['{ json, name?, email? }'...]",
     "geminiImportBulkZipHint": "ZIP mit oauth_creds.json-Einträgen. Maximal 50 Einträge, 10 MB entpackt.",
     "geminiImportBulkSubmit": "Alles importieren",
     "geminiImportBulkSuccess": "Importierte {count} Gemini-Verbindungen",
@@ -5715,7 +5715,7 @@
     "codexImportBulkModePaste": "Liste einfügen",
     "codexImportBulkModeZip": "ZIP-Archiv",
     "codexImportBulkUploadHint": "Wählen Sie mehrere .json-Dateien aus oder ziehen Sie sie per Drag & Drop",
-    "codexImportBulkPasteHint": "JSON-Array [ {...}, {...} ] oder mehrere durch --- getrennte JSONs in einer eigenen Zeile",
+    "codexImportBulkPasteHint": "JSON-Array [ '{...}', '{...}' ] oder mehrere durch --- getrennte JSONs in einer eigenen Zeile",
     "codexImportBulkZipHint": "Laden Sie eine ZIP-Datei mit auth.json-Dateien hoch (maximal 50 Dateien, 10 MB).",
     "codexImportBulkSubmit": "Importieren Sie {count}-Konten",
     "codexImportBulkLimit": "Maximal 50 Dateien pro Import",
@@ -5947,7 +5947,7 @@
     "validationModelIdHint": "Modell, das zur Überprüfung des API-Schlüssels verwendet wird. Leer lassen, um das erste verfügbare Modell des Anbieters zu verwenden.",
     "validationModelIdLabel": "Validierungsmodell",
     "validationModelIdPlaceholder": "z. B. meta-llama/llama-3.1-8b-instruct",
-    "vertexServiceAccountPlaceholder": "Paste your Service Account JSON ({\"type\":\"service_account\",\"project_id\":\"…\",\"client_email\":\"…\",\"private_key\":\"…\"}) or an OAuth access_token",
+    "vertexServiceAccountPlaceholder": "Paste your Service Account JSON ('{\"type\":\"service_account\",\"project_id\":\"…\",\"client_email\":\"…\",\"private_key\":\"…\"}') or an OAuth access_token",
     "webCookieProviders": "Web Cookie Providers",
     "weeklyShort": "Weekly Short",
     "xiaomiMimoBaseUrlHint": "Xiaomi Mimo Base Url Hint",
@@ -9524,7 +9524,7 @@
     "suiteBuilderCaseExpectedPlaceholder": "e.g. def fibonacci",
     "suiteBuilderCaseExpectedPlaceholderContains": "z.B. auf jeden Fall Fibonacci",
     "suiteBuilderCaseExpectedPlaceholderExact": "Fügen Sie die genaue erwartete Antwort ein",
-    "suiteBuilderCaseExpectedPlaceholderRegex": "z.B. ^\\\\s*\\\\{.*\\\\}\\\\s*$",
+    "suiteBuilderCaseExpectedPlaceholderRegex": "z.B. ^\\\\s*\\\\'{.*\\\\}'\\\\s*$",
     "suiteBuilderCaseExpectedHintRegex": "Verwenden Sie einen regulären JavaScript-Ausdruck ohne Umbruch von Schrägstrichen.",
     "suiteBuilderNamePlaceholder": "e.g. Coding Quality Suite",
     "suiteBuilderAddCase": "Add Case",
@@ -10733,7 +10733,7 @@
     "grokAuthJsonDescription": "Fügen Sie den vollständigen Inhalt von ~/.grok/auth.json ein (nicht nur das JWT \"key\"-Feld). Ein nacktes JWT hat kein refresh_token, sodass die Verbindung nach Ablauf der Frist abbricht (#7610). Bevorzugen Sie das spezielle Import auth.json-Modal, wenn verfügbar.",
     "devinDesktopPasteDescription": "Fügen Sie einen vorhandenen Devin API-Schlüssel aus einer authentifizierten Devin-Sitzung ein. Die Verfügbarkeit des Schlüsselausexports und die Schritte variieren je nach Devin-Version und -Konto.",
     "devinPasteDescription": "Geben Sie Ihren WINDSURF_API_KEY an (erhalten über `devin auth login` oder über den Windsurf IDE-Befehl \"Windsurf: Auth-Token bereitstellen\").",
-    "grokAuthJsonPlaceholder": "{\"https://auth.x.ai::clientId\": {\"key\": \"eyJ...\", \"refresh_token\": \"...\"}}",
+    "grokAuthJsonPlaceholder": "'{\"https://auth.x.ai::clientId\": {\"key\": \"eyJ...\", \"refresh_token\": \"...\"}'}",
     "grokAuthJsonLabel": "Grok Build auth.json",
     "apiTokenPlaceholder": "ws-...",
     "apiKeyTokenLabel": "API-Schlüssel / Token",
@@ -12968,7 +12968,7 @@
         "description": "Nach der Anbieter-Modell-Synchronisierung ~/.codex/*.config.toml-Profile aus dem Live-Katalog neu generieren. Dies ändert niemals die aktive oder Standard-Codex-Konfiguration und ist standardmäßig deaktiviert."
       },
       "OMNIROUTE_AUTO_SYNC_CLAUDE_PROFILES": {
-        "description": "Nach der Anbieter-Modell-Synchronisierung ~/.claude/profiles/<name>/settings.json-Profile aus dem Live-Katalog neu generieren. Dies ändert niemals die aktive oder Standard-Claude-Konfiguration und ist standardmäßig deaktiviert."
+        "description": "Nach der Anbieter-Modell-Synchronisierung ~/.claude/profiles/'<name>'/settings.json-Profile aus dem Live-Katalog neu generieren. Dies ändert niemals die aktive oder Standard-Claude-Konfiguration und ist standardmäßig deaktiviert."
       },
       "OMNIROUTE_DISABLE_LOCAL_HEALTHCHECK": {
         "description": "Den Health-Check-Endpunkt der lokalen Instanz deaktivieren."
@@ -13352,7 +13352,7 @@
     "secondaryNote": "Auch auf Open VSX (Cursor, Windsurf, VSCodium…)",
     "dismissAriaLabel": "Schließen"
   },
-  "featureFlagExposeFunctionalGatewayMirrorsDescription": "Bewerben Sie <gateway-alias>/<model> Spiegel-IDs auf /v1/models für Modelle, deren kanonischer Eigentümer keine aktiven Anmeldeinformationen hat, aber ein Durchgangsgateway mit aktiven Anmeldeinformationen sie weiterleitet. Warnung: Fügt Katalogeinträge für alle Clients hinzu, wenn global aktiviert.",
+  "featureFlagExposeFunctionalGatewayMirrorsDescription": "Bewerben Sie '<gateway-alias>'/'<model>' Spiegel-IDs auf /v1/models für Modelle, deren kanonischer Eigentümer keine aktiven Anmeldeinformationen hat, aber ein Durchgangsgateway mit aktiven Anmeldeinformationen sie weiterleitet. Warnung: Fügt Katalogeinträge für alle Clients hinzu, wenn global aktiviert.",
   "radarPage": {
     "title": "Radar-Katalog",
     "subtitle": "Kostenloser Modellkatalog, angereichert mit Community-Intelligenz",

@@ -2710,7 +2710,7 @@
     "ccOnboardingTitle": "settings.json per la scoperta modelli gateway",
     "ccOnboardingCopy": "Copia",
     "ccOnboardingCopied": "Copiato",
-    "ccOnboardingKeyPlaceholder": "<la tua chiave API OmniRoute>",
+    "ccOnboardingKeyPlaceholder": "'<la tua chiave API OmniRoute>'",
     "ccOnboardingWindowNote": "Claude Code assume una finestra di contesto di 200K per qualsiasi id modello non riconosciuto. Per un modello con una finestra reale diversa, aggiungi CLAUDE_CODE_AUTO_COMPACT_WINDOW subito sotto in modo che l'auto-compattazione non si attivi troppo presto.",
     "failedSave": "Impossibile salvare",
     "profileSyncTitle": "Sincronizzazione automatica profili CLI",
@@ -5634,7 +5634,7 @@
     "claudeImportBulkModePaste": "Incolla l'array JSON",
     "claudeImportBulkModeZip": "Carica CAP",
     "claudeImportBulkUploadHint": "Rilascia o raccogli fino a 50 file .credentials.json (256 KB ciascuno, 10 MB in totale).",
-    "claudeImportBulkPasteHint": "Incolla una serie di oggetti: [{ json, name?, email? }...]",
+    "claudeImportBulkPasteHint": "Incolla una serie di oggetti: ['{ json, name?, email? }'...]",
     "claudeImportBulkZipHint": "ZIP contenente voci .json. Max 50 voci, 10 MB scompattati.",
     "claudeImportBulkSubmit": "Importa tutto",
     "claudeImportBulkSuccess": "Connessioni {count} Claude importate",
@@ -5666,7 +5666,7 @@
     "geminiImportBulkModePaste": "Incolla l'array JSON",
     "geminiImportBulkModeZip": "Carica CAP",
     "geminiImportBulkUploadHint": "Rilascia o raccogli fino a 50 file oauth_creds.json (256 KB ciascuno, 10 MB in totale).",
-    "geminiImportBulkPasteHint": "Incolla una serie di oggetti: [{ json, name?, email? }...]",
+    "geminiImportBulkPasteHint": "Incolla una serie di oggetti: ['{ json, name?, email? }'...]",
     "geminiImportBulkZipHint": "ZIP contenente le voci oauth_creds.json. Max 50 voci, 10 MB scompattati.",
     "geminiImportBulkSubmit": "Importa tutto",
     "geminiImportBulkSuccess": "Connessioni Gemini importate {count}",
@@ -5715,7 +5715,7 @@
     "codexImportBulkModePaste": "Incolla elenco",
     "codexImportBulkModeZip": "Archivio ZIP",
     "codexImportBulkUploadHint": "Seleziona più file .json o trascina e rilascia",
-    "codexImportBulkPasteHint": "Array JSON [ {...}, {...} ] o più JSON separati da --- sulla propria riga",
+    "codexImportBulkPasteHint": "Array JSON [ '{...}', '{...}' ] o più JSON separati da --- sulla propria riga",
     "codexImportBulkZipHint": "Carica un file .zip contenente file auth.json (max 50 file, 10 MB)",
     "codexImportBulkSubmit": "Importa account {count}",
     "codexImportBulkLimit": "Massimo 50 file per importazione",
@@ -5947,7 +5947,7 @@
     "validationModelIdHint": "Modello utilizzato per verificare la chiave API. Lascia vuoto per utilizzare il primo modello disponibile del provider.",
     "validationModelIdLabel": "Modello di convalida",
     "validationModelIdPlaceholder": "es. meta-llama/llama-3.1-8b-instruct",
-    "vertexServiceAccountPlaceholder": "Paste your Service Account JSON ({\"type\":\"service_account\",\"project_id\":\"…\",\"client_email\":\"…\",\"private_key\":\"…\"}) or an OAuth access_token",
+    "vertexServiceAccountPlaceholder": "Paste your Service Account JSON ('{\"type\":\"service_account\",\"project_id\":\"…\",\"client_email\":\"…\",\"private_key\":\"…\"}') or an OAuth access_token",
     "webCookieProviders": "Web Cookie Providers",
     "weeklyShort": "Weekly Short",
     "xiaomiMimoBaseUrlHint": "Xiaomi Mimo Base Url Hint",
@@ -9517,7 +9517,7 @@
     "suiteBuilderCaseExpectedPlaceholder": "e.g. def fibonacci",
     "suiteBuilderCaseExpectedPlaceholderContains": "per esempio. def fibonacci",
     "suiteBuilderCaseExpectedPlaceholderExact": "Incolla l'esatta risposta prevista",
-    "suiteBuilderCaseExpectedPlaceholderRegex": "per esempio. ^\\\\s*\\\\{.*\\\\}\\\\s*$",
+    "suiteBuilderCaseExpectedPlaceholderRegex": "per esempio. ^\\\\s*\\\\'{.*\\\\}'\\\\s*$",
     "suiteBuilderCaseExpectedHintRegex": "Utilizza un'espressione regolare JavaScript senza racchiudere le barre.",
     "suiteBuilderNamePlaceholder": "e.g. Coding Quality Suite",
     "suiteBuilderAddCase": "Add Case",
@@ -10726,7 +10726,7 @@
     "grokAuthJsonDescription": "Incolla il contenuto COMPLETO di ~/.grok/auth.json (non solo il campo \"key\" del JWT). Un JWT nudo non ha refresh_token, quindi la connessione si interrompe dopo la scadenza (#7610). Preferisci il modulo di importazione dedicato auth.json quando disponibile.",
     "devinDesktopPasteDescription": "Incolla una chiave API Devin esistente da una sessione Devin autenticata. La disponibilità dell'esportazione della chiave e i passaggi variano a seconda della versione e dell'account Devin.",
     "devinPasteDescription": "Fornisci la tua WINDSURF_API_KEY (ottenuta tramite `devin auth login`, o tramite il comando \"Windsurf: Provide Auth Token\" dell'IDE Windsurf).",
-    "grokAuthJsonPlaceholder": "{\"https://auth.x.ai::clientId\": {\"key\": \"eyJ...\", \"refresh_token\": \"...\"}}",
+    "grokAuthJsonPlaceholder": "'{\"https://auth.x.ai::clientId\": {\"key\": \"eyJ...\", \"refresh_token\": \"...\"}'}",
     "grokAuthJsonLabel": "Grok Build auth.json",
     "apiTokenPlaceholder": "ws-...",
     "apiKeyTokenLabel": "Chiave API / Token",
@@ -12961,7 +12961,7 @@
         "description": "Dopo la sincronizzazione provider-modello, rigenera i profili ~/.codex/*.config.toml dal catalogo live. Questa operazione non modifica mai la configurazione attiva o predefinita di Codex ed è disattivata per impostazione predefinita."
       },
       "OMNIROUTE_AUTO_SYNC_CLAUDE_PROFILES": {
-        "description": "Dopo la sincronizzazione provider-modello, rigenera i profili ~/.claude/profiles/<name>/settings.json dal catalogo live. Questa operazione non modifica mai la configurazione attiva o predefinita di Claude ed è disattivata per impostazione predefinita."
+        "description": "Dopo la sincronizzazione provider-modello, rigenera i profili ~/.claude/profiles/'<name>'/settings.json dal catalogo live. Questa operazione non modifica mai la configurazione attiva o predefinita di Claude ed è disattivata per impostazione predefinita."
       },
       "OMNIROUTE_DISABLE_LOCAL_HEALTHCHECK": {
         "description": "Disabilita l'endpoint di health check dell'istanza locale."
@@ -13345,7 +13345,7 @@
     "secondaryNote": "Disponibile anche su Open VSX (Cursor, Windsurf, VSCodium…)",
     "dismissAriaLabel": "Ignora"
   },
-  "featureFlagExposeFunctionalGatewayMirrorsDescription": "Mostra gli id specchio <gateway-alias>/<model> su /v1/models per i modelli il cui proprietario canonico non ha credenziali attive ma un gateway di transito con una credenziale attiva li instrada. Attenzione: aggiunge voci nel catalogo per tutti i client quando abilitato globalmente.",
+  "featureFlagExposeFunctionalGatewayMirrorsDescription": "Mostra gli id specchio '<gateway-alias>'/'<model>' su /v1/models per i modelli il cui proprietario canonico non ha credenziali attive ma un gateway di transito con una credenziale attiva li instrada. Attenzione: aggiunge voci nel catalogo per tutti i client quando abilitato globalmente.",
   "radarPage": {
     "title": "Catalogo Radar",
     "subtitle": "Catalogo di modelli gratuito arricchito con intelligenza della comunità",
