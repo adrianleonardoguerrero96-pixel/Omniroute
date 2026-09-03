@@ -218,6 +218,7 @@ import { kiroProvider } from "./registry/kiro/index.ts";
 import { openadapterProvider } from "./registry/openadapter/index.ts";
 import { ditProvider } from "./registry/dit/index.ts";
 import { tokenrouterProvider } from "./registry/tokenrouter/index.ts";
+import { flatkeyProvider } from "./registry/flatkey/index.ts";
 import { token_kioskProvider } from "./registry/token-kiosk/index.ts";
 import { grok_cliProvider } from "./registry/grok-cli/index.ts";
 import { codebuddy_cnProvider } from "./registry/codebuddy-cn/index.ts";
@@ -489,6 +490,7 @@ export const REGISTRY: Record<string, RegistryEntry> = {
   openadapter: openadapterProvider,
   dit: ditProvider,
   tokenrouter: tokenrouterProvider,
+  flatkey: flatkeyProvider,
   "token-kiosk": token_kioskProvider,
   "grok-cli": grok_cliProvider,
   "codebuddy-cn": codebuddy_cnProvider,

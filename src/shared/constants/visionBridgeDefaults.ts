@@ -22,6 +22,13 @@ const FORCED_VISION_BRIDGE_MODELS = new Set<string>([
   // vision model instead of being passed through to text-only backends.
   "tokenrouter/deepseek-v4-pro",
   "tokenrouter/deepseek-v4-flash",
+  // flatkey provider (router.flatkey.ai): same overstatement — deepseek-v4-pro
+  // and deepseek-v4-flash come back type:text from the live /v1/models catalog.
+  // Mirror tokenrouter so image requests reach the bridge VLM, not a text-only
+  // backend. Seed ids per fixindex: flatkey uses bare `deepseek-v4-flash`, not
+  // the `-0731` suffixed CheaperInference slug.
+  "flatkey/deepseek-v4-pro",
+  "flatkey/deepseek-v4-flash",
 ]);
 
 export function isVisionBridgeForcedModel(model: string | null | undefined): boolean {

@@ -946,6 +946,19 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
       "Get your Factory API key at https://app.factory.ai/settings/api-keys, then paste it as a Bearer token. OpenAI-compatible endpoint at https://api.factory.ai/v1.",
     passthroughModels: true,
   },
+  flatkey: {
+    id: "flatkey",
+    alias: "fk",
+    name: "Flatkey",
+    icon: "hub",
+    color: "#7C3AED",
+    textIcon: "FK",
+    website: "https://flatkey.ai",
+    authHint:
+      "Use your Flatkey API key in Authorization: Bearer <key>. Fully OpenAI-compatible. API base URL: https://router.flatkey.ai/v1.",
+    apiHint:
+      "Flatkey exposes an OpenAI-compatible chat completions endpoint at https://router.flatkey.ai/v1/chat/completions, plus a working /v1/models catalog (97 models as of 2026-09). OmniRoute uses the OpenAI protocol.",
+  },
   bluesminds: {
     id: "bluesminds",
     alias: "bm",

@@ -24,6 +24,7 @@ export const NAMED_OPENAI_STYLE_PROVIDERS = new Set([
   "dit",
   "tokenrouter",
   "token-kiosk",
+  "flatkey",
   // provider-model-sweep (2026-06-19): same class as #3976/#4202/#4249 — keyed
   // openai-style providers with a real live `<baseUrl>/models` catalog, served
   // their small hardcoded seed because unclassified. Seed stays as offline fallback.

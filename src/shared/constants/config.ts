@@ -55,6 +55,7 @@ export const PROVIDER_ENDPOINTS = {
   dit: "https://api.dit.ai/v1/chat/completions",
   tokenrouter: "https://api.tokenrouter.com/v1/chat/completions",
   "token-kiosk": "https://agent-router.gaib.ai/v1/chat/completions",
+  flatkey: "https://router.flatkey.ai/v1/chat/completions",
   sumopod: "https://ai.sumopod.com/v1/chat/completions",
   x5lab: "https://api.x5lab.dev/v1/chat/completions",
   kenari: "https://kenari.id/v1/chat/completions",

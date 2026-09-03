@@ -46,6 +46,10 @@ test("isVisionBridgeForcedModel forces tokenrouter deepseek models (text-only ba
   // data leaks to a backend that cannot process it.
   assert.strictEqual(isVisionBridgeForcedModel("tokenrouter/deepseek-v4-pro"), true);
   assert.strictEqual(isVisionBridgeForcedModel("tokenrouter/deepseek-v4-flash"), true);
+  // flatkey (router.flatkey.ai): deepseek models are text-only in the live
+  // /v1/models catalog, so they must be force-bridged too (mirrors tokenrouter).
+  assert.strictEqual(isVisionBridgeForcedModel("flatkey/deepseek-v4-pro"), true);
+  assert.strictEqual(isVisionBridgeForcedModel("flatkey/deepseek-v4-flash"), true);
 });
 
 test("getVisionBridgeConfig returns defaults when no settings provided", () => {
