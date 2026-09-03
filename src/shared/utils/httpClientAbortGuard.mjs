@@ -42,19 +42,70 @@ export function isClientAbortError(err) {
   const e = /** @type {NodeJS.ErrnoException} */ (err);
   // Node emits `Error: aborted` (no code) from http.Server#abortIncoming.
   if (e.message === "aborted" || e.message === "Aborted") return true;
-  // OmniRoute's SSE teardown aborts in-flight legs with
-  // `Error [AbortError]: request_signal_aborted` on client disconnects
-  // (open-sse/utils/streamHandler.ts), and fetch/DOM cancellation surfaces as
-  // `AbortError` with an abort-flavoured message. Same benign class as
-  // `Error: aborted` — an emitter-left 'error' event on any of these used to
-  // kill the process (#fix-dev-server-aborted).
-  if (e.name === "AbortError" && /abort/i.test(String(e.message))) return true;
+  // ANY AbortError/TimeoutError reaching the process level is a raced abort
+  // or timeout signal from OmniRoute's own orchestration: client disconnects
+  // (`request_signal_aborted`), per-model combo timeouts
+  // (`combo-per-model-timeout`), ProxyFetch retry signals, fetch/DOM
+  // cancellation. The operation has already failed; killing the process for
+  // it only converts one failed request into a full server outage (#12164).
+  if (e.name === "AbortError" || e.name === "TimeoutError") return true;
+  if (e.code === "DIRECT_RESPONSE_START_TIMEOUT") return true;
+  // Node ≥20 autoSelectFamily connect attempts aggregate per-address errors
+  // (e.g. IPv6 EHOSTUNREACH + IPv4 ETIMEDOUT against Cloudflare fronts). A
+  // pure connect-failure aggregate is a transient network condition, not a
+  // server fault — absorb it (#12164).
+  if (
+    e.name === "AggregateError" &&
+    Array.isArray(/** @type {AggregateError} */ (e).errors) &&
+    /** @type {AggregateError} */ (e).errors.length > 0 &&
+    /** @type {AggregateError} */ (e).errors.every(
+      (x) => typeof x?.code === "string" && /^(ECONN|EHOST|ENET|ETIMED|EPIPE|EAI_)/.test(x.code)
+    )
+  ) {
+    return true;
+  }
+  // Socket-level failures arrive as `TypeError: fetch failed` with the real
+  // errno on `.cause` (undici wraps the underlying connect/read error). Walk a
+  // short cause chain so those transient network conditions are absorbed
+  // instead of escaping as "fetch failed" uncaught exceptions (observed:
+  // EADDRNOTAVAIL read error on opencode-go egress → exit 7).
+  const causes = [e];
+  for (let depth = 0; depth < 3; depth += 1) {
+    const cause = causes[causes.length - 1]?.cause;
+    if (!cause || typeof cause !== "object") break;
+    causes.push(/** @type {NodeJS.ErrnoException} */ (cause));
+  }
+  const anyNetworkCode = causes.some((c) => {
+    if (typeof c.code === "string" && /^(ECONN|EHOST|ENET|ETIMED|EPIPE|EADDR|EAI_|ENOTCONN)/.test(c.code)) {
+      return true;
+    }
+    // An AggregateError cause carries its members' codes on `.errors`, not on
+    // itself (undici autoSelectFamily connect failures nest this way).
+    if (
+      c.name === "AggregateError" &&
+      Array.isArray(/** @type {AggregateError} */ (c).errors) &&
+      /** @type {AggregateError} */ (c).errors.length > 0
+    ) {
+      return /** @type {Array<NodeJS.ErrnoException>} */ (c.errors).every(
+        (member) =>
+          typeof member?.code === "string" &&
+          /^(ECONN|EHOST|ENET|ETIMED|EPIPE|EADDR|EAI_|ENOTCONN)/.test(member.code)
+      );
+    }
+    return false;
+  });
+  if (anyNetworkCode) return true;
   switch (e.code) {
     case "ERR_STREAM_PREMATURE_CLOSE":
     case "ECONNRESET":
     case "EPIPE":
     case "ECONNABORTED":
     case "ETIMEDOUT":
+    case "EHOSTUNREACH":
+    case "ENETUNREACH":
+    case "ECONNREFUSED":
+    case "EADDRNOTAVAIL":
+    case "EAI_AGAIN":
     case "ENOTCONN":
     case "ECANCELED":
       return true;
