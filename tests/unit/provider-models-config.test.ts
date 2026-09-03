@@ -142,10 +142,19 @@ test("GitHub Copilot registry reflects the current supported model lineup", () =
 });
 
 test("Claude flagship catalogs keep Fable 5 first", () => {
-  for (const provider of ["anthropic", "cc", "cw", "gh", "ghe-copilot"]) {
+  // Anthropic-native catalogs list Fable 5.1 first (2026-09-01). Copilot's
+  // public model list has not shipped 5.1 yet, so gh/ghe still flagship Fable 5.
+  const expectedFirst = {
+    anthropic: "claude-fable-5-1",
+    cc: "claude-fable-5-1",
+    cw: "claude-fable-5-1",
+    gh: "claude-fable-5",
+    "ghe-copilot": "claude-fable-5",
+  };
+  for (const [provider, expected] of Object.entries(expectedFirst)) {
     assert.equal(
       getProviderModels(provider)[0]?.id,
-      "claude-fable-5",
+      expected,
       `${provider} must list the strongest Claude model first`
     );
   }
