@@ -155,6 +155,11 @@ const float FRONT_WAVE   = 14.0;
 const float WEFT_SPAN    = 2.6;
 /** Rows of knot-scale fray along the front. */
 const float FRONT_ROUGH  = 3.5;
+/**
+ * Rows already on the loom at progress 0. Enough that the start of the weave
+ * reads as a rug being begun rather than as an empty black stage.
+ */
+const float CAST_ON      = 26.0;
 const vec3  LUMA         = vec3(0.2126, 0.7152, 0.0722);
 
 float hash11(float p) {
@@ -210,8 +215,8 @@ float fibre(vec2 p) {
  * still bare warp. Returned alongside the three states it drives.
  */
 float weavingState(vec2 p, out float pile, out float trim, out float weftLive) {
-  float frontRow = 4.0 + uGrid.y * uProgress
-                 + (PILE_RAMP + TRIM_RAMP + 4.0) * uProgress * uProgress * uProgress;
+  float frontRow = CAST_ON + uGrid.y * uProgress
+                 + (PILE_RAMP + TRIM_RAMP + CAST_ON) * uProgress * uProgress * uProgress;
 
   float rowIdx = floor(p.y);
 
@@ -346,8 +351,8 @@ void main() {
   float beat = clamp(t / 3.0, 0.0, 1.0);
   float warp = warpAt(p);
   float weft = weftAt(p, beat);
-  float depth = 0.13 + 0.87 * exp(-max(0.0, -t) / 95.0);
-  vec3 warpCol = FOUNDATION * (0.06 + 0.32 * warp) * (0.62 + 0.38 * fib);
+  float depth = 0.26 + 0.74 * exp(-max(0.0, -t) / 110.0);
+  vec3 warpCol = FOUNDATION * (0.08 + 0.36 * warp) * (0.62 + 0.38 * fib);
   vec3 outCol = mix(mix(LOOM, warpCol, smoothstep(0.02, 0.50, warp) * depth), col, pile);
 
   // The weft shot the weaver has just passed, lying across the warps.

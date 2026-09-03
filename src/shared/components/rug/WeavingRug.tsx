@@ -16,6 +16,8 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 
 import { detectTier, FrameBudget, lowerTier, type QualityTier } from "./quality";
+import { withBasePath } from "@/shared/utils/basePath";
+
 import { RUG_SOURCE } from "./rugSource";
 import { WeaveRenderer } from "./weaveRenderer";
 import {
@@ -108,7 +110,6 @@ export default function WeavingRug({
   const [woven, setWoven] = useState(false);
   const [nearViewport, setNearViewport] = useState(false);
   const nearRef = useRef(false);
-  nearRef.current = nearViewport;
   const [reducedMotion, setReducedMotion] = useState(false);
 
   // Live state the render loop owns. Kept in refs so scrolling never re-renders.
@@ -118,8 +119,15 @@ export default function WeavingRug({
   const rendererRef = useRef<WeaveRenderer | null>(null);
   const boxRef = useRef({ width: 0, height: 0 });
   const maxZoomRef = useRef(maxZoom);
-  maxZoomRef.current = maxZoom;
   const controlRef = useRef<{ resume: () => void; pause: () => void } | null>(null);
+
+  useEffect(() => {
+    maxZoomRef.current = maxZoom;
+  }, [maxZoom]);
+
+  useEffect(() => {
+    nearRef.current = nearViewport;
+  }, [nearViewport]);
 
   /** Fits the rug to the stage without distorting it. */
   const measure = useCallback(() => {
@@ -164,10 +172,9 @@ export default function WeavingRug({
   useEffect(() => {
     const section = sectionRef.current;
     if (!section) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setNearViewport(entry.isIntersecting),
-      { rootMargin: "150% 0px" }
-    );
+    const observer = new IntersectionObserver(([entry]) => setNearViewport(entry.isIntersecting), {
+      rootMargin: "150% 0px",
+    });
     observer.observe(section);
     return () => observer.disconnect();
   }, []);
@@ -195,8 +202,8 @@ export default function WeavingRug({
       const renderer = rendererRef.current;
       if (!renderer || !running) return;
       raf = requestAnimationFrame(loop);
-        const dt = lastFrameTime ? (now - lastFrameTime) / 1000 : 1 / 60;
-        lastFrameTime = now;
+      const dt = lastFrameTime ? (now - lastFrameTime) / 1000 : 1 / 60;
+      lastFrameTime = now;
 
       const box = boxRef.current;
       renderer.resize(box.width, box.height, window.devicePixelRatio || 1);
@@ -344,10 +351,16 @@ export default function WeavingRug({
             {/* The finished rug. Visible until the weave is running, and the only
                 thing shown where WebGL or motion is unavailable. It is also the
                 texture the renderer reads, so it is never downloaded twice. */}
+            {/* eslint-disable-next-line @next/next/no-img-element -- the
+                renderer uploads this element to the GPU as its texture, so it
+                has to be a plain <img> whose bytes are the artwork; next/image
+                would re-encode and swap it out from under the upload. */}
             <img
               ref={imageRef}
               className="omniroute-weave__art"
-              src={RUG_SOURCE.artwork}
+              // public/ assets are not covered by Next's assetPrefix, so a
+              // subpath deploy needs the basePath applied by hand.
+              src={withBasePath(RUG_SOURCE.artwork)}
               alt={alt}
               width={960}
               height={Math.round(960 / RUG_SOURCE.aspectRatio)}
