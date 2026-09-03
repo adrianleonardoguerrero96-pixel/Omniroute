@@ -13988,6 +13988,7 @@
     "drawerTimeline": "Timeline",
     "drawerMetrics": "Mga Sukatan",
     "drawerResult": "Resulta",
+    "drawerMemory": "Ginamit na memory",
     "drawerActions": "Mga Aksyon",
     "drawerClose": "Isara",
     "copyTrace": "Kopyahin ang trace JSON",
@@ -13997,7 +13998,11 @@
     "actionDone": "Naisagawa ang aksyon",
     "actionFailed": "Nabigo ang aksyon: {error}",
     "detailFailed": "Nabigong i-load ang mga detalye: {error}",
-    "mirroredInA2A": "Naka-mirror sa A2A"
+    "mirroredInA2A": "Naka-mirror sa A2A",
+    "actionRepeat": "Ulitin",
+    "repeatConfirm": "I-click ulit para kumpirmahin",
+    "repeatDone": "Ginawa ang bagong run",
+    "repeatUnavailable": "Hindi available ang orihinal na input"
   },
   "cliproxyProviderExposure": {
     "title": "Provider Exposure",
