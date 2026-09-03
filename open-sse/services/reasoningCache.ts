@@ -200,14 +200,17 @@ export function cacheReasoning(
   cacheReasoningByKey(toolCallId, provider, model, reasoning);
 }
 
+function isReasoningReplayEnabled(): boolean {
+  return isFeatureFlagEnabled("REASONING_REPLAY_ENABLED");
+}
+
 export function cacheReasoningByKey(
   key: string,
   provider: string,
   model: string,
   reasoning: string
 ): void {
-  if (!isFeatureFlagEnabled("REASONING_REPLAY_ENABLED")) return;
-  if (!key || !reasoning) return;
+  if (!isReasoningReplayEnabled() || !key || !reasoning) return;
   // ponytail: never store the internal replay placeholder — models echo it
   // and it poisons the cache (upstream echo loop, OmniRoute #9573).
   if (isInternalReasoningPlaceholder(reasoning)) return;
@@ -377,7 +380,11 @@ export function cacheReasoningFromAssistantMessage(
  * Memory first → DB fallback → null (miss).
  */
 export function lookupReasoning(toolCallId: string): string | null {
-  if (!isFeatureFlagEnabled("REASONING_REPLAY_ENABLED")) return null;
+  if (!isReasoningReplayEnabled()) return null;
+  return lookupStoredReasoning(toolCallId);
+}
+
+function lookupStoredReasoning(toolCallId: string): string | null {
   if (!toolCallId) {
     misses++;
     return null;
