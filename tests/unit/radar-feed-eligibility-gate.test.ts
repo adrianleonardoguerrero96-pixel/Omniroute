@@ -100,3 +100,29 @@ test("a local override on the gate wins over the feed", () => {
   assert.equal(m!.eligibilityGate, "regional-identity");
   assert.equal(m!.origin, "local");
 });
+
+test("a local override sets the gate even when the feed clears it on a baseline entry", () => {
+  const ungatedBaseline = baselineToMergedEntries([
+    {
+      provider: "modelscope",
+      modelId: "Qwen/Qwen3.5-397B-A17B",
+      displayName: "Qwen3.5 397B A17B (ModelScope)",
+      monthlyTokens: 6_000_000,
+      creditTokens: 0,
+      freeType: "recurring-daily",
+      poolKey: "modelscope-free",
+      tos: "caution",
+    },
+  ]);
+  assert.equal(ungatedBaseline[0]!.eligibilityGate, undefined);
+  const [m] = applyFeed({
+    baseline: ungatedBaseline,
+    feed: [feedModel({ eligibilityGate: null })],
+    localOverrides: new Map<string, Partial<MergedEntry>>([
+      [KEY, { eligibilityGate: "regional-identity" }],
+    ]),
+    tombstones: new Set(),
+  });
+  assert.equal(m!.eligibilityGate, "regional-identity");
+  assert.equal(m!.origin, "local");
+});
