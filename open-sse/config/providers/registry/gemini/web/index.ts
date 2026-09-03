@@ -24,14 +24,14 @@ export const gemini_webProvider: RegistryEntry = {
       supportsReasoning: false,
     },
     {
-      id: "gemini-3.7-flash",
-      name: "Gemini 3.7 Flash",
+      id: "gemini-3.8-flash",
+      name: "Gemini 3.8 Flash",
       toolCalling: false,
       supportsReasoning: false,
     },
     {
-      id: "gemini-3.1-flash-lite",
-      name: "Gemini 3.1 Flash-Lite",
+      id: "gemini-3.5-flash-lite",
+      name: "Gemini 3.5 Flash-Lite",
       toolCalling: false,
       supportsReasoning: false,
     },
