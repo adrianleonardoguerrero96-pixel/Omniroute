@@ -97,6 +97,7 @@ const EFFORT_TIERS: Record<string, readonly string[]> = {
   "qwen3.6-plus": ["high", "max"],
   "qwen3.7-max": ["high", "max"],
   "qwen3.7-plus": ["high", "max"],
+  "muse-spark-1.3-contributor": ["minimal", "low", "medium", "high", "xhigh"],
   "muse-spark-1.2-contributor": ["minimal", "low", "medium", "high", "xhigh"],
 };
 
