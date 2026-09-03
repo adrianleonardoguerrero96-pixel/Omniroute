@@ -12,8 +12,8 @@
 
 import { extractProviderWarnings } from "@/lib/compliance/providerAudit";
 import { logAuditEvent } from "@/lib/compliance";
-import { findToolCallSpecViolation } from "../../services/combo/validateQuality.ts";
 import { emit } from "@/lib/events/eventBus";
+import { maybeLogToolCallSpecViolation } from "./toolCallSpecViolationAudit.ts";
 import type { RequestCompletedPayload, RequestFailedPayload } from "@/lib/events/types";
 import { saveCallLog } from "@/lib/usageDb";
 import { FORMATS } from "../../translator/formats.ts";
@@ -233,35 +233,14 @@ export function persistAttemptLogs(args: PersistAttemptLogsArgs, ctx: PersistAtt
     });
   }
 
-  // Post-request on-spec check: validateResponseQuality's streaming path only
-  // ever peeks the START of a stream (to avoid buffering the whole response
-  // and defeating streaming's latency purpose), so it cannot see a violation
-  // like a duplicated tool call that only streams in after real content
-  // already started relaying to the client (observed: minimax-m3:free via
-  // OpenRouter/GMICloud, 2026-09-02, duplicated a heartbeat_respond call
-  // byte-for-byte). This is the first point the FULLY assembled response is
-  // available -- too late to fail this attempt over to a sibling combo
-  // target, the client already has it, but a durable, queryable audit
-  // signal still lets a human (or a future routing decision) distrust this
-  // provider/model going forward instead of it being recorded as a clean win.
-  const toolCallSpecViolation = findToolCallSpecViolation(responseBody);
-  if (toolCallSpecViolation) {
-    logAuditEvent({
-      action: "provider.spec_violation",
-      actor: "system",
-      target: [provider, finalConnectionId].filter(Boolean).join(":") || provider || model,
-      resourceType: "provider_spec_violation",
-      status: "warning",
-      requestId: skillRequestId,
-      details: {
-        provider,
-        model,
-        connectionId: finalConnectionId,
-        httpStatus: status,
-        violation: toolCallSpecViolation,
-      },
-    });
-  }
+  maybeLogToolCallSpecViolation({
+    responseBody,
+    provider,
+    model,
+    connectionId: finalConnectionId,
+    httpStatus: status,
+    requestId: skillRequestId,
+  });
 
   const capturedPipeline = reqLogger?.getPipelinePayloads?.() ?? null;
   const pipelinePayloads = detailedLoggingEnabled
