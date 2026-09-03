@@ -24,11 +24,22 @@ export type TurnDisplayContent = {
 };
 
 type CanonicalTurnLike = {
-  role: string;
+  role: "system" | "user" | "assistant" | "tool";
   text: string;
   blockKind: "text" | "tool_use" | "tool_result";
   toolName: string | null;
 };
+
+type JsonRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): JsonRecord | null {
+  return value && typeof value === "object" ? (value as JsonRecord) : null;
+}
+
+function turnsFromBody(body: unknown): CanonicalTurnLike[] {
+  const rec = asRecord(body);
+  return rec ? extractCanonicalTurns(rec) : [];
+}
 
 /**
  * extractCanonicalTurns's Chat Completions branch only reads a message's
@@ -54,23 +65,46 @@ function extractChatCompletionsToolUseTurns(messages: unknown): CanonicalTurnLik
   if (!Array.isArray(messages)) return [];
   const turns: CanonicalTurnLike[] = [];
   for (const item of messages) {
-    const rec = item && typeof item === "object" ? (item as Record<string, unknown>) : {};
+    const rec = asRecord(item) ?? {};
     if (rec.role !== "assistant" || !Array.isArray(rec.tool_calls)) continue;
     for (const call of rec.tool_calls) {
-      const fn =
-        call && typeof call === "object" ? (call as Record<string, unknown>).function : null;
-      const fnRec = fn && typeof fn === "object" ? (fn as Record<string, unknown>) : null;
-      const args = fnRec?.arguments;
+      const fn = asRecord(asRecord(call)?.function);
+      const args = fn?.arguments;
       if (typeof args !== "string" || !args) continue;
       turns.push({
         role: "tool",
         text: args,
         blockKind: "tool_use",
-        toolName: typeof fnRec?.name === "string" ? fnRec.name : null,
+        toolName: typeof fn?.name === "string" ? fn.name : null,
       });
     }
   }
   return turns;
+}
+
+function turnsFromClientResponse(clientResponse: unknown): CanonicalTurnLike[] {
+  const rec = asRecord(clientResponse);
+  if (!rec) return [];
+  const summary = asRecord(rec.summary);
+  const output = Array.isArray(rec.output) ? rec.output : summary?.output;
+  return Array.isArray(output) ? extractCanonicalTurns({ input: output }) : [];
+}
+
+function turnsFromProviderRequest(body: unknown): CanonicalTurnLike[] {
+  const rec = asRecord(body);
+  return [...turnsFromBody(rec), ...extractChatCompletionsToolUseTurns(rec?.messages)];
+}
+
+function indexTurns(result: Map<string, TurnDisplayContent>, turns: CanonicalTurnLike[]): void {
+  for (const turn of turns) {
+    const hash = hashTurnContent(turn);
+    if (result.has(hash)) continue;
+    result.set(hash, {
+      textPreview: turn.text,
+      blockKind: turn.blockKind,
+      toolName: turn.toolName,
+    });
+  }
 }
 
 /**
@@ -114,73 +148,10 @@ export function resolveTurnDisplayContent(
   for (const relPath of artifactPathByCorrelationId.values()) {
     const { artifact, state } = readCallArtifact(relPath);
     if (state !== "ready") continue;
-
-    const clientRawRequest = artifact?.pipeline?.clientRawRequest as { body?: unknown } | undefined;
-    const requestBody = clientRawRequest?.body;
-    const requestTurns =
-      requestBody && typeof requestBody === "object"
-        ? extractCanonicalTurns(requestBody as Record<string, unknown>)
-        : [];
-
-    // A genuine-continuation turn's own client request only ever carries the
-    // NEW delta (see responsesContinuationStore.ts's doc comment) -- unlike a
-    // full-history-resend conversation, it never resends the model's own
-    // prior output as history, so the assistant/tool_use turns THIS call
-    // generated exist only in this same artifact's own response, never in
-    // any request body (this one's or a later one's) -- request-only
-    // resolution silently rendered them as empty. Read the response the same
-    // dual-shape way resolvePreviousResponseState does: a streaming response
-    // nests output under clientResponse.summary.output, a non-streaming one
-    // carries it directly. Reusing extractCanonicalTurns under an `input` key
-    // works unchanged -- Responses API output items share input's shape.
-    const clientResponse = artifact?.pipeline?.clientResponse as
-      { output?: unknown; summary?: { output?: unknown } } | undefined;
-    const responseOutput = Array.isArray(clientResponse?.output)
-      ? clientResponse.output
-      : clientResponse?.summary?.output;
-    const responseTurns = Array.isArray(responseOutput)
-      ? extractCanonicalTurns({ input: responseOutput })
-      : [];
-
-    // For a node whose creating request/response pair is itself long gone
-    // from the current continuation window (an older turn a later,
-    // still-thin delta request never touches again -- INSERT OR IGNORE never
-    // updates an existing node's last_correlation_id), the only remaining
-    // record of its text is the provider-translated request OmniRoute
-    // actually forwarded upstream for THIS artifact -- which, for a
-    // non-Responses-native provider, carries the full reconstructed history
-    // as Chat Completions `messages`. Best-effort only: translated text can
-    // differ byte-for-byte from what was originally hashed (a
-    // pass-through-only tool-call/reasoning shape mismatch), so this closes
-    // most but not all of the gap -- an unresolved node still falls back to
-    // toTurn's "_(empty)_" placeholder rather than showing wrong content.
-    const providerRequestBody = (
-      artifact?.pipeline?.providerRequest as { body?: unknown } | undefined
-    )?.body;
-    const providerTurns =
-      providerRequestBody && typeof providerRequestBody === "object"
-        ? extractCanonicalTurns(providerRequestBody as Record<string, unknown>)
-        : [];
-    const providerToolUseTurns = extractChatCompletionsToolUseTurns(
-      providerRequestBody && typeof providerRequestBody === "object"
-        ? (providerRequestBody as Record<string, unknown>).messages
-        : undefined
-    );
-
-    for (const turn of [
-      ...requestTurns,
-      ...responseTurns,
-      ...providerTurns,
-      ...providerToolUseTurns,
-    ]) {
-      const hash = hashTurnContent(turn);
-      if (result.has(hash)) continue;
-      result.set(hash, {
-        textPreview: turn.text,
-        blockKind: turn.blockKind,
-        toolName: turn.toolName,
-      });
-    }
+    const pipeline = asRecord(artifact?.pipeline);
+    indexTurns(result, turnsFromBody(asRecord(pipeline?.clientRawRequest)?.body));
+    indexTurns(result, turnsFromClientResponse(pipeline?.clientResponse));
+    indexTurns(result, turnsFromProviderRequest(asRecord(pipeline?.providerRequest)?.body));
   }
   return result;
 }
