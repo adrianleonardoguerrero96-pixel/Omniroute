@@ -6175,7 +6175,7 @@
       "glm-cn": "API 키로 GLM Coding (China) 연결.",
       "glmt": "더 높은 토큰 예산, 생각하기(thinking) 활성화 및 더 긴 타임아웃이 설정된 프리셋 GLM 프로필.",
       "getgoapi": "API 키로 GoAPI 연결.",
-      "groq": "__MISSING__:Free plan: per-model caps (30 RPM · 1K RPD · 200K tokens/day per chat model, console.groq.com/docs/rate-limits) — no payment method on file.",
+      "groq": "__MISSING__:Free plan: per-model caps (200K tokens/day per chat model; see console.groq.com/docs/rate-limits for RPM/RPD) — no payment method on file.",
       "haiper": "haiper.ai/haiper-api 에서 API 키를 가져오세요.",
       "heroku": "API 키로 Heroku AI 연결.",
       "hcnsec": "api.hcnsec.cn 에서 API 키를 가져오세요.",

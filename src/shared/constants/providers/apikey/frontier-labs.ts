@@ -93,7 +93,7 @@ export const APIKEY_PROVIDERS_FRONTIER = {
     website: "https://groq.com",
     hasFree: true,
     freeNote:
-      "Free plan: per-model caps (30 RPM · 1K RPD · 200K tokens/day per chat model, console.groq.com/docs/rate-limits) — no payment method on file.",
+      "Free plan: per-model caps (200K tokens/day per chat model; see console.groq.com/docs/rate-limits for RPM/RPD) — no payment method on file.",
     serviceKinds: ["llm", "imageToText"],
   },
   blackbox: {
