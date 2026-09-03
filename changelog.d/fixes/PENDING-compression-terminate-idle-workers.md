@@ -1,0 +1,1 @@
+- **fix(compression):** Terminate idle compression workers instead of only dropping them from the pool, so each idle cycle no longer leaks a live thread and V8 isolate while `dispatch()` spawns a replacement (#PENDING — thanks @pacocartones)
