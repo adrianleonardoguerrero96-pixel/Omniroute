@@ -1,0 +1,1 @@
+- **fix(sse):** include Anthropic `system` and `tools` fields in prompt-cache affinity prefix hashing so distinct system/tool payloads pin to different accounts ([#12336](https://github.com/diegosouzapw/OmniRoute/pull/12336)) — thanks @raheemuddin786
