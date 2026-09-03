@@ -9,6 +9,7 @@ import { withSettingsFallback } from "./cliInstallFallback";
 import { GROK_BUILD_RUNTIME_ENTRY, AMP_RUNTIME_ENTRY } from "./cliRuntimeGrokBuild";
 import { isLocationTrusted, findKnownPathMatch } from "./cliRuntimeKnownPath";
 import { buildHealthcheckPath } from "./cliRuntimeHealthcheckPath";
+import { appendWindowsKnownBinPaths, mergeWindowsLookupPath } from "./cliRuntimeWindowsNode";
 import {
   describeContainerTarget,
   hasBindMountAt,
@@ -734,17 +735,7 @@ export const getKnownToolPaths = (toolId: string): string[] => {
     }
 
     for (const [winName] of bins) {
-      if (npmPrefix) paths.push(path.join(npmPrefix, winName));
-      if (appData) {
-        const appDataPath = path.join(appData, "npm", winName);
-        if (
-          !npmPrefix ||
-          path.normalize(appDataPath) !== path.normalize(path.join(npmPrefix, winName))
-        ) {
-          paths.push(appDataPath);
-        }
-      }
-      if (nvmNodePath) paths.push(path.join(nvmNodePath, winName));
+      appendWindowsKnownBinPaths(paths, winName, npmPrefix, appData, nvmNodePath, validateEnvPath);
     }
   } else {
     for (const [, posixName] of bins) {
@@ -809,7 +800,9 @@ export const getLookupEnv = () => {
   // Only add user-specified extra paths, NOT generic user directories
   // This is more secure - user explicitly opts in via CLI_EXTRA_PATHS
   if (extraPaths.length > 0 || enrichedPath !== basePath || isWindows()) {
-    const mergedPath = [...extraPaths, enrichedPath].filter(Boolean).join(path.delimiter);
+    const mergedPath = isWindows()
+      ? mergeWindowsLookupPath(extraPaths, enrichedPath, validateEnvPath)
+      : [...extraPaths, enrichedPath].filter(Boolean).join(path.delimiter);
     if (mergedPath) {
       env.PATH = mergedPath;
       if (isWindows()) {
