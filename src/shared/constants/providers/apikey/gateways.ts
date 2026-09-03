@@ -1351,7 +1351,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     authHint:
       "Create a free account at xkiro.com and paste the key here (Bearer; x-api-key also accepted).",
     apiHint:
-      "OpenAI-compatible endpoint at https://api.xkiro.com/v1. Public /v1/models tags free rows with access_tier=free; paid models answer 403 on the free plan.",
+      "OpenAI-compatible endpoint at https://api.xkiro.com/v1. Public /v1/models tags free rows with access_tier=free; paid models are rejected on the free plan.",
   },
   regolo: {
     id: "regolo",
