@@ -521,3 +521,21 @@ test("xaiCompletedToGeminiJson: maps usage to usageMetadata", () => {
   assert.equal(meta.candidatesTokenCount, 20);
   assert.equal(meta.totalTokenCount, 30);
 });
+
+test("#12692: legacy assistant function_call maps to a function_call item", () => {
+  const out = chatRequestToXaiResponses({
+    model: "grok-4",
+    messages: [
+      {
+        role: "assistant",
+        content: null,
+        function_call: { name: "get_weather", arguments: '{"city":"Paris"}' },
+      },
+    ],
+  } as never);
+  const calls = out.input.filter((i) => i.type === "function_call");
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].name, "get_weather");
+  assert.equal(calls[0].arguments, '{"city":"Paris"}');
+  assert.ok(calls[0].call_id);
+});

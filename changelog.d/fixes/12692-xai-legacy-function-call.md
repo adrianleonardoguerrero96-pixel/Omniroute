@@ -1,0 +1,1 @@
+- **fix(xai):** assistant messages using the legacy `function_call` field are now mapped to `function_call` items instead of being silently dropped ([#12692](https://github.com/diegosouzapw/OmniRoute/issues/12692))
