@@ -60,9 +60,15 @@ export interface FreeModelBudget {
 export interface FreeModelTotals {
   /** Pool-deduped recurring tokens/month — the headline "steady" number. */
   steadyRecurringTokens: number;
-  /** Steady + recurring credit grants (e.g. monthly $-credit plans). */
+  /**
+   * Steady + recurring credit grants (e.g. monthly $-credit plans).
+   * Eligibility-gated rows contribute nothing, exactly like the steady headline.
+   */
   steadyWithRecurringCreditsTokens: number;
-  /** Steady + recurring + one-time signup credits — first-month only. */
+  /**
+   * Steady + recurring + one-time signup credits — first-month only.
+   * Eligibility-gated rows contribute nothing, exactly like the steady headline.
+   */
   firstMonthRealisticTokens: number;
   /**
    * Extra recurring tokens/month unlocked by a one-time small deposit
@@ -74,6 +80,7 @@ export interface FreeModelTotals {
    * Providers that are permanently free but publish NO token cap
    * (rate/concurrency-limited). Real access, but un-quantifiable — listed,
    * never summed into the headline (avoids the rate-limit×24/7 inflation).
+   * Eligibility-gated rows are excluded: the list reads as "open to anyone".
    */
   uncappedProviders: string[];
   /**
@@ -266,12 +273,12 @@ export function computeFreeModelTotals(
   const recurringCredits = dedupedSum(
     models,
     (m) => m.creditTokens,
-    (m) => RECURRING_CREDIT.has(m.freeType)
+    (m) => RECURRING_CREDIT.has(m.freeType) && !isGated(m)
   );
   const oneTimeCredits = dedupedSum(
     models,
     (m) => m.creditTokens,
-    (m) => ONE_TIME_CREDIT.has(m.freeType)
+    (m) => ONE_TIME_CREDIT.has(m.freeType) && !isGated(m)
   );
 
   const steadyWithRecurringCreditsTokens = steadyRecurringTokens + recurringCredits;
@@ -295,8 +302,11 @@ export function computeFreeModelTotals(
     .reduce((s, [, b]) => s + b.boostMonthlyTokens, 0);
 
   // Permanently-free-but-uncapped providers (real access, no published cap).
+  // Gated rows are excluded: the list is read as "anyone can use this, forever".
   const uncappedProviders = [
-    ...new Set(models.filter((m) => UNCAPPED.has(m.freeType)).map((m) => m.provider)),
+    ...new Set(
+      models.filter((m) => UNCAPPED.has(m.freeType) && !isGated(m)).map((m) => m.provider)
+    ),
   ].sort();
 
   return {

@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   computeFreeModelTotals,
+  FREE_MODEL_BUDGETS,
   type FreeModelBudget,
 } from "@omniroute/open-sse/config/freeModelCatalog.ts";
 
@@ -103,8 +104,62 @@ test("excludeTosAvoid applies to gated entries too", () => {
   assert.deepEqual(t.gatedProviders, ["h"]);
 });
 
+test("a gated signup credit never enters the first-month figure", () => {
+  const baseline = computeFreeModelTotals({ entries });
+  const withGatedCredit = computeFreeModelTotals({
+    entries: [
+      ...entries,
+      {
+        provider: "c",
+        modelId: "c1",
+        displayName: "C1",
+        monthlyTokens: 0,
+        freeType: "one-time-initial",
+        poolKey: null,
+        creditTokens: 1000,
+        tos: "caution",
+        eligibilityGate: "regional-identity",
+      },
+    ],
+  });
+  assert.equal(
+    withGatedCredit.firstMonthRealisticTokens,
+    baseline.firstMonthRealisticTokens,
+    "a gated one-time credit must not inflate the first-month headline"
+  );
+  assert.equal(
+    withGatedCredit.steadyWithRecurringCreditsTokens,
+    baseline.steadyWithRecurringCreditsTokens
+  );
+});
+
+test("a gated uncapped provider is not advertised as permanently free", () => {
+  const t = computeFreeModelTotals({ entries });
+  // `u` is the gated recurring-uncapped row in the fixture above.
+  assert.ok(!t.uncappedProviders.includes("u"), "gated rows must stay out of uncappedProviders");
+  assert.deepEqual(t.uncappedProviders, []);
+});
+
 test("the shipped catalog exposes the two new fields", () => {
   const t = computeFreeModelTotals();
   assert.equal(typeof t.gatedRecurringTokens, "number");
   assert.ok(Array.isArray(t.gatedProviders));
+});
+
+/**
+ * Invariant: the gated bucket only ever accounts for STEADY tokens. A gated row
+ * carrying credits would silently drop them from every figure (credits are filtered
+ * out of the credit sums, and `gatedRecurringTokens` only sums `monthlyTokens`), so
+ * such a row must not exist in the shipped catalog without the totals growing a
+ * matching gated-credit figure first.
+ */
+test("shipped gated rows carry no credit tokens", () => {
+  for (const m of FREE_MODEL_BUDGETS) {
+    if (!m.eligibilityGate) continue;
+    assert.equal(
+      m.creditTokens,
+      0,
+      `${m.provider}/${m.modelId} is eligibility-gated but declares creditTokens=${m.creditTokens}`
+    );
+  }
 });

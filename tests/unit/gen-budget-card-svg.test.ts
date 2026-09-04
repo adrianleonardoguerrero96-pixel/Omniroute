@@ -24,4 +24,27 @@ test("the budget card prints the catalog's own totals (no regex-parsed subset)",
   if (t.gatedRecurringTokens > 0) {
     assert.ok(svg.includes("behind regional identity verification"), "gated line");
   }
+
+  // The committed card is a generated artifact: it must be exactly what the
+  // generator produces today, or the docs ship a stale picture of the totals.
+  const committed = readFileSync(
+    path.join(import.meta.dirname, "../../docs/screenshots/free-tier-budget-card.svg"),
+    "utf8"
+  );
+  assert.equal(
+    svg,
+    committed,
+    "docs/screenshots/free-tier-budget-card.svg is stale — regenerate with " +
+      "`node --import tsx/esm scripts/research/gen-budget-card-svg.mjs`"
+  );
+});
+
+test("--out without a path fails loudly instead of writing to undefined", () => {
+  assert.throws(() =>
+    execFileSync(
+      process.execPath,
+      ["--import", "tsx/esm", "scripts/research/gen-budget-card-svg.mjs", "--out"],
+      { stdio: "pipe" }
+    )
+  );
 });

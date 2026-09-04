@@ -8,6 +8,7 @@ import fs from "node:fs";
 import { computeFreeModelTotals } from "../../open-sse/config/freeModelCatalog.ts";
 
 const outIdx = process.argv.indexOf("--out");
+if (outIdx >= 0 && !process.argv[outIdx + 1]) throw new Error("--out requires a path");
 const OUT = outIdx >= 0 ? process.argv[outIdx + 1] : "docs/screenshots/free-tier-budget-card.svg";
 
 const t = computeFreeModelTotals();
@@ -36,7 +37,8 @@ const gated = t.gatedRecurringTokens;
 
 const otMap = new Map();
 for (const r of t.perModel) {
-  if (r.freeType !== "one-time-initial" || r.creditTokens <= 0) continue;
+  // Gated rows are excluded here too — they are absent from firstMonthRealisticTokens.
+  if (r.freeType !== "one-time-initial" || r.creditTokens <= 0 || r.eligibilityGate) continue;
   const k = r.poolKey || r.provider;
   otMap.set(k, { provider: r.provider, v: Math.max(otMap.get(k)?.v || 0, r.creditTokens) });
 }

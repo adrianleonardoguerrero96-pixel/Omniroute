@@ -218,10 +218,13 @@ function readCodeFacts() {
     "const t=computeFreeModelTotals();const cli=Object.values(CLI_TOOLS);",
     "const by=(c)=>cli.filter(x=>x.category===c).length;",
     // "Free forever" = every provider whose free access renews or needs no key at all.
-    // one-time-initial (signup credits) and discontinued pools are excluded on purpose.
+    // one-time-initial (signup credits) and discontinued pools are excluded on purpose,
+    // and so is every eligibility-gated row: a provider nobody can sign up for without
+    // clearing a gate is not "free forever" for the reader of the headline.
     "const FOREVER=new Set(['recurring-monthly','recurring-daily','recurring-uncapped',",
     "'recurring-credit','keyless']);",
-    "const ff=new Set();for(const m of t.perModel)if(FOREVER.has(m.freeType))ff.add(m.provider);",
+    "const ff=new Set();for(const m of t.perModel)",
+    "if(FOREVER.has(m.freeType)&&!m.eligibilityGate)ff.add(m.provider);",
     'console.log("@@"+JSON.stringify({freeSteady:t.steadyRecurringTokens,entries:t.perModel.length,',
     "freeFirst:t.firstMonthRealisticTokens,freeGated:t.gatedRecurringTokens,",
     "freePools:t.poolCount,engines:ENGINE_IDS.length,",
