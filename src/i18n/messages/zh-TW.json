@@ -13990,6 +13990,7 @@
     "compareDuration": "持續時間",
     "compareCost": "成本",
     "compareEvents": "活動",
+    "compareDeltaLegend": "Δ 右 − 左",
     "showCompleted": "顯示已完成",
     "searchPlaceholder": "搜尋任務…",
     "filterStates": "狀態",

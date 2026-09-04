@@ -14000,6 +14000,7 @@
     "compareDuration": "Duration",
     "compareCost": "Cost",
     "compareEvents": "Events",
+    "compareDeltaLegend": "Δ right − left",
     "showCompleted": "Show completed",
     "searchPlaceholder": "Search tasks…",
     "filterStates": "States",

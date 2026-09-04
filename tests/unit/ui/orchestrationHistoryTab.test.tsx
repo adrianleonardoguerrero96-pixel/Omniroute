@@ -407,6 +407,53 @@ describe("HistoryTab", () => {
       cleanup();
     });
 
+    it("selecting a new preset clears the compare selection (Minor #3)", async () => {
+      // Review finding: a pick made under the old range can fall outside the new range once
+      // the preset changes — the grid drops its ring while the compare panel kept comparing a
+      // stale snapshot captured at click time. The selection queue must reset on preset change,
+      // without leaving/re-entering compare mode.
+      //
+      // `buildHistoryGrid` (historyModel.ts) buckets purely client-side by `createdAt` against
+      // `range`, which is derived from the REAL `Date.now()` (not the fixed `NOW` constant this
+      // file otherwise uses) — an item outside the requested window is dropped from the grid
+      // entirely, row and all. Both fixtures below use `realHoursAgo` so they survive the
+      // switch to the 1d preset too; the assertion is about the ring/selection state, not about
+      // which items the grid happens to still show.
+      vi.stubGlobal(
+        "fetch",
+        mockFetch({
+          a2aTasks: [
+            a2aTask({ id: "t1", skill: "smart-routing", createdAt: realHoursAgo(1) }),
+            a2aTask({ id: "t3", skill: "eval-suite", createdAt: realHoursAgo(2) }),
+          ],
+        })
+      );
+      const { c, cleanup } = render(<HistoryTab />);
+      await flush();
+
+      act(() => toggleCompareButton(c).click());
+      act(() => cellFor(c, "smart-routing").click());
+      act(() => cellFor(c, "eval-suite").click());
+      expect(cellFor(c, "smart-routing").getAttribute("aria-pressed")).toBe("true");
+      expect(cellFor(c, "eval-suite").getAttribute("aria-pressed")).toBe("true");
+
+      const btn1d = Array.from(c.querySelectorAll("button")).find(
+        (b) => b.textContent === "historyRange1d"
+      ) as HTMLButtonElement;
+      expect(btn1d).toBeTruthy();
+      act(() => btn1d.click());
+      await flush();
+
+      // Still in compare mode (the toggle itself is untouched by a preset change) …
+      expect(toggleCompareButton(c).getAttribute("aria-pressed")).toBe("true");
+      // … but both picks are unmarked — the cells still exist, they must no longer show the ring.
+      expect(cellFor(c, "smart-routing").getAttribute("aria-pressed")).toBe("false");
+      expect(cellFor(c, "eval-suite").getAttribute("aria-pressed")).toBe("false");
+      // The compare panel itself must not be mounted any more (queue dropped below 2).
+      expect(c.querySelector('[data-testid="orchestration-history-compare-panel"]')).toBeNull();
+      cleanup();
+    });
+
     it("leaving compare mode clears the selection", async () => {
       vi.stubGlobal("fetch", mockFetch(threeItems()));
       const { c, cleanup } = render(<HistoryTab />);

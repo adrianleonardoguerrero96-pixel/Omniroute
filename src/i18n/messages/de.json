@@ -13997,6 +13997,7 @@
     "compareDuration": "Dauer",
     "compareCost": "Kosten",
     "compareEvents": "Ereignisse",
+    "compareDeltaLegend": "Δ rechts − links",
     "showCompleted": "Abgeschlossene anzeigen",
     "searchPlaceholder": "Aufgaben durchsuchen…",
     "filterStates": "Status",

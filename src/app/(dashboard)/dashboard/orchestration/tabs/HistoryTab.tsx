@@ -370,9 +370,16 @@ export function HistoryTab() {
     [compareSelected]
   );
 
+  // Review finding (Minor #3): a preset change re-samples the range, so a pick made under the
+  // old range can fall outside the new one — the grid drops its ring (the item's cell may not
+  // even be rendered any more) while the compare panel keeps comparing the stale snapshot
+  // captured at click time. Clearing the queue here is safe unconditionally: outside compare
+  // mode it is already empty (see `onToggleCompareMode`), and inside compare mode the operator
+  // is left free to pick a fresh pair against the new range.
   const onSelectPreset = (p: Preset) => {
     setPreset(p);
     setNowMs(Date.now());
+    setCompareSelected([]);
   };
   const onSelectItem = (item: HistoryItem) => setSelected(nodeFromHistoryItem(item));
   // Leaving compare mode clears the selection; entering it starts from an empty queue too, so

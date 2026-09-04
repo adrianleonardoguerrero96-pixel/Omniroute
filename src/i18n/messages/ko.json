@@ -13990,6 +13990,7 @@
     "compareDuration": "기간",
     "compareCost": "비용",
     "compareEvents": "이벤트",
+    "compareDeltaLegend": "Δ 오른쪽 − 왼쪽",
     "showCompleted": "완료 항목 표시",
     "searchPlaceholder": "작업 검색…",
     "filterStates": "상태",

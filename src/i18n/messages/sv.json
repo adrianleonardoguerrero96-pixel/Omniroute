@@ -13990,6 +13990,7 @@
     "compareDuration": "Varaktighet",
     "compareCost": "Kostnad",
     "compareEvents": "Händelser",
+    "compareDeltaLegend": "Δ höger − vänster",
     "showCompleted": "Visa slutförda",
     "searchPlaceholder": "Sök uppgifter…",
     "filterStates": "Tillstånd",

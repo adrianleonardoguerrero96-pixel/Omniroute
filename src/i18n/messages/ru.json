@@ -13990,6 +13990,7 @@
     "compareDuration": "Продолжительность",
     "compareCost": "Стоимость",
     "compareEvents": "События",
+    "compareDeltaLegend": "Δ справа − слева",
     "showCompleted": "Показать завершённые",
     "searchPlaceholder": "Поиск задач…",
     "filterStates": "Состояния",

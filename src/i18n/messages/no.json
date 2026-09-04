@@ -13990,6 +13990,7 @@
     "compareDuration": "Varighet",
     "compareCost": "Kostnad",
     "compareEvents": "Hendelser",
+    "compareDeltaLegend": "Δ høyre − venstre",
     "showCompleted": "Vis fullførte",
     "searchPlaceholder": "Søk i oppgaver…",
     "filterStates": "Tilstander",

@@ -13990,6 +13990,7 @@
     "compareDuration": "Durée",
     "compareCost": "Coût",
     "compareEvents": "Événements",
+    "compareDeltaLegend": "Δ droite − gauche",
     "showCompleted": "Afficher les terminés",
     "searchPlaceholder": "Rechercher des tâches…",
     "filterStates": "États",

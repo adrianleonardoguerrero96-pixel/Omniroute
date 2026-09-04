@@ -13990,6 +13990,7 @@
     "compareDuration": "Időtartam",
     "compareCost": "Költség",
     "compareEvents": "Események",
+    "compareDeltaLegend": "Δ jobb − bal",
     "showCompleted": "Befejezettek megjelenítése",
     "searchPlaceholder": "Feladatok keresése…",
     "filterStates": "Állapotok",

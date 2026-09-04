@@ -11,9 +11,12 @@
  * parallel via `Promise.allSettled`, and `normalizeRunSide` is called with whatever `detail`
  * that side ended up with (the real payload on success, `null` on failure — `normalizeRunSide`
  * already treats a non-object `detail` as "empty events/memoryHits", never throwing). The
- * header/metrics rows read straight off the `HistoryItem` props (`left`/`right`), which are
- * already available synchronously — only the timeline/memory sections depend on the fetch, so
- * the panel renders immediately and fills in as each side's request settles.
+ * header and the Duration/Cost metric rows read straight off the `HistoryItem` props
+ * (`left`/`right`), which are already available synchronously, so the panel renders immediately.
+ * The Events row, timeline and memory sections all depend on the fetch instead — the Events row
+ * specifically renders `—` (not a stale/zero count) until BOTH sides reach the `"ok"` status
+ * (Task A4 review fix, Important #1), since `events: []` while a side is still `"loading"` or
+ * `"error"` is indistinguishable from a genuinely empty timeline.
  */
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -68,12 +71,18 @@ function unwrapDetailBody(item: HistoryItem, body: unknown): unknown {
   return b.data ?? body;
 }
 
+/** `status` is the explicit tri-state the metrics row gates on (Task A4 review fix, Important
+ * #1): `"loading"` before the fetch settles, `"ok"` once `detail` is the real payload, `"error"`
+ * once it has failed. Deriving "did this side actually load" from `detail == null` alone was
+ * ambiguous — that shape is identical for "still loading" and "loaded but genuinely empty" —
+ * and led the Events row to render a real `0` for a side that never loaded at all. */
 interface SideFetchState {
+  status: "loading" | "ok" | "error";
   detail: unknown | null;
   error: string | null;
 }
 
-const INITIAL_SIDE: SideFetchState = { detail: null, error: null };
+const INITIAL_SIDE: SideFetchState = { status: "loading", detail: null, error: null };
 
 function pairKey(left: HistoryItem, right: HistoryItem): string {
   return `${left.id}:${right.id}`;
@@ -122,13 +131,13 @@ function useCompareDetail(left: HistoryItem, right: HistoryItem) {
       if (controller.signal.aborted) return;
       setLeftState(
         leftResult.status === "fulfilled"
-          ? { detail: leftResult.value, error: null }
-          : { detail: null, error: toSafeErrorText(leftResult.reason) }
+          ? { status: "ok", detail: leftResult.value, error: null }
+          : { status: "error", detail: null, error: toSafeErrorText(leftResult.reason) }
       );
       setRightState(
         rightResult.status === "fulfilled"
-          ? { detail: rightResult.value, error: null }
-          : { detail: null, error: toSafeErrorText(rightResult.reason) }
+          ? { status: "ok", detail: rightResult.value, error: null }
+          : { status: "error", detail: null, error: toSafeErrorText(rightResult.reason) }
       );
     });
 
@@ -344,11 +353,18 @@ export function CompareRunsPanel({
     normalizeRunSide(left, leftState.detail),
     normalizeRunSide(right, rightState.detail)
   );
+  // The Events row is the only metric sourced from the async detail fetch (duration/cost read
+  // straight off the `HistoryItem` props, always available). Gating it on BOTH sides being
+  // `"ok"` — not just non-null — is what fixes Important #1: previously a `"loading"` or
+  // `"error"` side's empty `events: []` rendered as a real `0`, so the row showed e.g.
+  // `3 · 0 · -3` right next to the error alert — a wrong number presented as data. Showing `—`
+  // here doubles as the panel's missing loading cue.
+  const eventsBothOk = leftState.status === "ok" && rightState.status === "ok";
 
   return (
     <div
       data-testid="orchestration-history-compare-panel"
-      className="border border-border rounded p-2 overflow-x-auto"
+      className="border border-border rounded p-2 overflow-x-auto overflow-y-auto max-h-[45vh] shrink-0"
     >
       <div className="flex items-center justify-between mb-2 min-w-[480px]">
         <span className="text-xs font-semibold">{t("compareTitle")}</span>
@@ -379,13 +395,28 @@ export function CompareRunsPanel({
         </div>
       )}
 
+      {/* Informational only — fires on every mount where the two picks are not the same
+          (source, identity) pair, never in response to an error condition, so `role="status"`
+          (polite) is correct here; `role="alert"` (assertive) stays reserved for the actual
+          per-side fetch failures in `SideErrorCell` above (Task A4 review fix, Minor #6). */}
       {!comparison.deltas.sameIdentity && (
-        <div role="alert" className="text-[10px] text-warning mb-2">
+        <div role="status" className="text-[10px] text-warning mb-2">
           {t("compareDifferentIdentity")}
         </div>
       )}
 
       <div className="flex flex-col gap-1">
+        {/* Delta-column legend (Task A4 review fix, Minor #4): column order is selection order,
+            not chronology, so nothing else on the panel says which side a positive delta favors.
+            Shares the metric rows' grid template and right-aligns like the delta cells below. */}
+        <div className="grid grid-cols-[70px_1fr_1fr_70px] gap-2 text-[9px] items-center min-w-[480px] text-muted">
+          <span />
+          <span />
+          <span />
+          <span data-testid="orchestration-compare-delta-legend" className="text-right">
+            {t("compareDeltaLegend")}
+          </span>
+        </div>
         <MetricRow
           metricKey="duration"
           label={t("compareDuration")}
@@ -403,9 +434,9 @@ export function CompareRunsPanel({
         <MetricRow
           metricKey="events"
           label={t("compareEvents")}
-          leftText={String(comparison.left.events.length)}
-          rightText={String(comparison.right.events.length)}
-          deltaText={formatEventDelta(comparison.deltas.eventCount)}
+          leftText={eventsBothOk ? String(comparison.left.events.length) : "—"}
+          rightText={eventsBothOk ? String(comparison.right.events.length) : "—"}
+          deltaText={eventsBothOk ? formatEventDelta(comparison.deltas.eventCount) : "—"}
         />
       </div>
 

@@ -13990,6 +13990,7 @@
     "compareDuration": "持续时间",
     "compareCost": "成本",
     "compareEvents": "活动",
+    "compareDeltaLegend": "Δ 右 − 左",
     "showCompleted": "显示已完成",
     "searchPlaceholder": "搜索任务…",
     "filterStates": "状态",

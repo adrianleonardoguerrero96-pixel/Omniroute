@@ -13990,6 +13990,7 @@
     "compareDuration": "期間",
     "compareCost": "コスト",
     "compareEvents": "イベント",
+    "compareDeltaLegend": "Δ 右 − 左",
     "showCompleted": "完了を表示",
     "searchPlaceholder": "タスクを検索…",
     "filterStates": "状態",

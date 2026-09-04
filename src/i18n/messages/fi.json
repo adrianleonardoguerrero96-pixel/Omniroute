@@ -13990,6 +13990,7 @@
     "compareDuration": "Kesto",
     "compareCost": "Kustannukset",
     "compareEvents": "Tapahtumat",
+    "compareDeltaLegend": "Δ oikea − vasen",
     "showCompleted": "Näytä valmiit",
     "searchPlaceholder": "Hae tehtäviä…",
     "filterStates": "Tilat",

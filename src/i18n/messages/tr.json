@@ -13990,6 +13990,7 @@
     "compareDuration": "Süre",
     "compareCost": "Maliyet",
     "compareEvents": "Etkinlikler",
+    "compareDeltaLegend": "Δ sağ − sol",
     "showCompleted": "Tamamlananları göster",
     "searchPlaceholder": "Görevlerde ara…",
     "filterStates": "Durumlar",

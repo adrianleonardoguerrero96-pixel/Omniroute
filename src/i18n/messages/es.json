@@ -13990,6 +13990,7 @@
     "compareDuration": "Duración",
     "compareCost": "Costo",
     "compareEvents": "Eventos",
+    "compareDeltaLegend": "Δ derecha − izquierda",
     "showCompleted": "Mostrar completados",
     "searchPlaceholder": "Buscar tareas…",
     "filterStates": "Estados",
