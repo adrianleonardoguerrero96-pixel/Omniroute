@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 // Dynamic import is the established convention in this suite (loader stack +
 // polyfills; see 9303-recovery-hint-all-targets-skipped.test.ts).
 const {
-  isReasoningConsumedQualityRejection,
   isTinyBudgetReasoningProbe,
   buildReasoningProbeTruncatedResponse,
 } = await import("../../open-sse/services/reasoningTokenBuffer.ts");
