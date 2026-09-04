@@ -30,10 +30,7 @@ import { rejectEmptyChoicesStream, buildEmptyChoicesStreamError } from "./stream
 import { calculateCost } from "@/lib/usage/costCalculator";
 import { buildOmniRouteSseMetadataComment } from "@/domain/omnirouteResponseMeta";
 import { sseCommentsEnabled } from "./sseHeartbeat.ts";
-import {
-  createStructuredSSECollector,
-  buildStreamSummaryFromEvents,
-} from "./streamPayloadCollector.ts";
+import { createStructuredSSECollector } from "./streamPayloadCollector.ts";
 import { STREAM_IDLE_TIMEOUT_MS, FETCH_BODY_TIMEOUT_MS, HTTP_STATUS } from "../config/constants.ts";
 import {
   OMIT_STREAMING_CHUNK_MARKER,
@@ -844,6 +841,27 @@ export function createSSEStream(options: StreamOptions = {}) {
   });
   const clientPayloadCollector = createStructuredSSECollector({
     stage: "client_response",
+    // Live incident (2026-09-04): the OPENAI_RESPONSES-only carve-outs below
+    // rebuilt the client summary from clientPayloadCollector.getEvents() --
+    // the collector's own RETAINED (possibly cap-truncated) event array --
+    // even after providerPayloadCollector got a live cap-independent reducer
+    // for the exact same class of bug (#9315, see that collector's own
+    // `format:` comment above). A reasoning-heavy stream that exhausts the
+    // cap during the reasoning phase alone (measured live: routine, not an
+    // edge case) silently dropped the terminal response.completed event from
+    // the retained array, so the rebuilt-from-events summary permanently
+    // showed status "in_progress" with empty output even though the client
+    // itself received the real, complete reply. Wiring `format` here gives
+    // this collector the SAME always-live reducer providerPayloadCollector
+    // already has, so switching the carve-outs below from
+    // buildStreamSummaryFromEvents(collector.getEvents(), ...) to
+    // collector.getSummary() makes them cap-independent too -- strictly
+    // equivalent for a stream that never hits the cap, correct instead of
+    // silently empty for one that does. Same mode ternary as
+    // clientExpectsResponsesStream/clientExpectsClaudeStream above: passthrough
+    // forwards clientResponseFormat as-is, translate re-shapes to sourceFormat.
+    format: mode === STREAM_MODE.PASSTHROUGH ? clientResponseFormat : sourceFormat,
+    fallbackModel: model,
   });
   // Per-stream instances to avoid shared state with concurrent streams
   const decoder = new TextDecoder();
@@ -2665,18 +2683,19 @@ export function createSSEStream(options: StreamOptions = {}) {
                   // #9315 switched the summary to the accumulated responseBody to avoid
                   // stale/truncated event data — but responseBody here is synthesized in
                   // chat-completion shape, which loses the Responses API `response` object.
-                  // Keep the events-derived summary for OPENAI_RESPONSES only. responseBody
+                  // Keep a Responses-shaped summary for OPENAI_RESPONSES only. responseBody
                   // itself never carries an `object` marker (it's built purely for the
                   // client, which doesn't need one) — the dashboard's Provider Response
                   // panel does, so stamp `object: "chat.completion"` on a shallow copy
                   // used only for this summary, leaving responseBody itself untouched.
+                  // getSummary(), not buildStreamSummaryFromEvents(getEvents(), ...): the
+                  // latter only sees the collector's RETAINED (possibly cap-truncated)
+                  // events, silently losing a late response.completed event on a long
+                  // reasoning-heavy stream (live incident 2026-09-04) -- see
+                  // providerPayloadCollector's own `format:` construction comment above.
                   providerPayload: providerPayloadCollector.build(
                     sourceFormat === FORMATS.OPENAI_RESPONSES
-                      ? buildStreamSummaryFromEvents(
-                          providerPayloadCollector.getEvents(),
-                          sourceFormat,
-                          model
-                        )
+                      ? providerPayloadCollector.getSummary()
                       : { object: "chat.completion", ...responseBody },
                     { includeEvents: false }
                   ),
@@ -2687,14 +2706,13 @@ export function createSSEStream(options: StreamOptions = {}) {
                   // src/lib/usage/callLogs.ts is always null for a Responses-API client
                   // (extractResponsesId reads `clientResponse.id`, which the chat-shaped
                   // responseBody never has), so previous_response_id continuation lookups
-                  // in src/lib/db/responsesContinuationStore.ts always miss.
+                  // in src/lib/db/responsesContinuationStore.ts always miss. getSummary(),
+                  // not buildStreamSummaryFromEvents(getEvents(), ...) -- same cap-truncation
+                  // reasoning as providerPayload above; clientPayloadCollector's own `format:`
+                  // construction above gives it the same live, cap-independent reducer.
                   clientPayload: clientPayloadCollector.build(
                     clientResponseFormat === FORMATS.OPENAI_RESPONSES
-                      ? buildStreamSummaryFromEvents(
-                          clientPayloadCollector.getEvents(),
-                          clientResponseFormat,
-                          model
-                        )
+                      ? clientPayloadCollector.getSummary()
                       : responseBody,
                     { includeEvents: false }
                   ),
@@ -2941,13 +2959,14 @@ export function createSSEStream(options: StreamOptions = {}) {
                 // all — stamp `object: "chat.completion"` on a shallow copy used only
                 // for this summary; responseBody itself (sent to the client / below)
                 // stays untouched.
+                // getSummary(), not buildStreamSummaryFromEvents(getEvents(), ...) -- the
+                // latter only sees the collector's RETAINED (possibly cap-truncated)
+                // events, silently losing a late response.completed event on a long
+                // reasoning-heavy stream (live incident 2026-09-04) -- see
+                // providerPayloadCollector's own `format:` construction comment above.
                 providerPayload: providerPayloadCollector.build(
                   targetFormat === FORMATS.OPENAI_RESPONSES
-                    ? buildStreamSummaryFromEvents(
-                        providerPayloadCollector.getEvents(),
-                        targetFormat,
-                        model
-                      )
+                    ? providerPayloadCollector.getSummary()
                     : { object: "chat.completion", ...responseBody },
                   { includeEvents: false }
                 ),
@@ -2958,14 +2977,13 @@ export function createSSEStream(options: StreamOptions = {}) {
                 // sourceFormat, ...) above confirms that direction. emitTranslatedClientItem
                 // already pushes every client-visible translated item into
                 // clientPayloadCollector unconditionally, so the events are already there;
-                // this only fixes what gets built from them.
+                // getSummary() (not buildStreamSummaryFromEvents(getEvents(), ...)) makes
+                // reading them back cap-independent -- same reasoning as providerPayload
+                // above; clientPayloadCollector's own `format:` construction gives it the
+                // same live reducer.
                 clientPayload: clientPayloadCollector.build(
                   sourceFormat === FORMATS.OPENAI_RESPONSES
-                    ? buildStreamSummaryFromEvents(
-                        clientPayloadCollector.getEvents(),
-                        sourceFormat,
-                        model
-                      )
+                    ? clientPayloadCollector.getSummary()
                     : responseBody,
                   { includeEvents: false }
                 ),
