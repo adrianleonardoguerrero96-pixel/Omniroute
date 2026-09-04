@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { Worker } from "node:worker_threads";
+import { notifyCompressionFailOpen } from "./failOpenNotifier.ts";
 import type { CompressionResult } from "./types.ts";
 import type { StackedCompressionStep } from "./strategySelector.ts";
 import type {
@@ -133,7 +134,12 @@ export class CompressionWorkerPool {
     options?: CompressionWorkerOptions,
     onEngineStep?: (step: StackedCompressionStep) => void
   ): Promise<CompressionResult> {
-    if (this.broken) return Promise.resolve(unchanged(body));
+    if (this.broken) {
+      // Without this the pool fails open silently forever after the one startup
+      // warn — exactly the invisibility that let issue #2 leak for hours.
+      notifyCompressionFailOpen("compression pool broken (worker spawn failed)");
+      return Promise.resolve(unchanged(body));
+    }
     return new Promise((resolve) => {
       this.queue.push({
         id: this.nextId++,
@@ -180,8 +186,8 @@ export class CompressionWorkerPool {
           // Fail-open every queued job NOW: leaving them in this.queue leaks
           // their full request bodies for the process lifetime (issue #2).
           this.broken = true;
-          console.warn(
-            `[compression] worker spawn failed — failing open permanently: ${
+          notifyCompressionFailOpen(
+            `worker spawn failed — pool failing open permanently: ${
               error instanceof Error ? error.message : String(error)
             }`
           );

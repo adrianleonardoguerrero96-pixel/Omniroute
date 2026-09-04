@@ -35,6 +35,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";
 
+import { notifyCompressionFailOpen } from "../../failOpenNotifier.ts";
 import { LLMLINGUA_WORKER_TIMEOUT_MS, LLMLINGUA_WORKER_IDLE_MS } from "./constants.ts";
 import { resolveLlmlinguaModel } from "./modelStore.ts";
 import { packMemberInstalled } from "../../../../utils/optionalPacks.ts";
@@ -295,8 +296,11 @@ function pump(): void {
   let w: Worker;
   try {
     w = ensureWorker();
-  } catch {
+  } catch (error) {
     // Spawn failed → fail-open this item and continue draining the queue.
+    notifyCompressionFailOpen(
+      `llmlingua worker spawn failed: ${error instanceof Error ? error.message : String(error)}`
+    );
     busy = false;
     item.resolve(item.text);
     pump();
@@ -338,8 +342,13 @@ function pump(): void {
       compressionRate: item.opts?.compressionRate,
       modelPath: item.opts?.modelPath,
     });
-  } catch {
+  } catch (error) {
     // postMessage failed → fail-open this item and respawn.
+    notifyCompressionFailOpen(
+      `llmlingua worker postMessage failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
     clearTimeout(timer);
     pending.delete(id);
     item.resolve(item.text);

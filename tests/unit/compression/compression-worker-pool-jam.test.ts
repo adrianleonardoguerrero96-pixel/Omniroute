@@ -8,7 +8,7 @@ import {
 import {
   __resetCompressionFailOpenNotifierForTests,
   notifyCompressionFailOpen,
-} from "../../../open-sse/services/compression/strategySelector.ts";
+} from "../../../open-sse/services/compression/failOpenNotifier.ts";
 import { llmlinguaWorkerSpecifier } from "../../../open-sse/services/compression/engines/llmlingua/worker.ts";
 
 /**
@@ -36,6 +36,21 @@ function throwingWorkerFactory(): () => Worker {
     const error = new Error("Cannot find module './compressionWorker.ts'");
     (error as NodeJS.ErrnoException).code = "MODULE_NOT_FOUND";
     throw error;
+  };
+}
+
+/** Capture console.warn lines while the stub is installed. */
+function captureWarn(): { lines: string[]; restore(): void } {
+  const lines: string[] = [];
+  const originalWarn = console.warn;
+  console.warn = (message?: unknown) => {
+    lines.push(String(message));
+  };
+  return {
+    lines,
+    restore() {
+      console.warn = originalWarn;
+    },
   };
 }
 
@@ -98,20 +113,69 @@ describe("CompressionWorkerPool spawn-failure queue drain", () => {
 
 describe("compression fail-open observability", () => {
   it("notifies (rate-limited) when the worker path fails open", () => {
-    const warnings: string[] = [];
-    const originalWarn = console.warn;
-    console.warn = (message?: unknown) => {
-      warnings.push(String(message));
-    };
+    const warn = captureWarn();
     try {
       notifyCompressionFailOpen();
       notifyCompressionFailOpen();
       notifyCompressionFailOpen();
     } finally {
-      console.warn = originalWarn;
+      warn.restore();
     }
-    assert.equal(warnings.length, 1);
-    assert.match(warnings[0] ?? "", /fail-open|compression/i);
+    assert.equal(warn.lines.length, 1);
+    assert.match(warn.lines[0] ?? "", /fail-open|compression/i);
+  });
+
+  it("still logs a NEW distinct failure detail inside the rate-limit window", () => {
+    const warn = captureWarn();
+    try {
+      notifyCompressionFailOpen("failure mode A");
+      notifyCompressionFailOpen("failure mode A"); // suppressed
+      notifyCompressionFailOpen("failure mode B"); // distinct detail — logged
+    } finally {
+      warn.restore();
+    }
+    assert.equal(warn.lines.length, 2);
+    assert.match(warn.lines[1] ?? "", /failure mode B/);
+  });
+
+  it("notifies on the broken-pool short-circuit, not only at spawn time", async () => {
+    const pool = new CompressionWorkerPool({
+      size: 1,
+      workerFactory: throwingWorkerFactory(),
+    });
+    const warn = captureWarn();
+    try {
+      await withTimeout(pool.run(body, "stacked"), 5000, "first job never resolved");
+      // Same detail string → rate-limited away; reset the window so the
+      // post-break run must exercise the notifyCompressionFailOpen call in run().
+      __resetCompressionFailOpenNotifierForTests();
+      const result = await withTimeout(pool.run(body, "stacked"), 5000, "post-break job hung");
+      assert.deepEqual(result, { body, compressed: false, stats: null });
+      assert.equal(warn.lines.length, 1, "broken-pool run must notify fail-open");
+      assert.match(warn.lines[0] ?? "", /pool broken/);
+    } finally {
+      warn.restore();
+      await pool.close();
+    }
+  });
+
+  it("never calls the factory again once the pool is broken", async () => {
+    let spawns = 0;
+    const pool = new CompressionWorkerPool({
+      size: 2,
+      workerFactory: () => {
+        spawns++;
+        throw new Error("Cannot find module './compressionWorker.ts'");
+      },
+    });
+    try {
+      await withTimeout(pool.run(body, "stacked"), 5000, "first job never resolved");
+      await withTimeout(pool.run(body, "stacked"), 5000, "post-break job hung");
+      await withTimeout(pool.run(body, "stacked"), 5000, "third job hung");
+      assert.equal(spawns, 1, "broken pool must not retry spawning");
+    } finally {
+      await pool.close();
+    }
   });
 });
 
@@ -120,5 +184,6 @@ describe("llmlingua worker spawn specifier", () => {
     const specifier = llmlinguaWorkerSpecifier("/app/onnxWorker.js");
     assert.ok(specifier instanceof URL, "Worker entry must be a URL object, not a string");
     assert.equal(specifier.protocol, "file:");
+    assert.equal(specifier.pathname, "/app/onnxWorker.js");
   });
 });
