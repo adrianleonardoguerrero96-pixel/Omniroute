@@ -1344,9 +1344,10 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     passthroughModels: true,
     website: "https://bynara.id",
     hasFree: true,
-    freeNote: "Free tier is a shared 5M tokens/day pool; some models are gated behind credit/plan.",
+    freeNote:
+      "Free plan: one 7M tokens/day bucket per account (15 req/min) across the plan's 8 models; others need credit.",
     authHint:
-      "Get a free API key via NaraRouter's Telegram channel, then paste it here as a Bearer token.",
+      "Create a free NaraRouter account, link your Telegram (required before /v1 answers), then paste the key here as a Bearer token.",
     apiHint:
       "OpenAI-compatible endpoint at https://router.bynara.id/v1. Free-tier models are pinned; others need credit.",
   },
