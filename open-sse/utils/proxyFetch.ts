@@ -215,8 +215,15 @@ async function withTlsFirstByteWatchdog(response: Response): Promise<Response> {
     }
     throw err;
   }
+  // The first chunk was already consumed by the watchdog race — re-emit it
+  // before continuing the original stream so no bytes are lost.
   const rest = new ReadableStream<Uint8Array>({
     async pull(controller) {
+      if (first && !first.done) {
+        controller.enqueue(first.value);
+        first = null;
+        return;
+      }
       try {
         const chunk = await reader.read();
         if (chunk.done) {
