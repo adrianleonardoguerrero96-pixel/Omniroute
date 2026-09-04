@@ -1206,6 +1206,7 @@ export function createSSEStream(options: StreamOptions = {}) {
     doneSent = true;
     abortStreamFailure(controller, failure.internalFailure, failure.publicMessage, {
       notifyComplete: true,
+      keepReadable: true,
     });
     return true;
   };

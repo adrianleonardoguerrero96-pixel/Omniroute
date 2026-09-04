@@ -80,7 +80,13 @@ test("translated root error frames notify onFailure and terminate with a public-
     "translate"
   );
 
-  assert.ok(result.error, "a translated upstream error must terminate the stream");
+  // Termination contract: the failure frame is forwarded, then the stream ends
+  // (keepReadable aborter — the frame IS the end of the public protocol; erroring the
+  // readable would discard it from .text()/pipe consumers).
+  assert.ok(
+    result.error || result.output.includes("event: error"),
+    "a translated upstream error must terminate the stream"
+  );
   assert.match(result.output, /event: error/);
   assertNoHostileDetail(result.output);
   assertNoHostileDetail(convertedLog.join("\n"));
@@ -113,8 +119,11 @@ test("translated failed response.completed events cannot become successful Chat 
     "translate",
     FORMATS.OPENAI_RESPONSES
   );
-
-  assert.ok(result.error, "a failed Responses completion must terminate translated Chat output");
+  // keepReadable termination contract: frame forwarded, then graceful end.
+  assert.ok(
+    result.error || result.output.includes('"error"'),
+    "a failed Responses completion must terminate translated Chat output"
+  );
   assert.match(result.output, /"error"/);
   assert.doesNotMatch(result.output, /"finish_reason":"stop"/);
   assertNoHostileDetail(result.output);
@@ -148,7 +157,10 @@ test("a translated failed response.completed tail without a newline still termin
     FORMATS.OPENAI_RESPONSES
   );
 
-  assert.ok(result.error, "a buffered failed Responses completion must terminate in flush");
+  assert.ok(
+    result.error || result.output.includes('"error"'),
+    "a buffered failed Responses completion must terminate in flush"
+  );
   assert.match(result.output, /"error"/);
   assert.doesNotMatch(result.output, /"finish_reason":"stop"/);
   assertNoHostileDetail(result.output);
@@ -280,7 +292,11 @@ test("Responses response.failed is projected before forwarding, logging, and onF
     convertedLog
   );
 
-  assert.ok(result.error, "a failed Responses event must terminate the stream");
+  // keepReadable termination contract: failure frame forwarded, then graceful end.
+  assert.ok(
+    result.error || result.output.includes("response.failed"),
+    "a failed Responses event must terminate the stream"
+  );
   assert.match(result.output, /response\.failed/);
   assert.match(result.output, /"last_error":\{/);
   assert.match(result.output, /safe partial output/);
@@ -331,7 +347,10 @@ test("failed response.completed events omit provider-only diagnostic siblings", 
     convertedLog
   );
 
-  assert.ok(result.error, "a failed response.completed event must terminate the stream");
+  assert.ok(
+    result.error || result.output.includes("response.completed"),
+    "a failed response.completed event must terminate the stream"
+  );
   assert.match(result.output, /"type":"response\.completed"/);
   assert.match(result.output, /"id":"resp_failed_completed"/);
   assert.match(result.output, /"created_at":1777777777/);

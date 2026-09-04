@@ -1282,53 +1282,56 @@ test("buildStreamSummaryFromEvents falls back to response.output_text.delta when
   assert.equal((summary as any).usage.output_tokens, 2);
 });
 
-test("createSSEStream translate mode aborts on Responses failure with rate limit error", async () => {
+test("createSSEStream translate mode terminates on Responses failure with rate limit error", async () => {
   let onCompletePayload = null;
 
-  await assert.rejects(
-    readTransformed(
-      [
-        `data: ${JSON.stringify({
-          type: "response.created",
-          response: {
-            id: "resp_fail",
-            object: "response",
-            model: "gpt-5.4",
-            status: "in_progress",
-            output: [],
-          },
-        })}\n\n`,
-        `data: ${JSON.stringify({
-          type: "response.failed",
-          response: {
-            id: "resp_fail",
-            object: "response",
-            model: "gpt-5.4",
-            status: "failed",
-            error: {
-              message: "Rate limit reached for gpt-5.4",
-              code: "rate_limit_exceeded",
-            },
-          },
-        })}\n\n`,
-        `data: [DONE]\n\n`,
-      ],
-      {
-        mode: "translate",
-        targetFormat: FORMATS.OPENAI_RESPONSES,
-        sourceFormat: FORMATS.OPENAI,
-        provider: "codex",
-        model: "gpt-5.4",
-        body: { messages: [{ role: "user", content: "hello" }] },
-        onComplete(payload) {
-          onCompletePayload = payload;
+  // keepReadable termination contract: the translated failure frame is forwarded, then
+  // the stream ends gracefully instead of erroring (erroring the readable would discard
+  // the queued frame from a .text() consumer).
+  const text = await readTransformed(
+    [
+      `data: ${JSON.stringify({
+        type: "response.created",
+        response: {
+          id: "resp_fail",
+          object: "response",
+          model: "gpt-5.4",
+          status: "in_progress",
+          output: [],
         },
-      }
-    ),
-    /Rate limit reached for gpt-5\.4|Upstream failure/
+      })}\n\n`,
+      `data: ${JSON.stringify({
+        type: "response.failed",
+        response: {
+          id: "resp_fail",
+          object: "response",
+          model: "gpt-5.4",
+          status: "failed",
+          error: {
+            message: "Rate limit reached for gpt-5.4",
+            code: "rate_limit_exceeded",
+          },
+        },
+      })}\n\n`,
+      `data: [DONE]\n\n`,
+    ],
+    {
+      mode: "translate",
+      targetFormat: FORMATS.OPENAI_RESPONSES,
+      sourceFormat: FORMATS.OPENAI,
+      provider: "codex",
+      model: "gpt-5.4",
+      body: { messages: [{ role: "user", content: "hello" }] },
+      onComplete(payload) {
+        onCompletePayload = payload;
+      },
+    }
   );
 
-  assert.ok(onCompletePayload, "should capture completion payload before aborting");
+  assert.match(text, /"error"/);
+  assert.match(text, /Rate limit reached for gpt-5\.4|Upstream failure/);
+  assert.doesNotMatch(text, /"finish_reason":"stop"/);
+  assert.ok(onCompletePayload, "should capture completion payload before terminating");
   assert.equal(onCompletePayload.status, 429);
   assert.equal(onCompletePayload.responseBody.error.type, "rate_limit_error");
   assert.equal(onCompletePayload.responseBody.error.code, "rate_limit_exceeded");
