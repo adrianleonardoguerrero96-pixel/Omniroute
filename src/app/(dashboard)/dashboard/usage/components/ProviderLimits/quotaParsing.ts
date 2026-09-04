@@ -157,7 +157,7 @@ function parseGithub(data: any) {
 }
 
 function parseGlmFamily(data: any) {
-  return quotaEntries(data).map(([name, quota]) =>
+  const quotas = quotaEntries(data).map(([name, quota]) =>
     normalizeQuotaEntry(name, quota, {
       displayName: quota?.displayName,
       details: Array.isArray(quota?.details) ? quota.details : undefined,
@@ -165,6 +165,14 @@ function parseGlmFamily(data: any) {
         Number(quota?.total || 0) === 100 && quota?.remainingPercentage !== undefined,
     })
   );
+
+  // GLM Coding Plan Reset Cards, surfaced by getGlmUsage alongside the windows.
+  const bankedResetCredits = Number(data?.bankedResetCredits);
+  if (Number.isFinite(bankedResetCredits) && bankedResetCredits > 0) {
+    quotas.push(buildBankedResetCreditsQuota(bankedResetCredits));
+  }
+
+  return quotas;
 }
 
 function buildCreditsQuota(

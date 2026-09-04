@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 
 import { useNotificationStore } from "@/store/notificationStore";
-import { parseQuotaData } from "./utils";
+import { canProviderRedeemResetCredit, getResetCreditEndpoint, parseQuotaData } from "./utils";
 import type { UsageTranslationValues } from "./i18nFallback";
 
 type TranslateUsage = (key: string, fallback: string, values?: UsageTranslationValues) => string;
@@ -80,12 +80,17 @@ function useOpenCodexResetCredits(
   const notify = useNotificationStore();
   return useCallback(
     async (connectionId: string, provider: string) => {
-      if (provider !== "codex" || loadingResetCreditsId || redeemingResetCreditId) return;
+      if (
+        !canProviderRedeemResetCredit(provider) ||
+        loadingResetCreditsId ||
+        redeemingResetCreditId
+      )
+        return;
       setLoadingResetCreditsId(connectionId);
       setErrors((prev) => ({ ...prev, [connectionId]: null }));
       try {
         const response = await fetch(
-          `/api/usage/codex-reset-credit?connectionId=${encodeURIComponent(connectionId)}`,
+          `${getResetCreditEndpoint(provider)}?connectionId=${encodeURIComponent(connectionId)}`,
           { cache: "no-store" }
         );
         const data = await response.json().catch(() => ({}));
@@ -133,7 +138,7 @@ function useRedeemCodexResetCredit(state: ResetCreditRequestState) {
       state.setRedeemingResetCreditId(picker.connectionId);
       state.setErrors((prev) => ({ ...prev, [picker.connectionId]: null }));
       try {
-        const response = await fetch("/api/usage/codex-reset-credit", {
+        const response = await fetch(getResetCreditEndpoint(picker.provider), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

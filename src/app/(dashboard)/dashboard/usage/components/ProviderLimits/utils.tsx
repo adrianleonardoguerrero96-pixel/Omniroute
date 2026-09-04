@@ -337,9 +337,24 @@ export function computeCanEditCutoff(quotas: any[]): boolean {
   return quotas.some((q: any) => q && typeof q.name === "string" && !q.isCredits);
 }
 
+/**
+ * Providers that can redeem a banked reset credit: Codex reset credits and the GLM
+ * Coding Plan Reset Cards, which share the list/redeem contract behind different routes.
+ */
+export const RESET_CREDIT_PROVIDERS = ["codex", "glm", "glm-cn", "glmt", "zai"] as const;
+
+/** The redemption API backing a provider's reset credits. */
+export function getResetCreditEndpoint(provider: string): string {
+  return provider === "codex" ? "/api/usage/codex-reset-credit" : "/api/usage/glm-reset-card";
+}
+
+export function canProviderRedeemResetCredit(provider: string): boolean {
+  return (RESET_CREDIT_PROVIDERS as readonly string[]).includes(provider);
+}
+
 export function computeCanRedeemResetCredit(provider: string, quotas: any[]): boolean {
   return (
-    provider === "codex" &&
+    canProviderRedeemResetCredit(provider) &&
     quotas.some((q: any) => q?.isResetCredits && Number(q.creditCount ?? q.remaining ?? 0) > 0)
   );
 }
