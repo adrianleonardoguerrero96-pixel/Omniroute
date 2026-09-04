@@ -68,10 +68,9 @@ test("allowlist freezes a literal by file:line:value key", () => {
 });
 
 test("allowlist preserves the local ZCode handshake client ID without weakening credential detection", () => {
-  // The allowlist key is file:LINE:value, so this synthetic source must place the
-  // literal on exactly the line the entry pins (L313 since #12179 shifted
-  // zcodeProtocol.ts). When the real file moves, BOTH the entry in
-  // check-public-creds.mjs and this padding have to move with it.
+  // 312 newlines puts the statement on line 313, which is where it lives in
+  // zcodeProtocol.ts today. The allowlist key carries the line number, so this
+  // literal has to be kept in step with the source (it moved 302 -> 313).
   const src = `${"\n".repeat(312)}clientId: \`omniroute-\${process.pid}\`,`;
   assert.deepEqual(
     findLiteralCreds(src, KNOWN_LITERAL_CREDS, "open-sse/executors/zcodeProtocol.ts"),
