@@ -228,7 +228,7 @@
     "tests/unit/reasoning-cache.test.ts": 1291,
     "tests/unit/route-edge-coverage.test.ts": 1244,
     "tests/unit/sse-auth.test.ts": 1729,
-    "tests/unit/stream-utils.test.ts": 2517,
+    "tests/unit/stream-utils.test.ts": 2520,
     "tests/unit/token-refresh-service.test.ts": 1407,
     "tests/unit/translator-openai-responses-req.test.ts": 1470,
     "tests/unit/translator-openai-to-gemini.test.ts": 1625,
