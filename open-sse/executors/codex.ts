@@ -1028,7 +1028,15 @@ export class CodexExecutor extends BaseExecutor {
             );
           };
           ws.onclose = () => {
-            finishStream({ reason: "upstream_closed", closeSocket: false });
+            // A close after a terminal event already finished the stream — no-op.
+            // A close before any terminal event means the upstream died mid-response:
+            // emit a terminal response.failed instead of ending the client stream as
+            // if it completed normally (silent truncation).
+            if (closed) return;
+            failController(
+              "upstream_websocket_closed",
+              "Codex upstream WebSocket closed before a terminal response event"
+            );
           };
           if (!closed) {
             await prl.captureCurrentProviderBody(url, headers, bodyString, nextInput.log);
