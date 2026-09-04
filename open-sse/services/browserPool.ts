@@ -90,13 +90,18 @@ function createBrowserPoolMetrics(): BrowserPoolMetrics {
 
 type PoolEngine = "obscura" | "cloakbrowser" | "chromium";
 
+interface PendingContextEntry {
+  promise: Promise<PooledContext>;
+  createdAt: number;
+}
+
 interface PoolState {
   browser: Browser | null;
   /** Engine backing the headless browser, for metrics and stealth detection. */
   engine: PoolEngine | null;
   headedBrowser: Browser | null;
   contexts: Map<string, PooledContext>;
-  pendingContexts: Map<string, Promise<PooledContext>>;
+  pendingContexts: Map<string, PendingContextEntry>;
   launching: Promise<Browser> | null;
   headedLaunching: Promise<Browser> | null;
   generation: number;
@@ -119,7 +124,7 @@ const state: PoolState = {
   engine: null,
   headedBrowser: null,
   contexts: new Map(),
-  pendingContexts: new Map(),
+  pendingContexts: new Map<string, { promise: Promise<PooledContext>; createdAt: number }>(),
   launching: null,
   headedLaunching: null,
   generation: 0,
@@ -180,6 +185,15 @@ function evictStaleContexts(): void {
       state.contexts.delete(key);
       state.metrics.contextsEvicted++;
       pooled.context.close().catch(() => {});
+    }
+  }
+  // #12179: also evict pendingContexts entries that never resolved, so a hung
+  // launch cannot pin the map (and the pool) open forever.
+  const PENDING_TTL_MS = 5 * 60 * 1000;
+  for (const [key, pending] of state.pendingContexts) {
+    if (now - pending.createdAt > PENDING_TTL_MS) {
+      state.pendingContexts.delete(key);
+      state.metrics.contextsEvicted++;
     }
   }
   if (
@@ -485,7 +499,7 @@ export async function acquireBrowserContext(
 
   // Dedup concurrent creations for the same key
   const pending = state.pendingContexts.get(poolKey);
-  if (pending) return pending;
+  if (pending) return pending.promise;
 
   const createPromise = (async (): Promise<PooledContext> => {
     const [browser, proxy] = await Promise.all([
@@ -531,7 +545,7 @@ export async function acquireBrowserContext(
     return pooled;
   })();
 
-  state.pendingContexts.set(poolKey, createPromise);
+  state.pendingContexts.set(poolKey, { promise: createPromise, createdAt: Date.now() });
   createPromise
     .then(() => settlePendingContext(poolKey, false))
     .catch(() => settlePendingContext(poolKey, true));
