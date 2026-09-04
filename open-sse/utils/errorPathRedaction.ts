@@ -441,12 +441,12 @@ function remainderContainsFilesystemSeparator(value: string, start: number): boo
   return false;
 }
 
-function trimPathSpanEnd(value: string, start: number, end: number): number {
-  while (end > start && PATH_SPAN_END_PUNCTUATION.includes(value[end - 1])) end--;
-  return end;
-}
-
-function isClearProseBoundaryToken(value: string, start: number, end: number): boolean {
+function isClearProseBoundaryToken(
+  value: string,
+  start: number,
+  end: number,
+  remainderStart: number
+): boolean {
   while (start < end && LEADING_PATH_PUNCTUATION.includes(value[start])) start++;
   end = trimPathSpanEnd(value, start, end);
   const token = value.slice(start, end).toLowerCase();
@@ -459,8 +459,16 @@ function isClearProseBoundaryToken(value: string, start: number, end: number): b
   // Same for the label half of a split assignment: `Authorization:` followed by
   // `[REDACTED]` (the value was scrubbed by an earlier pass). Without this the
   // label token poisons `hasUnresolvedFragments` and the fail-closed span eats
-  // the redaction that follows it.
+  // the redaction that follows it. The boundary ONLY fires when the remainder
+  // actually is redacted output — a bare credential-shaped word in ordinary
+  // prose (e.g. "…/internal secret directory") must stay fail-closed.
+  const remainder = value.slice(remainderStart).replace(/^[)\]},'"`.:;!?]?\s+/, "");
+  if (!/^\[redacted\b/i.test(remainder)) return false;
   return /^[a-z0-9_-]+:?$/.test(token) && CREDENTIAL_LABEL_BOUNDARY.test(token);
+}
+function trimPathSpanEnd(value: string, start: number, end: number): number {
+  while (end > start && PATH_SPAN_END_PUNCTUATION.includes(value[end - 1])) end--;
+  return end;
 }
 
 function findUnquotedPathEnd(
@@ -508,7 +516,7 @@ function findUnquotedPathEnd(
       // boundary only when no later token carries path-separator evidence;
       // otherwise keep scanning so a filesystem suffix cannot survive.
     } else if (
-      isClearProseBoundaryToken(value, tokenStart, tokenEnd) &&
+      isClearProseBoundaryToken(value, tokenStart, tokenEnd, tokenEnd) &&
       (!remainderContainsFilesystemSeparator(value, tokenEnd) ||
         (!failClosedAmbiguity && !hasFilesystemEvidence))
     ) {
