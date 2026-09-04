@@ -201,26 +201,25 @@ export class CompressionWorkerPool {
     });
     return slot;
   }
+  private spawnOrFailOpen(): PoolWorker | null {
+    try {
+      return this.spawn();
+    } catch (error) {
+      // A synchronous spawn failure (bundler module-context miss, bad worker
+      // path, …) must fail-open the queue before its request bodies are retained.
+      const structural = isStructuralSpawnFailure(error);
+      this.broken = structural;
+      notifyCompressionFailOpen(
+        `worker spawn failed — pool failing open${structural ? " permanently" : " for this wave"}: ${errorText(error)}`
+      );
+      for (const job of this.queue.splice(0)) job.resolve(unchanged(job.originalBody));
+      return null;
+    }
+  }
   private dispatch(): void {
     while (this.queue.length) {
       let slot = [...this.workers].find((candidate) => !candidate.job);
-      if (!slot && this.workers.size < this.size) {
-        try {
-          slot = this.spawn();
-        } catch (error) {
-          // A synchronous spawn failure (bundler module-context miss, bad
-          // worker path, …) is structural — no worker can ever be created.
-          // Fail-open every queued job NOW: leaving them in this.queue leaks
-          // their full request bodies for the process lifetime (issue #2).
-          const structural = isStructuralSpawnFailure(error);
-          this.broken = structural;
-          notifyCompressionFailOpen(
-            `worker spawn failed — pool failing open${structural ? " permanently" : " for this wave"}: ${errorText(error)}`
-          );
-          for (const job of this.queue.splice(0)) job.resolve(unchanged(job.originalBody));
-          return;
-        }
-      }
+      if (!slot && this.workers.size < this.size) slot = this.spawnOrFailOpen() ?? undefined;
       if (!slot) return;
       if (slot.idle) clearTimeout(slot.idle);
       const job = this.queue.shift();
