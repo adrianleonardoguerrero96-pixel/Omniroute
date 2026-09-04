@@ -340,6 +340,7 @@
       "tests/unit/rate-limit-enhanced.test.ts",
       "tests/unit/rate-limit-execution-timeout-message-4165.test.ts",
       "tests/unit/rate-limit-local-capacity-classification.test.ts",
+      "tests/unit/reset-aware-request-scope-12600.test.ts",
       "tests/unit/rate-limit-local-error-classification.test.ts",
       "tests/unit/rate-limit-manager.test.ts",
       "tests/unit/rate-limit-queue-timeout-lockout.test.ts",
