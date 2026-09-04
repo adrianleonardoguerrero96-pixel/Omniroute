@@ -22,7 +22,7 @@ import {
   type AutoCategory,
   type AutoTier,
 } from "./suffixComposition";
-import { classifyTier } from "../tierResolver";
+import { classifyTier, isExplicitFreeTierOverride } from "../tierResolver";
 import type { AutoVariant } from "./autoPrefix";
 import { buildFamilyCandidateFilter, type ModelFamily } from "./modelFamily";
 import { getHiddenModelsByProvider } from "@/models";
@@ -88,6 +88,8 @@ export interface VirtualAutoComboCandidate {
   connectionId: string | null;
   /** Credentialed accounts that are eligible to serve this provider/model pair. */
   allowedConnectionIds?: string[];
+  /** Subset whose synced discovery explicitly reported this model free. */
+  freeConnectionIds?: string[];
   model: string;
   modelStr: string; // e.g., 'openai/gpt-4o'
   costPer1MTokens: number; // from providerRegistry
@@ -588,10 +590,15 @@ export async function prepareVirtualAutoComboInputs(
         .map((conn) => conn.id);
       if (allowedConnectionIds.length === 0) continue;
 
+      const freeConnectionIds = allowedConnectionIds.filter((connectionId) =>
+        (syncedByConnection[connectionId] ?? []).some((m) => m.id === modelId && m.isFree === true)
+      );
+
       candidatePool.push({
         provider: providerId,
         connectionId: null,
         allowedConnectionIds,
+        ...(freeConnectionIds.length > 0 ? { freeConnectionIds } : {}),
         model: modelId,
         modelStr: `${providerId}/${modelId}`,
         costPer1MTokens: 0, // Not used in virtual auto-combo (LKGP uses session stickiness)
@@ -643,6 +650,8 @@ export async function prepareVirtualAutoComboInputs(
       // let a reading of e.g. 0.3% (rounding noise, not real headroom) pass.
       minRemainingAllowance: 1,
       maxStateAgeMs: toNumber(settings.autoRefreshProviderQuotaInterval, 180) * 1000,
+      // Explicit operator economics are authoritative for this deployment.
+      isOperatorDeclaredFree: isExplicitFreeTierOverride,
     });
     if (strictFilteredPool !== pool) pool = strictFilteredPool;
 

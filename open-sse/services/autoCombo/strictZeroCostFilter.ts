@@ -111,6 +111,8 @@ export interface StrictZeroCostOptions {
   maxStateAgeMs: number;
   /** `now` injection for deterministic tests; defaults to `Date.now`. */
   now?: () => number;
+  /** Explicit operator assertion that this provider/model is free. */
+  isOperatorDeclaredFree?: (provider: string, model: string) => boolean;
   /**
    * The free-model catalog to look candidates up against. Defaults to the
    * real, live `FREE_MODEL_BUDGETS` — overridable so tests can prove the
@@ -129,6 +131,15 @@ export function findBudgetEntry(
   catalog: readonly FreeModelBudget[] = FREE_MODEL_BUDGETS
 ): FreeModelBudget | undefined {
   return catalog.find((m) => m.provider === candidate.provider && m.modelId === candidate.model);
+}
+
+function candidateConnectionIds(candidate: StrictZeroCostCandidate): string[] {
+  return candidate.connectionId ? [candidate.connectionId] : (candidate.allowedConnectionIds ?? []);
+}
+
+/** Nous Portal rotates price-locked free variants independently of releases. */
+function isNousPortalFreeVariant(candidate: StrictZeroCostCandidate): boolean {
+  return candidate.provider === "nous-research" && candidate.model.toLowerCase().endsWith(":free");
 }
 
 function isConnectionStateSafe(
@@ -170,6 +181,12 @@ export function evaluateCandidateConnections(
   resolveFreeAccessState: StrictZeroCostOptions["resolveFreeAccessState"],
   options: Pick<StrictZeroCostOptions, "minRemainingAllowance" | "maxStateAgeMs" | "now">
 ): string[] {
+  if (isNousPortalFreeVariant(candidate)) {
+    return candidateConnectionIds(candidate).filter(
+      (connectionId) => connectionId !== SYNTHETIC_NOAUTH_CONNECTION_ID
+    );
+  }
+
   if (!budgetEntry) return []; // not in the catalog at all → paid, or genuinely unknown
 
   const isGenuineNoAuthCandidate = candidate.connectionId === SYNTHETIC_NOAUTH_CONNECTION_ID;
@@ -194,12 +211,8 @@ export function evaluateCandidateConnections(
   // trust regardless of its answer.
   if (budgetEntry.hardStopGuaranteed !== true) return [];
 
-  const candidateConnectionIds = candidate.connectionId
-    ? [candidate.connectionId]
-    : (candidate.allowedConnectionIds ?? []);
-
   const safe: string[] = [];
-  for (const connectionId of candidateConnectionIds) {
+  for (const connectionId of candidateConnectionIds(candidate)) {
     if (connectionId === SYNTHETIC_NOAUTH_CONNECTION_ID) continue; // never reachable here, defensive
     if (isConnectionStateSafe(candidate.provider, connectionId, resolveFreeAccessState, options)) {
       safe.push(connectionId);
@@ -226,6 +239,15 @@ export function filterStrictZeroCostCandidates<T extends StrictZeroCostCandidate
   const kept: T[] = [];
   let changed = false;
   for (const candidate of pool) {
+    if (options.isOperatorDeclaredFree?.(candidate.provider, candidate.model) === true) {
+      if (candidateConnectionIds(candidate).length > 0) {
+        kept.push(candidate);
+      } else {
+        changed = true;
+      }
+      continue;
+    }
+
     const budgetEntry = findBudgetEntry(candidate, options.catalog);
     const safeConnectionIds = evaluateCandidateConnections(
       candidate,

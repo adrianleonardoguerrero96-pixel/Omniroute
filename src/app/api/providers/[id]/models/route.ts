@@ -119,6 +119,7 @@ import { buildStaleEncryptionKeyResponse } from "./staleEncryptionGuard";
 import {
   type ProviderModelsConfigEntry,
   PROVIDER_MODELS_CONFIG,
+  mergeNousRecommendedModelsWithCurated,
 } from "./discovery/providerModelsConfig";
 import {
   buildCodexDiscoveryCatalog,
@@ -2430,6 +2431,13 @@ export async function GET(
           );
         }
       }
+    }
+
+    if (provider === "nous-research") {
+      allModels = mergeNousRecommendedModelsWithCurated(
+        allModels,
+        getModelsByProviderId(provider) || []
+      );
     }
 
     return buildApiDiscoveryResponse(allModels);

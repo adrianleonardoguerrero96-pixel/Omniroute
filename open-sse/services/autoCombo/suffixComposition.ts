@@ -95,6 +95,8 @@ export function tierToWeightVariant(tier?: AutoTier): AutoVariant | "reliability
 interface PoolCandidate {
   provider: string;
   model: string;
+  /** Connections whose synced discovery explicitly marks this model free. */
+  freeConnectionIds?: string[];
   resolvedSupportsVision?: boolean;
   resolvedReasoning?: boolean;
   resolvedSupportsThinking?: boolean;
@@ -145,7 +147,7 @@ export function buildAutoCandidateFilter(
     });
   }
   if (tier === "free") {
-    checks.push((c) => safeClassifyTier(c) === "free");
+    checks.push((c) => (c.freeConnectionIds?.length ?? 0) > 0 || safeClassifyTier(c) === "free");
   }
   if (tier === "pro") {
     checks.push((c) => safeClassifyTier(c) === "premium");

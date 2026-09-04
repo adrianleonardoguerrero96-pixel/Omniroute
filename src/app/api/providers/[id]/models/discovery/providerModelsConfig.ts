@@ -103,6 +103,60 @@ export function parsePerplexitySonarModels(data: any): any[] {
     (model: any) => typeof model?.id === "string" && /^sonar(-|$)/.test(model.id)
   );
 }
+
+/** Preserve Nous Portal's full recommendation list while tagging the live free subset. */
+export function parseNousRecommendedModels(data: any): any[] {
+  const free = Array.isArray(data?.freeRecommendedModels) ? data.freeRecommendedModels : [];
+  const paid = Array.isArray(data?.paidRecommendedModels)
+    ? data.paidRecommendedModels
+    : Array.isArray(data?.recommendedModels)
+      ? data.recommendedModels
+      : [];
+  const seen = new Set<string>();
+  const models: Array<Record<string, unknown>> = [];
+
+  const append = (entry: any, isFree: boolean) => {
+    const id =
+      typeof entry === "string"
+        ? entry.trim()
+        : typeof entry?.modelName === "string"
+          ? entry.modelName.trim()
+          : typeof entry?.id === "string"
+            ? entry.id.trim()
+            : "";
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    const name =
+      typeof entry?.displayName === "string" && entry.displayName.trim()
+        ? entry.displayName.trim()
+        : typeof entry?.name === "string" && entry.name.trim()
+          ? entry.name.trim()
+          : id;
+    models.push({ id, name, ...(isFree ? { isFree: true } : {}) });
+  };
+
+  for (const entry of free) append(entry, true);
+  for (const entry of paid) append(entry, false);
+  return models;
+}
+
+/** Portal recommendations augment the shipped Nous catalog; live rows win duplicate ids. */
+export function mergeNousRecommendedModelsWithCurated<T extends { id: string }>(
+  recommended: Array<Record<string, unknown>>,
+  curated: T[]
+): Array<Record<string, unknown> | T> {
+  const merged: Array<Record<string, unknown> | T> = [...recommended];
+  const seen = new Set(
+    recommended
+      .map((model) => (typeof model.id === "string" ? model.id : ""))
+      .filter(Boolean)
+  );
+  for (const model of curated) {
+    if (!seen.has(model.id)) merged.push(model);
+  }
+  return merged;
+}
+
 type ProviderModelsHeaderContext = {
   authType?: string;
   providerSpecificData?: unknown;
@@ -481,6 +535,12 @@ export const PROVIDER_MODELS_CONFIG: Record<string, ProviderModelsConfigEntry> =
       });
     },
     parseResponse: parseGrokBuildModels,
+  },
+  "nous-research": {
+    url: "https://portal.nousresearch.com/api/nous/recommended-models",
+    method: "GET",
+    headers: { Accept: "application/json" },
+    parseResponse: parseNousRecommendedModels,
   },
   openrouter: {
     url: "https://openrouter.ai/api/v1/models",

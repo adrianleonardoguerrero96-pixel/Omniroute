@@ -3,6 +3,7 @@ import { PROVIDER_TIER } from "./tierTypes";
 import { getModelPricing } from "./providerCostData";
 import { isExplicitlyFree } from "./providerCostData";
 import { mergeTierConfig, DEFAULT_TIER_CONFIG } from "./tierConfig";
+import { isFreeModel } from "@/shared/utils/freeModels";
 
 let dbPersistenceChecked = false;
 
@@ -16,6 +17,24 @@ function cacheKey(provider: string, model: string): string {
 function matchGlob(pattern: string, text: string): boolean {
   const regexStr = pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
   return new RegExp(`^${regexStr}$`, "i").test(text);
+}
+
+/**
+ * Whether the operator explicitly declared this provider/model free through
+ * the persisted tier-override surface. This intentionally excludes automatic
+ * free-provider and pricing inference so callers can treat it as an explicit
+ * administrative assertion.
+ */
+export function isExplicitFreeTierOverride(provider: string, model: string): boolean {
+  const providerOverride = currentConfig.providerOverrides.find(
+    (o) => o.provider.toLowerCase() === provider.toLowerCase()
+  );
+  if (providerOverride) return providerOverride.tier === PROVIDER_TIER.FREE;
+
+  const modelOverride = currentConfig.modelOverrides.find(
+    (o) => o.provider.toLowerCase() === provider.toLowerCase() && matchGlob(o.modelPattern, model)
+  );
+  return modelOverride?.tier === PROVIDER_TIER.FREE;
 }
 
 export function classifyTier(provider: string, model: string): TierAssignment {
@@ -72,6 +91,20 @@ export function classifyTier(provider: string, model: string): TierAssignment {
       costPer1MOutput: pricing.outputCostPer1M,
       hasFreeTier: pricing.isFree,
       freeQuotaLimit: pricing.freeQuotaLimit,
+    };
+    tierCache.set(key, assignment);
+    return assignment;
+  }
+
+  if (isFreeModel(provider, { id: model })) {
+    const assignment: TierAssignment = {
+      provider,
+      model,
+      tier: PROVIDER_TIER.FREE,
+      reason: "Model is explicitly identified as free by the shared free-model classifier",
+      costPer1MInput: 0,
+      costPer1MOutput: 0,
+      hasFreeTier: true,
     };
     tierCache.set(key, assignment);
     return assignment;
