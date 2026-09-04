@@ -9263,6 +9263,13 @@
     "kimiExtraUsageFrozen": "Frozen",
     "kimiExtraUsageUnavailable": "Unavailable",
     "kimiMonthlyUsed": "Used this month",
+    "kiloAccountBalance": "__MISSING__:Account Balance",
+    "kiloPassBonus": "__MISSING__:Available bonus",
+    "kiloPassMeterLabel": "__MISSING__:Kilo Pass usage meter",
+    "kiloPassPaid": "__MISSING__:Paid",
+    "kiloPassRemaining": "__MISSING__:Remaining",
+    "kiloPassRenews": "__MISSING__:Renews {count} days",
+    "kiloPassUsageLabel": "__MISSING__:This month's usage",
     "kimiMonthlyLimit": "Monthly limit",
     "kimiMonthlyLimitUnlimited": "Unlimited",
     "kimiAdditionalCredits": "Additional Credits",
@@ -13601,6 +13608,7 @@
   },
   "featureFlagCapabilityFilterEnabledDescription": "Rejeitar pedidos antes do envio quando o modelo de destino não tiver as capacidades necessárias (visão, ferramentas, saída estruturada, janela de contexto). Protege pedidos diretos de um único fornecedor que contornam o filtro de compatibilidade da camada combinada.",
   "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Desative a geração de variantes de nível de pensamento (por exemplo, -low, -medium, -high) no catálogo /v1/models.",
   "publicSystem": {
     "notFound": {
       "title": "Página não encontrada",
