@@ -1,6 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { saveCallLog, getCallLogById, normalizeTtftMs } from "../../src/lib/usageDb";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
+const TEST_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "omniroute-calllogs-ttft-"));
+process.env.DATA_DIR = TEST_DATA_DIR;
+
+const core = await import("../../src/lib/db/core.ts");
+const { saveCallLog, getCallLogById, normalizeTtftMs } = await import("../../src/lib/usageDb");
+
+test.after(() => {
+  core.resetDbInstance();
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+});
 
 test("normalizeTtftMs unit helper", () => {
   assert.equal(normalizeTtftMs(250), 250);

@@ -8,6 +8,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { RequestPipelinePayloads } from "@omniroute/open-sse/utils/requestLogger.ts";
+import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/errorSanitization.ts";
 import { getDbInstance } from "../db/core";
 import { getRequestDetailLogByCallLogId } from "../db/detailedLogs";
 import { shouldPersistToDisk } from "./migrations";
@@ -21,7 +22,11 @@ import {
   getObservedReasoning,
 } from "./tokenAccounting";
 import { isNoLog } from "../compliance/noLog";
-import { protectPayloadForLog, parseStoredPayload } from "../logPayloads";
+import {
+  parseStoredPayload,
+  protectErrorPayloadForLog,
+  protectPayloadForLog,
+} from "../logPayloads";
 import { pickDisplayValue } from "@/shared/utils/maskEmail";
 import {
   CALL_LOGS_DIR,
@@ -341,7 +346,10 @@ function readLegacyLogFromDisk(entry: {
       return JSON.parse(fs.readFileSync(path.join(dir, files[0]), "utf8"));
     }
   } catch (error) {
-    console.error("[callLogs] Failed to read legacy disk log:", (error as Error).message);
+    console.error(
+      "[callLogs] Failed to read legacy disk log:",
+      sanitizeErrorMessage(error) || "Legacy call log read failed"
+    );
   }
 
   return null;
@@ -454,10 +462,19 @@ async function saveCallLogOperation(entry: any): Promise<void> {
     const noLogEnabled = Boolean(entry.noLog) || (apiKeyId ? isNoLog(apiKeyId) : false);
 
     const protectedRequestBody = noLogEnabled ? null : protectPayloadForLog(entry.requestBody);
-    const protectedResponseBody = noLogEnabled ? null : protectPayloadForLog(entry.responseBody);
+    const responseStatus = Number(entry.status);
+    const failedResponse = Number.isFinite(responseStatus) && responseStatus >= 400;
+    const protectedResponseBody = noLogEnabled
+      ? null
+      : failedResponse
+        ? protectErrorPayloadForLog(entry.responseBody)
+        : protectPayloadForLog(entry.responseBody);
     const protectedPipelinePayloads = noLogEnabled
       ? null
-      : protectPipelinePayloads(entry.pipelinePayloads ?? entry.pipeline ?? null);
+      : protectPipelinePayloads(
+          entry.pipelinePayloads ?? entry.pipeline ?? null,
+          failedResponse ? responseStatus : undefined
+        );
     const protectedError = sanitizeErrorForLog(entry.error);
 
     const account = await resolveAccountName(entry.connectionId || null);
@@ -590,7 +607,10 @@ async function saveCallLogOperation(entry: any): Promise<void> {
 
     scheduleCallLogRotation();
   } catch (error) {
-    console.error("[callLogs] Failed to save call log:", (error as Error).message);
+    console.error(
+      "[callLogs] Failed to save call log:",
+      sanitizeErrorMessage(error) || "Call log persistence failed"
+    );
   }
 }
 
@@ -660,6 +680,61 @@ function pushLikeFilter(
   params[paramKey] = `%${value}%`;
 }
 
+function callLogSearchLikeSql(tokenKey: string): string {
+  return `(
+    cl.model LIKE @${tokenKey} OR cl.path LIKE @${tokenKey} OR cl.account LIKE @${tokenKey} OR
+    ${RESOLVED_ACCOUNT_SQL} LIKE @${tokenKey} OR
+    cl.requested_model LIKE @${tokenKey} OR cl.provider LIKE @${tokenKey} OR
+    cl.api_key_name LIKE @${tokenKey} OR cl.api_key_id LIKE @${tokenKey} OR
+    cl.combo_name LIKE @${tokenKey} OR CAST(cl.status AS TEXT) LIKE @${tokenKey}
+    OR cl.combo_step_id LIKE @${tokenKey} OR cl.combo_execution_key LIKE @${tokenKey}
+    OR cl.error_summary LIKE @${tokenKey}
+    OR cl.correlation_id LIKE @${tokenKey}
+  )`;
+}
+
+function callLogSearchNotLikeSql(tokenKey: string): string {
+  return `(
+    IFNULL(cl.model, '') NOT LIKE @${tokenKey} AND IFNULL(cl.path, '') NOT LIKE @${tokenKey} AND IFNULL(cl.account, '') NOT LIKE @${tokenKey} AND
+    IFNULL(${RESOLVED_ACCOUNT_SQL}, '') NOT LIKE @${tokenKey} AND
+    IFNULL(cl.requested_model, '') NOT LIKE @${tokenKey} AND IFNULL(cl.provider, '') NOT LIKE @${tokenKey} AND
+    IFNULL(cl.api_key_name, '') NOT LIKE @${tokenKey} AND IFNULL(cl.api_key_id, '') NOT LIKE @${tokenKey} AND
+    IFNULL(cl.combo_name, '') NOT LIKE @${tokenKey} AND IFNULL(CAST(cl.status AS TEXT), '') NOT LIKE @${tokenKey}
+    AND IFNULL(cl.combo_step_id, '') NOT LIKE @${tokenKey} AND IFNULL(cl.combo_execution_key, '') NOT LIKE @${tokenKey}
+    AND IFNULL(cl.error_summary, '') NOT LIKE @${tokenKey}
+    AND IFNULL(cl.correlation_id, '') NOT LIKE @${tokenKey}
+  )`;
+}
+
+/** AND-token + -negation search, extracted so getCallLogs stays under max-lines. */
+function pushSearchTokenFilters(
+  conditions: string[],
+  params: Record<string, unknown>,
+  search: unknown
+) {
+  if (!search) return;
+  const tokens = String(search)
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((t) => t.trim());
+  const positiveTokens = tokens.filter((t) => !t.startsWith("-"));
+  const negativeTokens = tokens
+    .filter((t) => t.startsWith("-") && t.length > 1)
+    .map((t) => t.substring(1));
+
+  let searchIdx = 0;
+  for (const token of positiveTokens) {
+    const pKey = `searchPosQ${searchIdx++}`;
+    conditions.push(callLogSearchLikeSql(pKey));
+    params[pKey] = `%${token}%`;
+  }
+  for (const token of negativeTokens) {
+    const pKey = `searchNegQ${searchIdx++}`;
+    conditions.push(callLogSearchNotLikeSql(pKey));
+    params[pKey] = `%${token}%`;
+  }
+}
+
 export async function getCallLogs(filter: any = {}) {
   const db = getDbInstance();
   let sql = `
@@ -724,49 +799,7 @@ export async function getCallLogs(filter: any = {}) {
     conditions.push("cl.timestamp <= @until");
     params.until = filter.until instanceof Date ? filter.until.toISOString() : String(filter.until);
   }
-  if (filter.search) {
-    const tokens = filter.search
-      .split(/\s+/)
-      .filter(Boolean)
-      .map((t: string) => t.trim());
-
-    const positiveTokens = tokens.filter((t: string) => !t.startsWith("-"));
-    const negativeTokens = tokens
-      .filter((t: string) => t.startsWith("-") && t.length > 1)
-      .map((t: string) => t.substring(1));
-
-    let searchIdx = 0;
-
-    for (const token of positiveTokens) {
-      const pKey = `searchPosQ${searchIdx++}`;
-      conditions.push(`(
-        cl.model LIKE @${pKey} OR cl.path LIKE @${pKey} OR cl.account LIKE @${pKey} OR
-        ${RESOLVED_ACCOUNT_SQL} LIKE @${pKey} OR
-        cl.requested_model LIKE @${pKey} OR cl.provider LIKE @${pKey} OR
-        cl.api_key_name LIKE @${pKey} OR cl.api_key_id LIKE @${pKey} OR
-        cl.combo_name LIKE @${pKey} OR CAST(cl.status AS TEXT) LIKE @${pKey}
-        OR cl.combo_step_id LIKE @${pKey} OR cl.combo_execution_key LIKE @${pKey}
-        OR cl.error_summary LIKE @${pKey}
-        OR cl.correlation_id LIKE @${pKey}
-      )`);
-      params[pKey] = `%${token}%`;
-    }
-
-    for (const token of negativeTokens) {
-      const pKey = `searchNegQ${searchIdx++}`;
-      conditions.push(`(
-        IFNULL(cl.model, '') NOT LIKE @${pKey} AND IFNULL(cl.path, '') NOT LIKE @${pKey} AND IFNULL(cl.account, '') NOT LIKE @${pKey} AND
-        IFNULL(${RESOLVED_ACCOUNT_SQL}, '') NOT LIKE @${pKey} AND
-        IFNULL(cl.requested_model, '') NOT LIKE @${pKey} AND IFNULL(cl.provider, '') NOT LIKE @${pKey} AND
-        IFNULL(cl.api_key_name, '') NOT LIKE @${pKey} AND IFNULL(cl.api_key_id, '') NOT LIKE @${pKey} AND
-        IFNULL(cl.combo_name, '') NOT LIKE @${pKey} AND IFNULL(CAST(cl.status AS TEXT), '') NOT LIKE @${pKey}
-        AND IFNULL(cl.combo_step_id, '') NOT LIKE @${pKey} AND IFNULL(cl.combo_execution_key, '') NOT LIKE @${pKey}
-        AND IFNULL(cl.error_summary, '') NOT LIKE @${pKey}
-        AND IFNULL(cl.correlation_id, '') NOT LIKE @${pKey}
-      )`);
-      params[pKey] = `%${token}%`;
-    }
-  }
+  pushSearchTokenFilters(conditions, params, filter.search);
 
   if (conditions.length > 0) {
     sql += " WHERE " + conditions.join(" AND ");

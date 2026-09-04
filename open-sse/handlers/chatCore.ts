@@ -5,7 +5,8 @@ import {
 import { injectMemoryAndSkills } from "./chatCore/memorySkillsInjection.ts";
 import { resolveChatCoreRequestSetup } from "./chatCore/requestSetup.ts";
 import { normalizeOpenAICompatibleTools } from "./chatCore/openAICompatibleTools.ts";
-import { buildFailureUsageRecord } from "./chatCore/failureUsage.ts";
+import { buildFailureUsageRecord, projectFailureUsageErrorCode } from "./chatCore/failureUsage.ts";
+import { createTranslationFailureResult } from "./chatCore/translationFailure.ts";
 import { estimateFinalInputTokens } from "./chatCore/contextEstimation.ts";
 import {
   extractSystemRoleMessages,
@@ -77,7 +78,11 @@ import {
   isStripReasoningRequested,
 } from "./chatCore/headers.ts";
 import { markCodexScopeRateLimited } from "./chatCore/codexFailover.ts";
-import { getCodexClientSessionId, isCodexOriginatedHeaders } from "../config/codexIdentity.ts";
+import {
+  getCodexClientSessionId,
+  isCodexOriginatedHeaders,
+  isClaudeCodeOriginatedHeaders,
+} from "../config/codexIdentity.ts";
 import {
   noteCodexTurnStateProvenance,
   readCodexTurnStateHeader,
@@ -119,11 +124,7 @@ export {
   buildStreamingResponseHeaders,
   stripStaleForwardingHeaders,
 };
-import {
-  extractMemoryTextFromResponse,
-  extractMemoryTextFromRequestBody,
-  resolveMemoryOwnerId,
-} from "./chatCore/memoryExtraction.ts";
+import { resolveMemoryOwnerId, runMemoryExtractionGate } from "./chatCore/memoryExtraction.ts";
 import { CORS_HEADERS } from "../utils/cors.ts";
 import { checkResourcePressureGuard } from "../utils/resourcePressure.ts";
 import { normalizeHeaders } from "../utils/headers.ts";
@@ -359,6 +360,11 @@ import { assertExclusiveConnectionLeaseFence } from "@/lib/db/exclusiveConnectio
 import { deleteSessionAccountAffinity } from "@/lib/db/sessionAccountAffinity";
 import { getCacheControlSettings } from "@/lib/cacheControlSettings";
 import { guardrailRegistry } from "@/lib/guardrails";
+import type { VideoBridgeLogRedactionEntry } from "@/lib/guardrails/videoBridge";
+import {
+  logClientRawRequestRedacted,
+  redactPendingBody,
+} from "@/lib/guardrails/videoBridgeSnapshotRedaction";
 import {
   shouldPreserveCacheControl,
   resolveConnectionCacheOverride,
@@ -379,6 +385,7 @@ import { sanitizeOpenAITool } from "../services/toolSchemaSanitizer.ts";
 import { isCompactResponsesEndpoint } from "../executors/codex.ts";
 import { persistCodexChildQuotaResponse } from "../services/codexAccount/index.ts";
 import { invalidateCodexQuotaCache } from "../services/codexQuotaFetcher.ts";
+import { invalidateGenericQuotaCacheOnStatus } from "../services/genericQuotaFetcher.ts";
 import { translateNonStreamingResponse } from "./responseTranslator.ts";
 import { extractToolSchemaMap } from "../translator/response/openai-responses/toolSchemas.ts";
 import { unwrapClineNonStreamingEnvelope } from "./chatCore/clineResponseEnvelope.ts";
@@ -472,11 +479,21 @@ import {
   isRpmExhausted,
 } from "../services/geminiRateLimitTracker.ts";
 import { isSmallEnoughForSemanticCache } from "../utils/estimateSize.ts";
+import { getProactiveCompressionRatio } from "@/lib/db/compression";
 
 type ChatCoreExecutorResult = ReturnType<typeof normalizeExecutorResult> & {
   _executionCredentials?: Record<string, unknown>;
   _accountSemaphoreRelease?: () => void;
 };
+
+/**
+ * #12150 P1b: shape of handleChatCore's optional `videoBridgeLog` param — see
+ * its destructure default below. `handleChatCore`'s own params object has no
+ * type annotation (pre-existing convention for this god-function), so this
+ * alias is applied via a local cast at each read site instead of widening
+ * the whole destructure to a typed object.
+ */
+type VideoBridgeLogParam = { observed: boolean; redaction: VideoBridgeLogRedactionEntry[] } | null;
 
 /**
  * Core chat handler - shared between SSE and Worker
@@ -528,8 +545,23 @@ export async function handleChatCore({
   skipResourcePressureGuard = false,
   reasoningTransportFallback = "drop",
   managedLease = null,
+  // #12150 P1b: additive, optional video-bridge log/Memory shadow — shape is
+  // VideoBridgeLogParam (defined near the top of this file). Built once in chat.ts from
+  // preCallGuardrails.results (video-bridge guardrail meta) and threaded here
+  // through executeChatWithBreaker. `undefined` for every non-video request,
+  // so this parameter changes nothing on the byte-identical default path.
+  // `observed` gates durable Memory extraction (surface 3); `redaction` is
+  // applied to a CLONE of `body` at the persistAttemptLogs sink (surface 1) —
+  // the model-bound `body` itself is never touched.
+  videoBridgeLog = undefined,
 }) {
   let { provider, model, extendedContext } = modelInfo;
+  // #12150 P1b: true iff the video-bridge guardrail rendered >=1 transcript
+  // cue into a replaced part of this request. Gates both request- and
+  // response-derived Memory extraction
+  // (chatCore/memoryExtraction.ts::runMemoryExtractionGate).
+  const videoBridgeObserved: boolean =
+    (videoBridgeLog as VideoBridgeLogParam | undefined)?.observed === true;
   const resilienceSettings = resolveResilienceSettings(cachedSettings);
   if (!skipResourcePressureGuard) {
     try {
@@ -901,7 +933,7 @@ export async function handleChatCore({
   const pendingRequestId =
     trackPendingRequest(model, provider, pendingConnId, true, {
       clientEndpoint: clientRawRequest?.endpoint || "/v1/chat/completions",
-      clientRequest: clientRawRequest?.body ?? body,
+      clientRequest: redactPendingBody(clientRawRequest?.body ?? body, videoBridgeObserved),
       providerRequest: initialProviderRequest,
       stage: "registered",
       correlationId,
@@ -981,8 +1013,14 @@ export async function handleChatCore({
   const isCodexResponsesEcho =
     (isResponsesEndpoint || sourceFormat === FORMATS.OPENAI_RESPONSES) &&
     isCodexOriginatedHeaders(clientRawRequest?.headers);
+
+  // Detect Claude Code CLI so we can auto-enable model echo — this prevents
+  // session restore failures when the resolved upstream model (e.g.
+  // `oc/nemotron-3-ultra-free`) is not recognized by the client on `--resume`.
+  const isClaudeCodeClient = isClaudeCodeOriginatedHeaders(clientRawRequest?.headers);
+
   let echoModel =
-    (settings.echoRequestedModelName === true || isCodexResponsesEcho) &&
+    (settings.echoRequestedModelName === true || isCodexResponsesEcho || isClaudeCodeClient) &&
     typeof requestedModel === "string" &&
     requestedModel
       ? requestedModel
@@ -1056,6 +1094,9 @@ export async function handleChatCore({
       // client explicitly sent x-omniroute-session-id. The raw header remains a
       // fallback for any caller that somehow bypassed conversationId resolution.
       sessionTag: conversationId || explicitSessionIdHeader,
+      // #12150 P1b surface 1: undefined for every non-video request (byte-identical
+      // to before this param existed) — see applyVideoBridgeLogRedaction.
+      videoBridgeLogRedaction: (videoBridgeLog as VideoBridgeLogParam | undefined)?.redaction,
     });
 
   // Primary path: merge client model id + alias target so config on either key applies; resolved
@@ -1176,14 +1217,9 @@ export async function handleChatCore({
   });
   const pendingScope = { id: pendingRequestId, model, provider, connectionId: pendingConnId };
   const providerRequestCapture = createPreparedRequestLogger(reqLogger, pendingScope);
-  // 0. Log client raw request (before format conversion)
-  if (clientRawRequest) {
-    reqLogger.logClientRawRequest(
-      clientRawRequest.endpoint,
-      clientRawRequest.body,
-      clientRawRequest.headers
-    );
-  }
+  // 0. Log client raw request (before format conversion) — redacts video transcript
+  // cues in the logged copy only; see videoBridgeSnapshotRedaction.ts.
+  logClientRawRequestRedacted(reqLogger, clientRawRequest, videoBridgeObserved);
   const reasoningRouteDecision =
     body && typeof body === "object"
       ? (body as Record<string, unknown>)._omnirouteReasoningRouteTrace
@@ -1574,12 +1610,12 @@ export async function handleChatCore({
             await import("../services/compression/outputStyles/backCompat.ts");
           const selection = resolveOutputStyleSelection(config);
           if (selection.length > 0) {
-            const { applyOutputStyles } =
+            const { applyOutputStyles, resolveOutputStyleLanguage } =
               await import("../services/compression/outputStyles/apply.ts");
-            const outputStyleLanguage =
-              config.languageConfig?.enabled === true
-                ? config.languageConfig.defaultLanguage
-                : "en";
+            const outputStyleLanguage = resolveOutputStyleLanguage(
+              config.languageConfig,
+              body as Parameters<typeof resolveOutputStyleLanguage>[1]
+            );
             outputStyleResult = applyOutputStyles(
               body as Parameters<typeof applyOutputStyles>[0],
               selection,
@@ -1987,7 +2023,7 @@ export async function handleChatCore({
       }
     }
 
-    const COMPRESSION_THRESHOLD = 0.7;
+    const COMPRESSION_THRESHOLD = getProactiveCompressionRatio();
     let reservedTokens = 0;
     if (Array.isArray(body.tools)) {
       reservedTokens = estimateTokens(body.tools);
@@ -2478,35 +2514,11 @@ export async function handleChatCore({
         : HTTP_STATUS.SERVER_ERROR;
     const message = error?.message || "Invalid request";
     const errorType = typeof error?.errorType === "string" ? error.errorType : null;
-
-    log?.warn?.("TRANSLATE", `Request translation failed: ${message}`);
-
-    if (errorType) {
-      trackPendingRequest(model, provider, connectionId, false);
-      return {
-        success: false,
-        status: statusCode,
-        error: message,
-        response: new Response(
-          JSON.stringify({
-            error: {
-              message,
-              type: errorType,
-              code: errorType,
-            },
-          }),
-          {
-            status: statusCode,
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        ),
-      };
-    }
+    const result = createTranslationFailureResult(statusCode, message, errorType);
+    log?.warn?.("TRANSLATE", `Request translation failed: ${result.error}`);
 
     trackPendingRequest(model, provider, connectionId, false);
-    return createErrorResult(statusCode, message);
+    return result;
   }
 
   // The latest OmniGlyph release has protocol-native OpenAI transforms. Run
@@ -2725,6 +2737,7 @@ export async function handleChatCore({
 
   const previousResponseIdPolicy = applyResponsesPreviousResponseIdPolicy(translatedBody, {
     mode: settings.responsesPreviousResponseIdMode,
+    provider,
     sourceFormat,
     targetFormat,
     credentials,
@@ -3204,6 +3217,14 @@ export async function handleChatCore({
                   const errMessage = err instanceof Error ? err.message : String(err);
                   log?.debug?.("CODEX", `Failed to persist codex quota state: ${errMessage}`);
                 }
+              } else if (attemptConnectionId && res.response.status === 429) {
+                // Dropped generic quota cache after 429
+                invalidateGenericQuotaCacheOnStatus({
+                  provider,
+                  connectionId: String(attemptConnectionId),
+                  status: res.response.status,
+                  isolateProbe: await shouldIsolateProbeFailures(),
+                });
               }
 
               // Track Gemini RPM + RPD request counts for 429 classification
@@ -3880,10 +3901,14 @@ export async function handleChatCore({
       streamController.handleError(error);
       return createErrorResult(499, "Request aborted");
     }
-    persistFailureUsage(
-      failureStatus,
-      upstreamErrorCode || (error instanceof Error && error.name ? error.name : "upstream_error")
-    );
+    const persistentErrorCode = projectFailureUsageErrorCode({
+      statusCode: failureStatus,
+      message: failureMessage,
+      errorCode:
+        upstreamErrorCode || (error instanceof Error && error.name ? error.name : "upstream_error"),
+      errorType: upstreamErrorType,
+    });
+    persistFailureUsage(failureStatus, persistentErrorCode);
     console.log(`${COLORS.red}[ERROR] ${failureMessage}${COLORS.reset}`);
     if (stream && upstreamErrorCode) {
       const result = createStreamingErrorResult(
@@ -4209,6 +4234,9 @@ export async function handleChatCore({
         `${decision.kind} (model remaining: ${decision.snapshot.modelRemaining ?? "unknown"}, total remaining: ${decision.snapshot.totalRemaining ?? "unknown"})`
       );
     }
+    // Classifiers and recovery paths above consume the raw provider wording.
+    // Project a separate value only at persistent connection-state boundaries.
+    const persistentMessage = sanitizeErrorMessage(message) || "Provider request failed";
     const errorConnectionId = getCurrentConnectionId();
     if (errorConnectionId && errorType) {
       try {
@@ -4220,7 +4248,7 @@ export async function handleChatCore({
               {
                 testStatus: "banned",
                 isActive: false,
-                lastError: message,
+                lastError: persistentMessage,
                 lastErrorType: errorType,
                 errorCode: String(statusCode),
               },
@@ -4251,7 +4279,7 @@ export async function handleChatCore({
           ) {
             await updateProviderConnection(errorConnectionId, {
               lastErrorType: errorType,
-              lastError: message,
+              lastError: persistentMessage,
               errorCode: statusCode,
             });
             console.warn(
@@ -4264,7 +4292,7 @@ export async function handleChatCore({
               {
                 testStatus: "deactivated",
                 isActive: false,
-                lastError: message,
+                lastError: persistentMessage,
                 lastErrorType: errorType,
                 errorCode: String(statusCode),
               },
@@ -4288,7 +4316,7 @@ export async function handleChatCore({
                 errorConnectionId,
                 {
                   testStatus: "credits_exhausted",
-                  lastError: message,
+                  lastError: persistentMessage,
                   lastErrorType: errorType,
                   errorCode: String(statusCode),
                 },
@@ -4374,7 +4402,7 @@ export async function handleChatCore({
                   rateLimitedUntil: kimiRateLimitResetAt,
                   backoffLevel: 0,
                   lastErrorType: PROVIDER_ERROR_TYPES.RATE_LIMITED,
-                  lastError: message,
+                  lastError: persistentMessage,
                   errorCode: statusCode,
                 });
                 console.warn(
@@ -4403,7 +4431,7 @@ export async function handleChatCore({
                   errorConnectionId,
                   {
                     testStatus: "credits_exhausted",
-                    lastError: message,
+                    lastError: persistentMessage,
                     lastErrorType: errorType,
                     errorCode: String(statusCode),
                   },
@@ -4419,14 +4447,14 @@ export async function handleChatCore({
           // Normal 401 (token/session auth issue): keep account active for refresh/re-auth.
           await updateProviderConnection(errorConnectionId, {
             lastErrorType: errorType,
-            lastError: message,
+            lastError: persistentMessage,
             errorCode: statusCode,
           });
         } else if (errorType === PROVIDER_ERROR_TYPES.OAUTH_INVALID_TOKEN) {
           // OAuth 401 with invalid credentials - token refresh can recover
           await updateProviderConnection(errorConnectionId, {
             lastErrorType: errorType,
-            lastError: message,
+            lastError: persistentMessage,
             errorCode: statusCode,
           });
           console.warn(
@@ -4436,7 +4464,7 @@ export async function handleChatCore({
           // Cloud Code 403 with stale project: not a ban, keep account active.
           await updateProviderConnection(errorConnectionId, {
             lastErrorType: errorType,
-            lastError: message,
+            lastError: persistentMessage,
             errorCode: statusCode,
           });
           console.warn(
@@ -4452,7 +4480,7 @@ export async function handleChatCore({
           const geoCooldownMs = COOLDOWN_MS.geoBlocked ?? 24 * 60 * 60 * 1000;
           await updateProviderConnection(errorConnectionId, {
             lastErrorType: errorType,
-            lastError: message,
+            lastError: persistentMessage,
             errorCode: statusCode,
           });
           // T-PROBE: the 24h exclusion is a routing mutation — a probe must
@@ -4477,7 +4505,7 @@ export async function handleChatCore({
           const byopCooldownMs = COOLDOWN_MS.gcpProjectRequired ?? 24 * 60 * 60 * 1000;
           await updateProviderConnection(errorConnectionId, {
             lastErrorType: errorType,
-            lastError: message,
+            lastError: persistentMessage,
             errorCode: statusCode,
           });
           try {
@@ -5124,17 +5152,22 @@ export async function handleChatCore({
       }
     );
 
-    if (memoryOwnerId && memorySettings?.enabled && memorySettings.maxTokens > 0) {
-      const requestMemoryText = extractMemoryTextFromRequestBody(body as Record<string, unknown>);
-      if (requestMemoryText) {
-        extractFacts(requestMemoryText, memoryOwnerId, pipelineSessionId);
-      }
-
-      const memoryText = extractMemoryTextFromResponse(memoryExtractionResponse);
-      if (memoryText) {
-        extractFacts(memoryText, memoryOwnerId, pipelineSessionId);
-      }
-    }
+    // #12150 P1b surface 3 (fix round 1): a video-bridge-observed request's
+    // request- AND response-derived text both carry the full transcript (the
+    // flattened description on the request side, the model's own reply on
+    // the response side) — neither may populate durable Memory. See
+    // runMemoryExtractionGate for the shared gate + extraction wiring, unit
+    // tested directly in tests/unit/video-bridge-memory-suppression.test.ts.
+    runMemoryExtractionGate({
+      memoryOwnerId,
+      memorySettings,
+      videoBridgeObserved,
+      pipelineSessionId,
+      requestBody: body as Record<string, unknown>,
+      responseBody: memoryExtractionResponse as Record<string, unknown> | null,
+      extractFacts,
+      log,
+    });
 
     const customSkillExecutionEnabled =
       Boolean(memoryOwnerId) && memorySettings?.skillsEnabled === true;
@@ -5256,9 +5289,12 @@ export async function handleChatCore({
       }).catch(() => {});
       const malformed = describeMalformedNonStream(translatedResponse, malformedTranslatedReason);
       const malformedMessage = `[${provider}/${model}] ${malformed.message}`;
-      const malformedClientBody = buildErrorBody(HTTP_STATUS.BAD_GATEWAY, malformedMessage);
-      malformedClientBody.error.code = malformed.code;
-      malformedClientBody.error.type = malformed.type;
+      const malformedClientBody = buildErrorBody(
+        HTTP_STATUS.BAD_GATEWAY,
+        malformedMessage,
+        undefined,
+        { code: malformed.code, type: malformed.type }
+      );
       persistAttemptLogs({
         status: HTTP_STATUS.BAD_GATEWAY,
         tokens: usage,
@@ -5465,6 +5501,7 @@ export async function handleChatCore({
 
   const streamReadiness = await ensureStreamReadiness(providerResponse, {
     timeoutMs: streamReadinessPolicy.timeoutMs,
+    maxTimeoutMs: streamReadinessPolicy.maxTimeoutMs,
     provider,
     model,
     log,
@@ -5748,23 +5785,20 @@ export async function handleChatCore({
     });
     // === /Quota Share POST-hook streaming ===
 
-    if (
-      memoryOwnerId &&
-      memorySettings?.enabled &&
-      memorySettings.maxTokens > 0 &&
-      streamStatus === 200
-    ) {
-      const requestMemoryText = extractMemoryTextFromRequestBody(body as Record<string, unknown>);
-      if (requestMemoryText) {
-        extractFacts(requestMemoryText, memoryOwnerId, pipelineSessionId);
-      }
-
-      const streamedMemoryText = extractMemoryTextFromResponse(
-        (streamResponseBody ?? null) as Record<string, unknown> | null
-      );
-      if (streamedMemoryText) {
-        extractFacts(streamedMemoryText, memoryOwnerId, pipelineSessionId);
-      }
+    if (streamStatus === 200) {
+      // #12150 P1b surface 3 (fix round 1): see the matching non-streaming
+      // gate above — an observed request populates NO durable memory from
+      // either the request-derived text or this streamed response.
+      runMemoryExtractionGate({
+        memoryOwnerId,
+        memorySettings,
+        videoBridgeObserved,
+        pipelineSessionId,
+        requestBody: body as Record<string, unknown>,
+        responseBody: (streamResponseBody ?? null) as Record<string, unknown> | null,
+        extractFacts,
+        log,
+      });
     }
 
     // Semantic cache: store assembled streaming response for future cache hits

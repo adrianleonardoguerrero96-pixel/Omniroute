@@ -40,6 +40,7 @@ import { invalidateDbCache } from "./readCache";
 import { rowToCamel } from "./caseMapping";
 import { isAutomatedTestProcess } from "@/shared/utils/testProcess";
 import { parseModelAccessMode } from "./apiKeys/modelAccessMode";
+import { getExistingDbInstance as getDb, setDbInstance as setDb } from "./singleton";
 // Re-exported so existing call sites that pull these helpers off the core module keep working.
 export { toSnakeCase, toCamelCase, objToSnake, rowToCamel, cleanNulls } from "./caseMapping";
 import {
@@ -370,8 +371,7 @@ const SCHEMA_SQL = `
     provider TEXT,
     account TEXT,
     connection_id TEXT,
-    duration INTEGER DEFAULT 0,
-    ttft_ms INTEGER DEFAULT NULL,
+    duration INTEGER DEFAULT 0, ttft_ms INTEGER DEFAULT NULL,
     tokens_in INTEGER DEFAULT 0,
     tokens_out INTEGER DEFAULT 0,
     tokens_cache_read INTEGER DEFAULT NULL,
@@ -515,7 +515,6 @@ const SCHEMA_SQL = `
 // Module-level `let` resets on every webpack recompile, causing connection leaks.
 
 declare global {
-  var __omnirouteDb: SqliteAdapter | undefined;
   // Cycle-breaker counter for the probe-failed/restore cascade. Survives
   // Next.js HMR re-evaluations so concurrent subsystems all see the same
   // count and we abort with a clear error instead of looping forever.
@@ -528,18 +527,6 @@ declare global {
   // (BATCH, HealthCheck, ProviderLimitsSync, ModelSync) re-throws the same
   // OOM error forever with no terminal diagnostic.
   var __omnirouteDbOomFailureCount: number | undefined;
-}
-
-function getDb(): SqliteDatabase | null {
-  return globalThis.__omnirouteDb ?? null;
-}
-
-function setDb(db: SqliteDatabase | null): void {
-  if (db) {
-    globalThis.__omnirouteDb = db;
-  } else {
-    delete globalThis.__omnirouteDb;
-  }
 }
 
 function checkpointDb(db: SqliteDatabase, mode: CheckpointMode = "TRUNCATE"): boolean {
@@ -1131,10 +1118,10 @@ export function getDbInstance(): SqliteDatabase {
   // This is needed so the migration runner skips the mass-migration safety abort
   // that would otherwise trigger because heuristic seeding marks some migrations
   // as applied, making the fresh DB look like a wiped existing DB (#1328).
-  // #9934: also classify as fresh a file that `omniroute setup` created with
-  // only the clipped skeleton schema (see the probe below) — even though the
-  // file exists, it has never had migrations run.
-  let isNewDb = !fs.existsSync(sqliteFile);
+  // #9934: also classify a setup-created skeleton as logically fresh for the mass guard,
+  // while tracking its pre-existing file independently for mandatory snapshot safety.
+  const databaseExistedBeforeInitialization = fs.existsSync(sqliteFile);
+  let isNewDb = !databaseExistedBeforeInitialization;
 
   // Detect and handle old schema format — preserve data when possible (#146)
   // Uses a single probe connection that becomes the real connection when possible.
@@ -1290,13 +1277,18 @@ export function getDbInstance(): SqliteDatabase {
   // selected on the server's primary DB path too, not only the backup-import
   // route.
   console.log(`[DB] Driver: ${db.driver} | file: ${sqliteFile}`);
-  db.pragma("journal_mode = WAL");
   // better-sqlite3 is synchronous, so a contended write parks the Node event loop for up to
   // busy_timeout ms (a 0-CPU freeze that stacks under load → /health stops responding). The
   // hot-path writers here (usage_history, call_logs) are best-effort and the WinUI host opens
   // the same DB, so cap the block at 2s instead of 5s: normal writes complete in <1ms, and a
   // contended op can no longer freeze the loop past the host watchdog's 6s liveness probe.
+  //
+  // Install the busy handler before the connection's first statement. `journal_mode = WAL`
+  // needs a SHARED lock, and another process closing its WAL connection briefly holds the
+  // file EXCLUSIVE (checkpoint + WAL delete); node:sqlite opens with busy timeout 0, so with
+  // the pragmas in the other order that window surfaced as `database is locked` at startup.
   db.pragma("busy_timeout = 2000");
+  db.pragma("journal_mode = WAL");
   db.pragma("synchronous = NORMAL");
   db.pragma(`cache_size = -${DEFAULT_DATABASE_SETTINGS.optimization.cacheSize}`);
   db.pragma("temp_store = MEMORY");
@@ -1318,7 +1310,7 @@ export function getDbInstance(): SqliteDatabase {
     VALUES ('001', 'initial_schema');
   `);
 
-  runMigrations(db, { isNewDb });
+  runMigrations(db, { isNewDb, databaseExistedBeforeInitialization });
   // Fresh installs need the same post-migration index guarantee as upgraded
   // databases, including recovery from an interrupted migration 127 attempt.
   ensureUsageHistoryAccountIndex(db);

@@ -1,6 +1,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { formatTtft, getLogTtft } from "../../../../src/shared/components/RequestLoggerV2";
+import {
+  compareRequestLogs,
+  formatTtft,
+  getLogTtft,
+} from "../../../../src/shared/components/requestLoggerMetrics";
 
 describe("RequestLoggerV2 - TTFT helpers", () => {
   describe("getLogTtft", () => {
@@ -42,6 +46,31 @@ describe("RequestLoggerV2 - TTFT helpers", () => {
       assert.equal(formatTtft(undefined), "—");
       assert.equal(formatTtft(NaN), "—");
       assert.equal(formatTtft(Infinity), "—");
+    });
+  });
+
+  describe("compareRequestLogs ttft sort", () => {
+    const logs = [
+      { model: "nullish", timeToFirstTokenMs: null },
+      { model: "fast", timeToFirstTokenMs: 80 },
+      { model: "slow", timeToFirstTokenMs: 1500 },
+      { model: "missing" },
+    ];
+
+    it("orders positive TTFT descending and keeps nulls last", () => {
+      const sorted = [...logs].sort((a, b) => compareRequestLogs(a, b, "ttft_desc"));
+      assert.deepEqual(
+        sorted.map((l) => l.model),
+        ["slow", "fast", "nullish", "missing"]
+      );
+    });
+
+    it("orders positive TTFT ascending and keeps nulls last", () => {
+      const sorted = [...logs].sort((a, b) => compareRequestLogs(a, b, "ttft_asc"));
+      assert.deepEqual(
+        sorted.map((l) => l.model),
+        ["fast", "slow", "nullish", "missing"]
+      );
     });
   });
 });
