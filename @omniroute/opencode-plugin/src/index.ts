@@ -1199,7 +1199,7 @@ export type OmniRouteModelsFetcher = (
 export const defaultOmniRouteModelsFetcher: OmniRouteModelsFetcher = async (
   baseURL,
   apiKey,
-  timeoutMs = 10_000
+  timeoutMs = 30_000
 ) => {
   if (!apiKey) throw new Error("@omniroute/opencode-plugin: apiKey required to fetch /v1/models");
   if (!baseURL) throw new Error("@omniroute/opencode-plugin: baseURL required to fetch /v1/models");
@@ -1221,9 +1221,12 @@ export const defaultOmniRouteModelsFetcher: OmniRouteModelsFetcher = async (
       signal: controller.signal,
     });
     if (!res.ok) {
-      throw new Error(
+      const err = new Error(
         `@omniroute/opencode-plugin: GET ${url} failed: ${res.status} ${res.statusText}`
-      );
+      ) as Error & { statusCode: number; status: number };
+      err.statusCode = res.status;
+      err.status = res.status;
+      throw err;
     }
     const body = (await res.json()) as unknown;
     const rawList: unknown[] = Array.isArray(body)
@@ -5398,7 +5401,7 @@ export function createOmniRouteConfigHook(
         // exact warn message so per-endpoint fallbacks are preserved.
         const doModels = async (): Promise<void> => {
           try {
-            localRawModels = await fetcher(baseURL, apiKey, 10_000);
+            localRawModels = await fetcher(baseURL, apiKey, 30_000);
           } catch (err) {
             logAt(
               "error",

@@ -78,6 +78,7 @@ import {
 } from "@/lib/db/sessionAccountAffinity";
 import { dispatchChatWithAffinityEviction } from "./chatDispatch";
 import { getCachedSettings, getCombosCacheVersion } from "@/lib/db/readCache";
+import { comboCheckProvider, ghComboGate } from "./chat/githubLiveCatalogFilter.ts";
 import { getCombos } from "@/lib/db/combos";
 import { resolveModelLockoutSettings } from "@/lib/resilience/modelLockoutSettings";
 import {
@@ -174,6 +175,7 @@ import { registerBailianCodingPlanQuotaFetcher } from "@omniroute/open-sse/servi
 import { registerQwenTokenPlanQuotaFetcher } from "@omniroute/open-sse/services/qwenTokenPlanQuotaFetcher.ts";
 import { registerCrofUsageFetcher } from "@omniroute/open-sse/services/crofUsageFetcher.ts";
 import { registerDeepseekQuotaFetcher } from "@omniroute/open-sse/services/deepseekQuotaFetcher.ts";
+import { registerMoonshotQuotaFetcher, registerMoonshotFetchersForNodes } from "@omniroute/open-sse/services/moonshotQuotaFetcher.ts";
 import { registerOpenrouterQuotaFetcher } from "@omniroute/open-sse/services/openrouterQuotaFetcher.ts";
 import { registerOpencodeQuotaFetcher } from "@omniroute/open-sse/services/opencodeQuotaFetcher.ts";
 import { registerGrokWebQuotaFetcher } from "@omniroute/open-sse/services/grokQuotaFetcher.ts";
@@ -221,6 +223,21 @@ registerCrofUsageFetcher();
 // Register DeepSeek balance quota fetcher.
 // Hooks into quotaPreflight + quotaMonitor so combos can switch accounts before balance is exhausted.
 registerDeepseekQuotaFetcher();
+registerMoonshotQuotaFetcher();
+void import("@/lib/db/providers")
+  .then(({ getProviderNodes }) => getProviderNodes())
+  .then((nodes) => {
+    registerMoonshotFetchersForNodes(
+      (Array.isArray(nodes) ? nodes : []).map((node) => ({
+        id: typeof node.id === "string" ? node.id : null,
+        prefix: typeof node.prefix === "string" ? node.prefix : null,
+        baseUrl: typeof node.baseUrl === "string" ? node.baseUrl : null,
+      })),
+    );
+  })
+  .catch((error) => {
+    console.warn("[STARTUP] Moonshot custom-node fetcher scan skipped:", error);
+  });
 registerOpenrouterQuotaFetcher();
 
 // Register OpenCode quota fetcher (opencode-go / opencode / opencode-zen).
@@ -1009,18 +1026,10 @@ async function handleChatImplementation(
         if (isCommonChatGptWebRetirementError(error)) return false;
         throw error;
       }
-      // Apply the same prefix-override guard as handleSingleModelChat:
-      // if providerId is just the prefix already in the model string, use
-      // the fully-resolved modelInfo.provider for a precise credential check.
-      const provider = (() => {
-        if (!target?.providerId) return modelInfo.provider;
-        if (target.providerId === modelInfo.provider) return modelInfo.provider;
-        if (modelString.startsWith(target.providerId + "/")) return modelInfo.provider;
-        return target.providerId;
-      })();
-      if (!provider) return true; // can't determine provider, let it try
-
+      const provider = comboCheckProvider(modelString, modelInfo, target?.providerId);
       const resolvedModel = modelInfo.model || modelString;
+      const githubGate = await ghComboGate(comboPreselectedCredentials, provider, resolvedModel);
+      if (githubGate !== null) return githubGate;
       const hasForcedConnection =
         typeof target?.connectionId === "string" && target.connectionId.trim().length > 0;
       let allowedConnections = intersectAllowedConnectionIds(
