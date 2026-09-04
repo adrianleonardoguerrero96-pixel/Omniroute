@@ -3010,7 +3010,8 @@ export function createSSETransformStreamWithLogger(
   copilotCompatibleReasoning = false,
   suppressThinkClose = false,
   customToolNames: ReadonlySet<string> = new Set(),
-  requestToolIdentityMap: Map<string, { namespace: string; name: string }> | null = null
+  requestToolIdentityMap: Map<string, { namespace: string; name: string }> | null = null,
+  _bufferSize?: number
 ) {
   return createSSEStream({
     mode: STREAM_MODE.TRANSLATE,
