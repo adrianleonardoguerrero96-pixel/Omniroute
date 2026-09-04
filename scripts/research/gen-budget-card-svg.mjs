@@ -5,7 +5,7 @@ import fs from "node:fs";
 const txt = fs.readFileSync("open-sse/config/freeModelCatalog.data.ts", "utf8");
 const recs = [
   ...txt.matchAll(
-    /\{ provider: "([^"]+)", modelId: "([^"]+)", displayName: "([^"]+)", monthlyTokens: (\d+), creditTokens: (\d+), freeType: "([^"]+)", poolKey: (null|"[^"]+"), tos: "([^"]+)" \}/g
+    /\{ provider: "([^"]+)", modelId: "([^"]+)", displayName: "([^"]+)", monthlyTokens: (\d+), creditTokens: (\d+), freeType: "([^"]+)", poolKey: (null|"[^"]+"), tos: "([^"]+)"(?:, [^}]*)? \}/g
   ),
 ].map((m) => ({
   provider: m[1],
