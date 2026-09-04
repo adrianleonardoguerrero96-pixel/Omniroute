@@ -1,0 +1,1 @@
+- **fix(ci):** make the OpenAPI security-tier gate honor `isLocalOnlyPath` / imported prefixes, re-anchor the ZCode public-creds allowlist at `zcodeProtocol.ts:313`, and refresh stacked file-size caps ([#12605](https://github.com/diegosouzapw/OmniRoute/pull/12605), base-red [#12581](https://github.com/diegosouzapw/OmniRoute/issues/12581))
