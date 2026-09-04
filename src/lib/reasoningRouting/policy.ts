@@ -8,7 +8,10 @@ import {
 } from "@/lib/db/reasoningRoutingRules";
 import { getResolvedModelCapabilities } from "@/lib/modelCapabilities";
 import { normalizeRoutingTags } from "@/domain/tagRouter";
-import { splitClaudeEffortSuffix } from "@omniroute/open-sse/config/providerModels.ts";
+import {
+  splitClaudeEffortSuffix,
+  PROVIDER_MODELS,
+} from "@omniroute/open-sse/config/providerModels.ts";
 
 type JsonRecord = Record<string, unknown>;
 const EFFORTS = new Set<ReasoningEffort>([
@@ -264,14 +267,35 @@ function capabilityFor(
   const capabilities = getResolvedModelCapabilities(model);
   if (capabilities.supportsThinking === false) return "unsupported" as const;
   if (targetEffort === "max" || targetEffort === "ultra") {
-    // A declared (or operator-overridden) effort vocabulary is authoritative for
-    // the exact model: when it lists the requested tier, the dispatch-time
-    // sanitizer (`open-sse/executors/base/reasoningEffort.ts`) will forward it
-    // verbatim, so the gate must not reject it here. This keeps custom
-    // OpenAI-compatible providers (e.g. Merge Gateway routes like
-    // `zai/glm-5.3-flash`, which accept `max` natively) usable with forced-max
-    // rules instead of 400ing on a hardcoded gpt-5.6 regex.
+    // The gate must agree with what the dispatch-time sanitizer
+    // (`open-sse/executors/base/reasoningEffort.ts`) can actually enforce.
+    // That sanitizer clamps against the STATIC registry vocabulary for a
+    // registered model; it forwards verbatim only for providers/models the
+    // registry does not declare. So:
+    //   1. A static registry vocabulary excluding the tier stays unsupported —
+    //      a DB override must not let a request pass the gate only to be
+    //      silently downgraded at dispatch.
+    //   2. For unregistered providers/models, a declared (synced or
+    //      operator-overridden) vocabulary listing the tier is authoritative —
+    //      the sanitizer forwards verbatim there (#8057 trust-the-upstream).
+    //   3. The gpt-5.6 regex remains the fallback for undeclared models.
+    // This keeps custom OpenAI-compatible providers whose models accept `max`
+    // natively (e.g. Merge Gateway `zai/glm-5.3-flash`, accepting
+    // `low|high|max`) usable with forced-max rules instead of 400ing.
     const declaredEfforts = capabilities.supportedThinkingEfforts;
+    const provider = model.includes("/") ? model.slice(0, model.indexOf("/")) : "";
+    const modelIdForRegistry = model.startsWith(`${provider}/`)
+      ? model.slice(provider.length + 1)
+      : model;
+    const registryModels = provider ? PROVIDER_MODELS[provider] || [] : [];
+    const registryDeclared = registryModels.find(
+      (entry) => entry.id === modelIdForRegistry
+    )?.supportedThinkingEfforts;
+    if (Array.isArray(registryDeclared)) {
+      return registryDeclared.includes(targetEffort)
+        ? ("supported" as const)
+        : ("unsupported" as const);
+    }
     if (Array.isArray(declaredEfforts) && declaredEfforts.includes(targetEffort)) {
       return "supported" as const;
     }

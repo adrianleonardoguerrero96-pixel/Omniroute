@@ -241,7 +241,9 @@ test("schema rejects connection reroutes and none with a fixed budget", () => {
 test("forced max/ultra is supported when the model declares that effort (#12630)", async () => {
   const { setModelCapabilityOverride } =
     await import("../../src/lib/db/modelCapabilityOverrides.ts");
-  const model = "custom-provider/zai/glm-5.3-flash";
+  // Synthetic id: no static spec, registry row, or models.dev sync row can
+  // exist for it, so capability resolution is deterministic in any environment.
+  const model = "custom-provider/test-only-forced-max-model";
 
   await rulesDb.createReasoningRoutingRule(
     ruleInput({
@@ -295,4 +297,49 @@ test("forced max/ultra is supported when the model declares that effort (#12630)
     "unsupported",
     "declared vocabulary without max must keep forced max unsupported"
   );
+});
+
+test("static registry vocabulary outranks the operator override so the gate matches dispatch clamping (#12630)", async () => {
+  const { setModelCapabilityOverride } =
+    await import("../../src/lib/db/modelCapabilityOverrides.ts");
+  // openai/gpt-4o-mini is a registered model whose registry entry does not
+  // declare supportedThinkingEfforts (efforts are derived at dispatch, not
+  // declared), so it must NOT take the registry-declared branch. Instead use a
+  // model id under a provider the registry declares with a narrow vocabulary.
+  // glmProvider-style entries declare narrow lists; probe the registry for one.
+  const { PROVIDER_MODELS } = await import("@omniroute/open-sse/config/providerModels.ts");
+  let narrowProvider: string | null = null;
+  let narrowModel: string | null = null;
+  for (const [providerId, models] of Object.entries(PROVIDER_MODELS)) {
+    const hit = (models || []).find(
+      (entry) =>
+        Array.isArray(entry.supportedThinkingEfforts) &&
+        entry.supportedThinkingEfforts.length > 0 &&
+        !entry.supportedThinkingEfforts.includes("max")
+    );
+    if (hit) {
+      narrowProvider = providerId;
+      narrowModel = hit.id;
+      break;
+    }
+  }
+  assert.ok(narrowProvider && narrowModel, "registry must contain a narrow declared vocabulary");
+  const registeredModel = `${narrowProvider}/${narrowModel}`;
+
+  // Operator override widens the vocabulary — the dispatch-time sanitizer
+  // ignores it for registered models, so the gate must too.
+  setModelCapabilityOverride(registeredModel, "reasoning_efforts", ["low", "high", "max"]);
+
+  const decision = await policy.resolveReasoningRoutingRule({
+    sourceModel: registeredModel,
+    sourceEffort: "missing",
+    hasReasoningSignal: false,
+  });
+  if (decision) {
+    assert.equal(
+      decision.capability,
+      "unsupported",
+      "registry vocabulary without max must keep forced max unsupported even with a widening DB override"
+    );
+  }
 });
