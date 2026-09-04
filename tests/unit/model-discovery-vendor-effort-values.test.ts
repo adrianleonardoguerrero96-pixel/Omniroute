@@ -6,7 +6,7 @@ import {
   normalizeDiscoveredModels,
 } from "@/lib/providerModels/modelDiscovery";
 
-// Merge Gateway `/v1/models` nests per-vendor-route reasoning capability under
+// Vendor-route catalogs (e.g. Merge Gateway `/v1/models`) nest per-route reasoning capability under
 // `vendors.<vendor>.capabilities.reasoning` with the route's accepted effort
 // levels in `effort_values` (docs.merge.dev, "Effort levels per route"). The
 // same canonical model declares DIFFERENT vocabularies per vendor route, and
@@ -27,7 +27,7 @@ function mergeRecord(vendorEfforts: Record<string, string[] | undefined>) {
   };
 }
 
-test("Merge effort_values from a single vendor route is parsed into supportedThinkingEfforts", () => {
+test("vendor-route effort_values from a single vendor route is parsed into supportedThinkingEfforts", () => {
   assert.deepEqual(detectSupportedThinkingEfforts(mergeRecord({ zai: ["low", "high", "max"] })), [
     "low",
     "high",
@@ -35,7 +35,7 @@ test("Merge effort_values from a single vendor route is parsed into supportedThi
   ]);
 });
 
-test("Merge effort_values from multiple vendor routes intersects across routes", () => {
+test("vendor-route effort_values from multiple vendor routes intersects across routes", () => {
   assert.deepEqual(
     detectSupportedThinkingEfforts(
       mergeRecord({
@@ -89,7 +89,7 @@ test("effort synonyms are normalized inside effort_values", () => {
   ]);
 });
 
-test("Merge defaultThinkingEffort falls back to the intersected vocabulary's highest tier (rank-based)", () => {
+test("vendor-route defaultThinkingEffort falls back to the intersected vocabulary's highest tier (rank-based)", () => {
   // max survives both routes → default max.
   const withMax = mergeRecord({
     zai: ["low", "high", "max"],
@@ -111,7 +111,7 @@ test("Merge defaultThinkingEffort falls back to the intersected vocabulary's hig
   assert.equal(detectDefaultThinkingEffort(unsorted), "max");
 });
 
-test("Merge default is skipped when a higher-precedence declared shape wins the list", () => {
+test("vendor-route default is skipped when a higher-precedence declared shape wins the list", () => {
   // Flat import field pins the vocabulary to ["low"]; the vendors
   // intersection must not inject a default outside it.
   const pinnedFlat = {
@@ -145,7 +145,7 @@ test("a malformed entry inside effort_values is dropped individually, not the wh
   assert.deepEqual(detectSupportedThinkingEfforts(record), ["low", "high"]);
 });
 
-test("explicit default_effort keeps precedence over the Merge vendors fallback", () => {
+test("explicit default_effort keeps precedence over the vendor-route fallback", () => {
   const record = {
     ...mergeRecord({ zai: ["low", "high", "max"] }),
     reasoning: { default_effort: "high" },
@@ -153,7 +153,7 @@ test("explicit default_effort keeps precedence over the Merge vendors fallback",
   assert.equal(detectDefaultThinkingEffort(record), "high");
 });
 
-test("normalizeDiscoveredModels threads the intersected Merge vocabulary into synced models", () => {
+test("normalizeDiscoveredModels threads the intersected vendor-route vocabulary into synced models", () => {
   const models = normalizeDiscoveredModels([
     {
       id: "zai/glm-5.3-flash",
