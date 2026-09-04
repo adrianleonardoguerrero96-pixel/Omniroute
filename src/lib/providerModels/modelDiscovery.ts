@@ -98,6 +98,45 @@ const effortListSchema = z.array(z.unknown());
 const supportedReasoningLevelsSchema = z.object({ supported_reasoning_levels: z.unknown() });
 const thinkingLevelsSchema = z.object({ thinking: z.object({ levels: z.unknown() }).partial() });
 
+// Merge Gateway `/v1/models` nests per-vendor-route reasoning capability under
+// `vendors.<vendor>.capabilities.reasoning` — the route's accepted effort
+// levels live in `effort_values` (docs.merge.dev, "Effort levels per route"):
+// the SAME canonical model lists different vocabularies per vendor route, and
+// a request naming an effort level is served by a route that honors it when
+// one exists (unpinned requests self-narrow). So the safe synced vocabulary is
+// the INTERSECTION across vendor routes (a forced level must never 400 or be
+// silently adjusted on a route the operator can hit), not the union. A route
+// without `effort_values` declares "no effort control" for that vendor and is
+// excluded from the intersection. Validate with Zod (Hard Rule #7): a
+// malformed vendor entry is dropped individually rather than failing the
+// whole record.
+const mergeReasoningCapabilitySchema = z.object({
+  effort_values: z.array(z.string()).optional(),
+});
+const mergeVendorsSchema = z.record(z.string(), z.unknown());
+
+function parseMergeVendorEffortValues(record: JsonRecord): string[][] {
+  const vendorsParsed = mergeVendorsSchema.safeParse(record.vendors);
+  if (!vendorsParsed.success) return [];
+  const perVendor: string[][] = [];
+  for (const vendorValue of Object.values(vendorsParsed.data)) {
+    const vendorRecord = asRecord(vendorValue);
+    const reasoningParsed = mergeReasoningCapabilitySchema.safeParse(
+      asRecord(vendorRecord.capabilities).reasoning
+    );
+    if (!reasoningParsed.success || !reasoningParsed.data) continue;
+    const efforts = Array.from(
+      new Set(
+        reasoningParsed.data.effort_values
+          ?.filter((effort): effort is string => effort.length > 0)
+          .map(normalizeSupportedEffort)
+      )
+    );
+    if (efforts.length > 0) perVendor.push(efforts);
+  }
+  return perVendor;
+}
+
 // Maps common upstream synonyms onto OmniRoute's canonical effort vocabulary
 // (`src/shared/reasoning/effortStandardization.ts`). Values already in
 // `CANONICAL_EFFORT_VALUES`, and any unrecognized provider-native tier (e.g.
@@ -166,6 +205,16 @@ export function detectDefaultThinkingEffort(record: JsonRecord): string | undefi
     const raw = parsed.data.default_effort;
     if (typeof raw === "string" && raw.length > 0) return normalizeSupportedEffort(raw);
   }
+  // Merge Gateway: use the intersected cross-vendor vocabulary's highest tier
+  // as the default — no single route owns a `default_effort` and a guaranteed
+  // level beats an invented default.
+  const mergeVendorEfforts = parseMergeVendorEffortValues(record);
+  if (mergeVendorEfforts.length > 0) {
+    const shared = mergeVendorEfforts.reduce((acc, efforts) =>
+      acc.filter((effort) => efforts.includes(effort))
+    );
+    if (shared.length > 0) return shared[shared.length - 1];
+  }
   return undefined;
 }
 
@@ -213,6 +262,19 @@ export function detectSupportedThinkingEfforts(record: JsonRecord): string[] | u
     }
   }
 
+  // Merge Gateway: intersect `effort_values` across vendor routes. Placed
+  // after the flat import field handling (caller) and the #7694/#9160 nested
+  // shapes so those explicit per-model declarations keep precedence; runs
+  // before the generic `capabilities.effort_tiers` fallback because
+  // `vendors` is strictly more specific than a flat tier list.
+  const mergeVendorEfforts = parseMergeVendorEffortValues(record);
+  if (mergeVendorEfforts.length > 0) {
+    const shared = mergeVendorEfforts.reduce((acc, efforts) =>
+      acc.filter((effort) => efforts.includes(effort))
+    );
+    if (shared.length > 0) return shared;
+  }
+
   // #9160: fall back to `capabilities.effort_tiers` before the legacy fields.
   // OmniRoute's own catalog surfaces effort tiers inside `capabilities.effort_tiers`,
   // which the existing `parseEffortList` already handles (string arrays).
@@ -246,7 +308,13 @@ function hasDeclaredEffortList(record: JsonRecord): boolean {
   if (Array.isArray(asRecord(record.reasoning).supported_efforts)) return true;
   if (Array.isArray(asRecord(record.capabilities).effort_tiers)) return true;
   if (Array.isArray(record.supported_reasoning_levels)) return true;
-  return Array.isArray(asRecord(record.thinking).levels);
+  if (Array.isArray(asRecord(record.thinking).levels)) return true;
+  // Merge Gateway: `vendors.<v>.capabilities.reasoning.effort_values` counts as
+  // a declared list so the fallback chain in `normalizeDiscoveredModels` stops
+  // here instead of applying provider-specific heuristics to a record that
+  // already declares its vocabulary explicitly (mirrors the other declared
+  // shapes: detect returning undefined means "declared, nothing usable").
+  return parseMergeVendorEffortValues(record).length > 0;
 }
 
 export function isAutoFetchModelsEnabled(providerSpecificData: unknown): boolean {
