@@ -115,40 +115,42 @@ describe("CompressionWorkerPool spawn-failure queue drain", () => {
     }
   });
 
-  it("retries after a transient resource-exhaustion spawn failure", async () => {
-    let spawns = 0;
-    const worker = fakeWorker();
-    const pool = new CompressionWorkerPool({
-      size: 1,
-      workerFactory: () => {
-        spawns++;
-        if (spawns === 1) {
-          const error = new Error("too many open files");
-          (error as NodeJS.ErrnoException).code = "EMFILE";
-          throw error;
-        }
-        return worker;
-      },
+  for (const transientCode of ["EMFILE", "ERR_WORKER_INIT_FAILED"] as const) {
+    it(`retries after a transient ${transientCode} spawn failure`, async () => {
+      let spawns = 0;
+      const worker = fakeWorker();
+      const pool = new CompressionWorkerPool({
+        size: 1,
+        workerFactory: () => {
+          spawns++;
+          if (spawns === 1) {
+            const error = new Error("temporary worker resource exhaustion");
+            (error as NodeJS.ErrnoException).code = transientCode;
+            throw error;
+          }
+          return worker;
+        },
+      });
+      try {
+        assert.deepEqual(await pool.run(body, "stacked"), {
+          body,
+          compressed: false,
+          stats: null,
+        });
+        const pending = pool.run(body, "stacked");
+        assert.equal(spawns, 2, "transient failure must not permanently break the pool");
+        const wireJob = worker.messages[0] as { id: number };
+        worker.emit("message", {
+          type: "result",
+          id: wireJob.id,
+          result: { body, compressed: false, stats: null },
+        });
+        await withTimeout(pending, 5000, "retry after transient failure hung");
+      } finally {
+        await pool.close();
+      }
     });
-    try {
-      assert.deepEqual(await pool.run(body, "stacked"), {
-        body,
-        compressed: false,
-        stats: null,
-      });
-      const pending = pool.run(body, "stacked");
-      assert.equal(spawns, 2, "transient failure must not permanently break the pool");
-      const wireJob = worker.messages[0] as { id: number };
-      worker.emit("message", {
-        type: "result",
-        id: wireJob.id,
-        result: { body, compressed: false, stats: null },
-      });
-      await withTimeout(pending, 5000, "retry after transient failure hung");
-    } finally {
-      await pool.close();
-    }
-  });
+  }
 
   it("fails open immediately for jobs submitted after the pool broke", async () => {
     const pool = new CompressionWorkerPool({

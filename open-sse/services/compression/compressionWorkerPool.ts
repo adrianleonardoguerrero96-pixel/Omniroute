@@ -88,10 +88,20 @@ function errorText(error: unknown): string {
   return sanitizeErrorMessage(error instanceof Error ? error.message : String(error));
 }
 
-/** Resource exhaustion is transient; path/module/configuration errors are structural. */
+/**
+ * Only known path/module/configuration errors are structural. Unknown failures
+ * (including ERR_WORKER_INIT_FAILED) can be transient resource exhaustion and
+ * must be retried on the next wave rather than disabling compression forever.
+ */
 function isStructuralSpawnFailure(error: unknown): boolean {
   const code = (error as NodeJS.ErrnoException | undefined)?.code;
-  return code !== "EMFILE" && code !== "ENFILE" && code !== "ENOMEM";
+  return (
+    code === "MODULE_NOT_FOUND" ||
+    code === "ERR_MODULE_NOT_FOUND" ||
+    code === "ERR_WORKER_PATH" ||
+    code === "ERR_INVALID_ARG_TYPE" ||
+    code === "ERR_INVALID_ARG_VALUE"
+  );
 }
 interface PendingJob extends CompressionWorkerJob {
   originalBody: Record<string, unknown>;
