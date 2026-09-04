@@ -5,13 +5,14 @@
  * the moment a turn is recorded; display content (textPreview) resolves
  * lazily from the owning call-log artifact (resolveTurnDisplayContent). While
  * that resolution is still in flight, /api/conversations/[id]/tree's own
- * `blockKind ?? "text"` fallback makes a genuinely-in-progress tool node
- * indistinguishable from a permanently-empty one at the API layer -- but the
- * node's own persisted `role` ("tool", set at record time, independent of
- * content resolution) does distinguish them. toTurn() previously rendered
- * both as a bare "_(empty)_" text bubble, which read as broken rather than
- * in progress. This proves the tool+no-content case now maps to a distinct
- * `pending` block instead, without changing any other mapping.
+ * `blockKind ?? "text"` fallback makes a genuinely-in-progress node
+ * indistinguishable from a permanently-empty one at the API layer. toTurn()
+ * previously rendered an empty tool node as a distinct `pending` block but
+ * still showed a bare "_(empty)_" text bubble for user/assistant nodes with
+ * no textPreview yet -- live traffic showed the same resolution lag hits
+ * every role, not just tool, so this proves ANY role with no textPreview
+ * (in the plain-text fallback branch) now maps to `pending`, without
+ * changing tool_use/tool_result mapping.
  */
 
 import test from "node:test";
@@ -38,9 +39,21 @@ test("toTurn renders an unresolved tool node as pending, not a bare empty text b
   assert.deepEqual(turn.blocks, [{ type: "pending" }]);
 });
 
-test("toTurn still renders a genuinely empty assistant reply as empty text, not pending", () => {
+test("toTurn renders an unresolved assistant node as pending too", () => {
   const turn = toTurn(node({ role: "assistant", blockKind: "text", textPreview: "" }));
-  assert.deepEqual(turn.blocks, [{ type: "text", text: "_(empty)_" }]);
+  assert.deepEqual(turn.blocks, [{ type: "pending" }]);
+});
+
+test("toTurn renders an unresolved user node as pending too", () => {
+  const turn = toTurn(node({ role: "user", blockKind: "text", textPreview: "" }));
+  assert.deepEqual(turn.blocks, [{ type: "pending" }]);
+});
+
+test("toTurn renders a resolved assistant reply's real content once textPreview lands, not pending", () => {
+  const turn = toTurn(
+    node({ role: "assistant", blockKind: "text", textPreview: "the real reply" })
+  );
+  assert.deepEqual(turn.blocks, [{ type: "text", text: "the real reply" }]);
 });
 
 test("toTurn renders a resolved tool node's real content once textPreview lands, not pending", () => {

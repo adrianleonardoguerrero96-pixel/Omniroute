@@ -47,18 +47,21 @@ export function toTurn(node: ConversationTurn): NormalizedTurn {
       // Not JSON — show the raw string.
     }
     block = { type: "tool_result", tool_use_id: node.id.slice(0, 12), content };
-  } else if (role === "tool" && !node.textPreview) {
-    // The tree API records a node's identity (role/blockKind="tool") the
-    // moment the turn is recorded, independent of when its display content
+  } else if (!node.textPreview) {
+    // The tree API records a node's identity (role/blockKind) the moment
+    // the turn is recorded, independent of when its display content
     // resolves from the owning call-log artifact -- a request still in
-    // flight has a real tool_use/tool_result node with nothing to show yet,
-    // and /api/conversations/[id]/tree's own blockKind ?? "text" fallback
-    // can't tell that apart from a permanently-purged artifact. In
-    // practice this is near-always transient: the same poll that already
-    // refreshes this page (ConversationLogView's activeCallLogId-driven
-    // effect) picks up the real content within a tick or two once the
-    // artifact lands. Show that instead of a bare "(empty)" that reads as
-    // broken rather than in progress.
+    // flight has a real node (any role: user, assistant, or tool) with
+    // nothing to show yet, and /api/conversations/[id]/tree's own
+    // blockKind ?? "text" fallback can't tell that apart from a
+    // permanently-purged artifact. Live traffic shows this lag hits every
+    // role, not just tool nodes (a user/assistant turn's own textPreview
+    // resolves through the same lazy pipeline) -- so any empty text node
+    // gets the same treatment. In practice this is near-always transient:
+    // the same poll that already refreshes this page (ConversationLogView's
+    // activeCallLogId-driven effect) picks up the real content within a
+    // tick or two once the artifact lands. Show that instead of a bare
+    // "(empty)" that reads as broken rather than in progress.
     block = { type: "pending" };
   } else {
     block = { type: "text", text: node.textPreview || "_(empty)_" };

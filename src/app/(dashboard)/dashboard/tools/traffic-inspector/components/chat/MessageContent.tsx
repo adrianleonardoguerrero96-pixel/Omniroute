@@ -32,7 +32,7 @@ export function MessageContent({ blocks }: MessageContentProps) {
               className="flex items-center gap-2 text-xs text-text-muted italic px-1 py-0.5"
             >
               <span className="inline-block h-3 w-3 rounded-full border-2 border-current border-t-transparent animate-spin shrink-0" />
-              resolving…
+              loading...
             </div>
           );
         }
