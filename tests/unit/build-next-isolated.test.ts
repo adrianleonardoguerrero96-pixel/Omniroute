@@ -149,7 +149,7 @@ test("resolveNextBuildEnv replaces an inherited heap ceiling below the measured 
   assert.ok(match);
   assert.ok(
     Number(match[1]) >= 8192,
-    `inherited 1024 must be raised to the >= 6144 MB floor; got ${match[1]}`
+    `inherited 1024 must be raised to the >= 8192 MB floor; got ${match[1]}`
   );
 });
 test("resolveNextBuildEnv keeps unrelated NODE_OPTIONS flags when replacing the heap flag", () => {

@@ -26,6 +26,7 @@ const {
   createQuotaAutoPingState,
   resolveQuotaAutoPingModel,
   hasQuotaAutoPingOptIns,
+  settingsPatchTouchesQuotaAutoPing,
 } = await import("../../src/lib/services/quotaAutoPing.ts");
 const { resetDbInstance } = await import("../../src/lib/db/core.ts");
 const { getProviderModels } = await import("../../open-sse/config/providerModels.ts");
@@ -483,6 +484,16 @@ test("#perf-lazy-boot hasQuotaAutoPingOptIns is false with no opt-ins and true w
   );
   assert.equal(
     hasQuotaAutoPingOptIns({ codexAutoPing: { connections: { "codex-1": true } } }),
+    true
+  );
+});
+
+test("#perf-lazy-boot settingsPatchTouchesQuotaAutoPing only matches opt-in keys", () => {
+  assert.equal(settingsPatchTouchesQuotaAutoPing({}), false);
+  assert.equal(settingsPatchTouchesQuotaAutoPing({ debugMode: true }), false);
+  assert.equal(settingsPatchTouchesQuotaAutoPing({ codexAutoPing: {} }), true);
+  assert.equal(
+    settingsPatchTouchesQuotaAutoPing({ "codexAutoPing.connections": { "codex-1": true } }),
     true
   );
 });

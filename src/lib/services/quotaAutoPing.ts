@@ -561,14 +561,54 @@ const schedulerState = createQuotaAutoPingState();
  * woke every tick to read settings and find nothing to do.
  */
 export function hasQuotaAutoPingOptIns(settings: JsonRecord): boolean {
-  for (const providerConfig of Object.values(QUOTA_AUTOPING_PROVIDERS)) {
-    const enabledMap = getEnabledConnectionIds(settings, providerConfig);
-    // Match the tick filter exactly: only `=== true` entries are real opt-ins.
-    if (Object.values(enabledMap).some((enabled) => enabled === true)) {
-      return true;
-    }
+  return Object.values(QUOTA_AUTOPING_PROVIDERS).some((providerConfig) =>
+    Object.values(getEnabledConnectionIds(settings, providerConfig)).some(
+      (enabled) => enabled === true
+    )
+  );
+}
+
+/** True when a settings PATCH body touches the quota auto-ping opt-in keys. */
+export function settingsPatchTouchesQuotaAutoPing(rawBody: Record<string, unknown>): boolean {
+  return Object.keys(rawBody).some(
+    (key) => key === "codexAutoPing" || key.startsWith("codexAutoPing.")
+  );
+}
+
+/**
+ * Boot-lazy arm (#perf-lazy-boot): start the scheduler only when at least one
+ * connection opted in. Returns whether the interval was armed. `settings` is
+ * injectable so instrumentation can reuse a snapshot already in hand.
+ */
+export async function bootQuotaAutoPingIfOptedIn(settings?: JsonRecord): Promise<boolean> {
+  const resolved = settings ?? (await getSettings());
+  if (!hasQuotaAutoPingOptIns(resolved)) {
+    console.log("[STARTUP] Quota auto-ping scheduler skipped (no connections opted in)");
+    return false;
   }
-  return false;
+  startQuotaAutoPing();
+  console.log("[STARTUP] Quota auto-ping scheduler started (opt-in, no-op until enabled)");
+  return true;
+}
+
+/**
+ * Re-arm (start/stop) the scheduler after a settings PATCH so a first opt-in
+ * after boot starts it without a server restart. No-op when the body did not
+ * touch auto-ping keys. Failures are non-fatal (same as other startup schedulers).
+ */
+export function rearmQuotaAutoPingAfterSettingsPatch(
+  rawBody: Record<string, unknown>,
+  settings: JsonRecord
+): void {
+  if (!settingsPatchTouchesQuotaAutoPing(rawBody)) return;
+  try {
+    if (hasQuotaAutoPingOptIns(settings)) startQuotaAutoPing();
+    else stopQuotaAutoPing();
+  } catch (err) {
+    log.warn("re-arm after settings PATCH failed", {
+      error: sanitizeErrorMessage((err as Error)?.message ?? String(err)),
+    });
+  }
 }
 
 /** Start the in-process scheduler. Idempotent — a second call is a no-op. */

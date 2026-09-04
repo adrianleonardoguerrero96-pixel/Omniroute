@@ -438,17 +438,10 @@ export async function registerNodejs(): Promise<void> {
     startProviderLimitsSyncScheduler();
     console.log("[STARTUP] Provider limits sync scheduler started");
     // Boot-lazy (#perf-lazy-boot): only arm the auto-ping scheduler when at least
-    // one connection opted in — a zero-opt-in interval is a pure wake cost that
-    // reads settings every tick and finds nothing to do (9router #27b37705 parity).
-    // Dashboard opt-in changes re-arm it via the settings PATCH path.
-    const autoPingMod = await import("@/lib/services/quotaAutoPing");
-    const autoPingSettings = await getSettings();
-    if (autoPingMod.hasQuotaAutoPingOptIns(autoPingSettings)) {
-      autoPingMod.startQuotaAutoPing();
-      console.log("[STARTUP] Quota auto-ping scheduler started (opt-in, no-op until enabled)");
-    } else {
-      console.log("[STARTUP] Quota auto-ping scheduler skipped (no connections opted in)");
-    }
+    // one connection opted in (9router #27b37705 parity). Dashboard opt-in
+    // changes re-arm it via the settings PATCH path.
+    const { bootQuotaAutoPingIfOptedIn } = await import("@/lib/services/quotaAutoPing");
+    await bootQuotaAutoPingIfOptedIn();
     const cloudSyncInitialized = await ensureCloudSyncInitialized();
     console.log(
       `[STARTUP] Cloud/model sync background bootstrap ${cloudSyncInitialized ? "initialized" : "skipped"}`
@@ -639,14 +632,12 @@ export async function registerNodejs(): Promise<void> {
 
       // Conductor bridge (PRD Conductor RF1): mirrors OmniConductor hub tasks into the
       // A2A TaskManager via the hub SSE. Opt-in — self-gated on CONDUCTOR_HUB_URL.
-      import("@/lib/conductor/boot")
-        .then((m) => {
-          if (m.initConductorBridge()) console.log("[STARTUP] Conductor bridge started");
-        })
-        .catch((err: unknown) => {
-          const msg = err instanceof Error ? err.message : String(err);
-          console.warn("[STARTUP] Conductor bridge failed to start (non-fatal):", msg);
-        }),
+      import("@/lib/conductor/boot").then((m) => {
+        if (m.initConductorBridge()) console.log("[STARTUP] Conductor bridge started");
+      }).catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn("[STARTUP] Conductor bridge failed to start (non-fatal):", msg);
+      }),
 
       // Proactive connection-cooldown recovery (#8): re-validate connections whose
       // transient `rate_limited_until` window has elapsed OUTSIDE the request hot path,
