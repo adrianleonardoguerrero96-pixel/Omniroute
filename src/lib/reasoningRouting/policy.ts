@@ -10,7 +10,7 @@ import { getResolvedModelCapabilities } from "@/lib/modelCapabilities";
 import { normalizeRoutingTags } from "@/domain/tagRouter";
 import {
   splitClaudeEffortSuffix,
-  PROVIDER_MODELS,
+  getProviderModels,
 } from "@omniroute/open-sse/config/providerModels.ts";
 
 type JsonRecord = Record<string, unknown>;
@@ -282,22 +282,35 @@ function capabilityFor(
     // This keeps custom OpenAI-compatible providers whose models accept `max`
     // natively (e.g. Merge Gateway `zai/glm-5.3-flash`, accepting
     // `low|high|max`) usable with forced-max rules instead of 400ing.
+    // The registry lookup mirrors the sanitizer exactly: alias-resolved
+    // provider namespace (`getProviderModels`, #2798/#3870) and the entry's
+    // `aliases` list, so the gate can never approve what dispatch clamps.
     const declaredEfforts = capabilities.supportedThinkingEfforts;
     const provider = model.includes("/") ? model.slice(0, model.indexOf("/")) : "";
     const modelIdForRegistry = model.startsWith(`${provider}/`)
       ? model.slice(provider.length + 1)
       : model;
-    const registryModels = provider ? PROVIDER_MODELS[provider] || [] : [];
-    const registryDeclared = registryModels.find(
-      (entry) => entry.id === modelIdForRegistry
-    )?.supportedThinkingEfforts;
-    if (Array.isArray(registryDeclared)) {
+    // Mirror the sanitizer's empty-vocabulary semantics: a registry row that
+    // exists but declares nothing (`[]`) must fall through — there the
+    // sanitizer skips its declared clamp entirely instead of rejecting.
+    const registryDeclared = provider
+      ? getProviderModels(provider).find(
+          (entry) => entry.id === modelIdForRegistry || entry.aliases?.includes(modelIdForRegistry)
+        )?.supportedThinkingEfforts
+      : undefined;
+    if (Array.isArray(registryDeclared) && registryDeclared.length > 0) {
       return registryDeclared.includes(targetEffort)
         ? ("supported" as const)
         : ("unsupported" as const);
     }
     if (Array.isArray(declaredEfforts) && declaredEfforts.includes(targetEffort)) {
       return "supported" as const;
+    }
+    // An operator-declared vocabulary that excludes the tier is terminal —
+    // the same lookup the override resolves from must not be overruled by the
+    // legacy regex below.
+    if (capabilities.reasoningEffortsOverride && Array.isArray(declaredEfforts)) {
+      return "unsupported" as const;
     }
     const normalized = model.toLowerCase().replace(/^(?:codex|cx)\//, "");
     const supported =
