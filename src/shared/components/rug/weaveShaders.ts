@@ -141,7 +141,7 @@ const vec3 LOOM = vec3(0.038, 0.030, 0.028);
  * occlusion together average well below 1, so without this the rug renders
  * darker and muddier than the carpet it was measured from.
  */
-const float EXPOSURE = 1.48;
+const float EXPOSURE = 1.63;
 
 /** Rows over which a knot goes from just-tied to standing at full height. */
 const float PILE_RAMP    = 14.0;
@@ -251,12 +251,32 @@ float heightAt(vec2 p, float trim, vec3 st) {
   float tuft = max(strand(f.x - c1, w), strand(f.x - c2, w));
   float row = strand(f.y - 0.5, 0.56 + r2.y * 0.10);
 
-  float h = mix(0.42, tuft * row, knotDetail()) * (0.84 + 0.32 * r1.y);
+  // The groove between rows is cut deeper than the one between tufts: a beaten
+  // weft pulls the rows apart harder than the knot collar separates its lobes.
+  row *= row;
+  float h = mix(0.42, tuft * row, knotDetail()) * (0.80 + 0.40 * r1.y);
   h *= 0.62 + 0.38 * st.r;
   h *= 1.0 + 0.09 * st.b;
   h *= 1.0 + 0.06 * st.g;
   h *= 1.0 + 0.22 * (fibre(p) - 0.5);
   return h * mix(1.18, 1.0, trim);
+}
+
+/**
+ * Pile shadowing itself. Marches a few steps toward the light and asks whether
+ * anything upstream stands high enough to block it. This is what stops the
+ * weave reading as a bumpy photograph: without it every tuft is lit from the
+ * same angle regardless of what is in front of it.
+ */
+float selfShadow(vec2 p, float h, float trim, vec3 st) {
+  vec2 step = vec2(-0.52, -0.86) * 0.42;
+  float shade = 1.0;
+  for (int i = 1; i <= 3; i++) {
+    float d = float(i);
+    float above = heightAt(p + step * d, trim, st) - h - d * 0.20;
+    shade = min(shade, 1.0 - clamp(above * 1.7, 0.0, 1.0));
+  }
+  return shade;
 }
 
 /** Warp cords. A Persian knot is tied around a pair, so two per knot column. */
@@ -319,14 +339,18 @@ void main() {
   float hy = heightAt(p + vec2(0.0, eps), trim, st);
 
   // Pile only a few rows old is still short, so it self-shadows far less.
-  float relief = 0.22 * mix(0.30, 1.0, pile);
+  float relief = 0.40 * mix(0.30, 1.0, pile);
   vec3 N = normalize(vec3((h0 - hx) / eps * relief, (h0 - hy) / eps * relief, 1.0));
 
   vec3 L = normalize(vec3(-0.40, -0.66, 0.64));
   float ndl = max(dot(N, L), 0.0);
   float wrapped = dot(N, L) * 0.5 + 0.5;
   float diff = mix(wrapped * wrapped, ndl, 0.5);
-  float ao = mix(1.0, mix(0.60, 1.02, smoothstep(0.0, 0.80, h0)), pile);
+  float ao = mix(1.0, mix(0.46, 1.04, smoothstep(0.0, 0.82, h0)), pile);
+
+  // Cast shadow between the tufts, on the tiers that can afford the taps.
+  float shade = 1.0;
+  if (uOctaves > 1.5) shade = mix(1.0, selfShadow(p, h0, trim, st), pile * 0.85);
 
   // Anisotropic sheen along the fibre — silk, not varnish.
   vec3 T = normalize(vec3(0.17 + (rr.y - 0.5) * 0.22, 1.0, 0.0));
@@ -336,7 +360,11 @@ void main() {
   float sheen = pow(sqrt(max(0.0, 1.0 - tdh * tdh)), 24.0);
 
   float fib = fibre(p);
-  vec3 col = dye * EXPOSURE * (0.34 + 0.86 * diff) * ao;
+  // Wool is not opaque: light entering a tuft scatters through it and leaves
+  // warmer, which is what keeps deep shadow in a rug coloured rather than black.
+  vec3 through = dye * dye * vec3(1.25, 0.86, 0.72);
+  vec3 col = dye * EXPOSURE * (0.30 + 0.90 * diff * shade) * ao
+           + through * 0.11 * (1.0 - shade * 0.65) * pile;
   col += mix(dye, vec3(1.0), 0.60) * sheen * (0.050 + 0.085 * st.b)
        * (0.55 + 0.90 * fib) * mix(0.40, 1.0, trim);
 
