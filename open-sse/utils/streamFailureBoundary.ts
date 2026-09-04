@@ -33,7 +33,7 @@ export function createStreamFailureAborter(context: AborterContext) {
     controller: TransformStreamDefaultController<Uint8Array>,
     failure: StreamFailurePayload,
     publicMessage: string,
-    options: { notifyComplete?: boolean } = {}
+    options: { notifyComplete?: boolean; keepReadable?: boolean } = {}
   ): void => {
     let handled = false;
     context.timing.markInterrupted();
@@ -71,6 +71,14 @@ export function createStreamFailureAborter(context: AborterContext) {
     }
     context.clearIdleTimer();
     if (!handled) context.clearPendingRequest();
-    controller.error(context.markPendingRequestCleared(new Error(safeMessage)));
+    // `keepReadable` is for paths that already forwarded a terminal failure event to the
+    // client: the translated failure frame IS the end of the public protocol, so erroring
+    // the readable would discard the queued frame from a `readable.text()`/pipe consumer.
+    // Old behavior (pre-#12506) kept the readable open on this path; preserve it.
+    if (!options.keepReadable) {
+      controller.error(context.markPendingRequestCleared(new Error(safeMessage)));
+    } else {
+      context.markPendingRequestCleared(new Error(safeMessage));
+    }
   };
 }

@@ -2810,7 +2810,8 @@ export function saveImageErrorResult({
     model: `${provider}/${model}`,
     provider,
     duration: Date.now() - startTime,
-    error: typeof error === "string" ? error.slice(0, 500) : String(error).slice(0, 500),
+    error:
+      typeof error === "string" ? error.slice(0, 500) : JSON.stringify(error ?? null).slice(0, 500),
     requestBody,
   }).catch(() => {});
 

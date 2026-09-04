@@ -103,15 +103,33 @@ async function withSilencedConsoleError<T>(fn: () => T | Promise<T>): Promise<[T
 
 // ── Why a dedicated module: sanitizeErrorMessage does not cover these ───────
 
-test("sanitizeErrorMessage alone leaves every tunnel leak shape intact", () => {
+test("sanitizeErrorMessage leak coverage vs publicSafeTunnelError stays intentional", () => {
+  // Canary, two directions. `publicSafeTunnelError` (src/lib/api/publicSafeTunnelError.ts)
+  // is the tunnel-specific layer; when the shared sanitizer covers a leak shape, this
+  // test pins which shapes still require the dedicated layer.
+  const stillCoveredByShared = ["binary path (no extension)", "daemon state path"];
+  const nowCoveredByShared = ["config/state path (.json)", "windows config path"];
   for (const leak of LEAKS) {
     const out = sanitizeErrorMessage(leak.message);
-    const stillLeaks = leak.secrets.some((s) => out.includes(s));
-    assert.ok(
-      stillLeaks,
-      `${leak.label}: sanitizeErrorMessage unexpectedly covers this now — if the ` +
-        `shared sanitizer grew to handle it, simplify publicSafeTunnelError accordingly. Got: ${out}`
-    );
+    const covered = !leak.secrets.some((s) => out.includes(s));
+    if (nowCoveredByShared.includes(leak.label)) {
+      assert.ok(
+        covered,
+        `${leak.label}: shared sanitizer regressed — expected coverage. Got: ${out}`
+      );
+    } else if (stillCoveredByShared.includes(leak.label)) {
+      assert.ok(
+        covered,
+        `${leak.label}: unexpectedly covered — re-check publicSafeTunnelError overlap`
+      );
+    } else {
+      const stillLeaks = leak.secrets.some((s) => out.includes(s));
+      assert.ok(
+        stillLeaks,
+        `${leak.label}: sanitizeErrorMessage unexpectedly covers this now — if the ` +
+          `shared sanitizer grew to handle it, simplify publicSafeTunnelError accordingly. Got: ${out}`
+      );
+    }
   }
 });
 

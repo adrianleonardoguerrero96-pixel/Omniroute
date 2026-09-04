@@ -30,8 +30,14 @@ const CLEAR_PROSE_BOUNDARIES = [
   "retry",
   "then",
   "when",
-  "while",
+  "redacted",
+  "with",
 ] as const;
+// Credential labels whose `label:`/`label=`-introducer marks prose (the value is
+// redacted by the sanitizer before path spans are resolved). Mirrors the
+// BLOCKED_KEYS vocabulary in errorSanitization.ts.
+const CREDENTIAL_LABEL_BOUNDARY =
+  /stack|trace|path|file|cwd|dir|password|secret|token|key|authorization|cookie|credential|session/i;
 const POSIX_FILESYSTEM_ROOTS = [
   "/Users",
   "/app",
@@ -443,9 +449,18 @@ function trimPathSpanEnd(value: string, start: number, end: number): number {
 function isClearProseBoundaryToken(value: string, start: number, end: number): boolean {
   while (start < end && LEADING_PATH_PUNCTUATION.includes(value[start])) start++;
   end = trimPathSpanEnd(value, start, end);
-  return (CLEAR_PROSE_BOUNDARIES as readonly string[]).includes(
-    value.slice(start, end).toLowerCase()
-  );
+  const token = value.slice(start, end).toLowerCase();
+  if ((CLEAR_PROSE_BOUNDARIES as readonly string[]).includes(token)) return true;
+  // A redacted credential assignment (`label=[REDACTED]`) is sanitizer output,
+  // never a path continuation — treat it as a prose boundary so the span that
+  // swallowed a preceding ambiguous path cannot also swallow the redaction.
+  // trimPathSpanEnd may already have stripped the closing bracket.
+  if (/(?:^|[^a-z0-9_])[a-z0-9_-]+=\[redacted\]?[)\]},'"`.:;!?]?$/.test(token)) return true;
+  // Same for the label half of a split assignment: `Authorization:` followed by
+  // `[REDACTED]` (the value was scrubbed by an earlier pass). Without this the
+  // label token poisons `hasUnresolvedFragments` and the fail-closed span eats
+  // the redaction that follows it.
+  return /^[a-z0-9_-]+:?$/.test(token) && CREDENTIAL_LABEL_BOUNDARY.test(token);
 }
 
 function findUnquotedPathEnd(

@@ -335,7 +335,7 @@ function findUnquotedCredentialEnd(value: string, start: number): number {
   return end;
 }
 
-function redactLabeledCredentialAssignments(value: string): string {
+export function redactLabeledCredentialAssignments(value: string): string {
   const parts: string[] = [];
   let copyStart = 0;
   let index = 0;
@@ -689,7 +689,14 @@ function sanitizeErrorMessageWithStackPolicy(
   // Raw URI credentials must be projected before the path tokenizer consumes
   // the URI tail; Windows path evidence still stays intact until after this
   // credential-only pass and is redacted before escape normalization.
-  str = redactKnownCredentialPatterns(redactSensitiveUrlCredentials(stripStackTail(str)));
+  // Credential kv-assignments (`access_token=…`, `api_key=…`, …) must be
+  // scrubbed BEFORE path-span redaction: an unquoted path with line:col
+  // ambiguity fails closed over the rest of the line, which would otherwise
+  // swallow a following `label=value` credential wholesale and destroy it
+  // instead of redacting it (the HuggingChat transport regression).
+  str = redactLabeledCredentialAssignments(
+    redactKnownCredentialPatterns(redactSensitiveUrlCredentials(stripStackTail(str)))
+  );
   str = redactErrorPaths(str);
   str = redactSensitiveErrorText(str);
   str = truncateSanitizedErrorText(str);
