@@ -137,6 +137,71 @@ export function parseEffortLevel(model: string): { baseModel: string; effort: st
 }
 
 /**
+ * Matches a muse-spark model id in any executor-level form (bare
+ * `muse-spark-1.3-contributor`, effort alias, or provider-prefixed).
+ */
+const MUSE_SPARK_MODEL_PATTERN = /(?:^|\/)muse-spark/i;
+
+/**
+ * Whether an upstream 400 body is the OpenCode /responses "effort not
+ * supported" rejection (e.g. sending reasoning.effort=max to a model whose
+ * wire vocabulary tops out at xhigh). Real upstream shape (2026-09-04):
+ * `{"error":{"param":"reasoning.effort","type":"invalid_request_error",
+ * "message":"… reasoning_effort 'max' is not supported …"}}`.
+ * Exported for testability.
+ */
+export function isUnsupportedReasoningEffortRejection(bodyText: string): boolean {
+  if (!bodyText) return false;
+  if (/"param"\s*:\s*"reasoning\.effort"/i.test(bodyText)) return true;
+  return /reasoning/i.test(bodyText) && /not supported|unknown variant/i.test(bodyText);
+}
+
+/**
+ * Max-first fallback input rewrite (muse-spark only): when the caller asked
+ * for `max` — via a `-max` effort alias or a flat `reasoning_effort` /
+ * `reasoning.effort` field — produce a copy of the input pinned to `xhigh`
+ * for the single bounded retry. Returns null when the input carries no
+ * max-effort intent (no retry). Never mutates the caller's input.
+ */
+function downgradeMuseSparkMaxEffortInput(input: ExecuteInput): ExecuteInput | null {
+  const model = String(input.model ?? "");
+  const parsed = parseEffortLevel(model);
+  const isSpark =
+    MUSE_SPARK_MODEL_PATTERN.test(model) || (parsed?.baseModel.startsWith("muse-spark") ?? false);
+  if (!isSpark) return null;
+
+  const bodyRec =
+    input.body && typeof input.body === "object" && !Array.isArray(input.body)
+      ? (input.body as Record<string, unknown>)
+      : null;
+
+  if (parsed && parsed.effort === "max") {
+    return {
+      ...input,
+      model: parsed.baseModel,
+      body: { ...(bodyRec ?? {}), reasoning_effort: "xhigh" },
+    };
+  }
+  if (bodyRec && String(bodyRec.reasoning_effort ?? "").toLowerCase() === "max") {
+    return { ...input, body: { ...bodyRec, reasoning_effort: "xhigh" } };
+  }
+  const reasoningRec =
+    bodyRec?.reasoning && typeof bodyRec.reasoning === "object" && !Array.isArray(bodyRec.reasoning)
+      ? (bodyRec.reasoning as Record<string, unknown>)
+      : null;
+  if (reasoningRec && String(reasoningRec.effort ?? "").toLowerCase() === "max") {
+    return { ...input, body: { ...bodyRec, reasoning: { ...reasoningRec, effort: "xhigh" } } };
+  }
+  return null;
+}
+
+/** Object-shaped arm of ExecutorExecuteResult (the HTTP path). */
+type HttpExecuteResult = Extract<
+  Awaited<ReturnType<BaseExecutor["execute"]>>,
+  { response: Response }
+>;
+
+/**
  * Determine whether a model requires an API key on the given opencode provider.
  *
  * - `opencode-go`: ALL models require a key (no free tier).
@@ -476,6 +541,35 @@ export class OpencodeExecutor extends BaseExecutor {
     };
   }
 
+  /**
+   * Max-first effort fallback (muse-spark on /responses): the wire tier is
+   * sent verbatim — including `max` — and only when the upstream answers 400
+   * with the unsupported-effort signature is the same dispatch retried once
+   * with the input downgraded to `xhigh`. Exactly one extra attempt, only on
+   * that signature; every other outcome passes through untouched.
+   */
+  private async dispatchWithMuseSparkMaxFallback(
+    input: ExecuteInput,
+    dispatch: (effInput: ExecuteInput) => Promise<HttpExecuteResult>
+  ): Promise<HttpExecuteResult> {
+    const first = await dispatch(input);
+    if (first.response.status !== 400) return first;
+    const downgraded = downgradeMuseSparkMaxEffortInput(input);
+    if (!downgraded) return first;
+    let bodyText: string | null = null;
+    try {
+      bodyText = await first.response.clone().text();
+    } catch {
+      return first;
+    }
+    if (bodyText === null || !isUnsupportedReasoningEffortRejection(bodyText)) return first;
+    input.log?.warn?.(
+      "OPENCODE",
+      "upstream rejected reasoning effort 'max' for muse-spark, retrying once with 'xhigh'…"
+    );
+    return dispatch(downgraded);
+  }
+
   async execute(input: ExecuteInput) {
     this._requestFormat = resolveOpencodeTargetFormat(this.provider, input.model);
 
@@ -532,10 +626,13 @@ export class OpencodeExecutor extends BaseExecutor {
         // execute() in runWithProxyContext(proxyInfo.proxy, ...) before we run.
         // Only pin direct egress when no such context exists; otherwise let the
         // ambient proxy stand instead of clobbering it with the direct sentinel.
-        const dispatch = () => super.execute(input);
+        const dispatch = (effInput: ExecuteInput) =>
+          super.execute(effInput) as Promise<HttpExecuteResult>;
         const single = (await (hasAmbientProxyContext()
-          ? dispatch()
-          : runWithDirectFetchContext(dispatch))) as HttpExecuteResult;
+          ? this.dispatchWithMuseSparkMaxFallback(input, dispatch)
+          : runWithDirectFetchContext(() =>
+              this.dispatchWithMuseSparkMaxFallback(input, dispatch)
+            ))) as HttpExecuteResult;
         if (single.response.status === 400) {
           let bodyText: string | null = null;
           try {
@@ -564,10 +661,6 @@ export class OpencodeExecutor extends BaseExecutor {
       // This loop only ever dispatches through super.execute() (the HTTP request
       // path), which always resolves the object-shaped arm of ExecutorExecuteResult
       // — the bare-Response arm belongs to web/scraping executors only (base.ts:290).
-      type HttpExecuteResult = Extract<
-        Awaited<ReturnType<BaseExecutor["execute"]>>,
-        { response: Response }
-      >;
       let lastResult: HttpExecuteResult | null = null;
       let lastSharedEgressError: unknown = null;
       const sharedEgressGuardEnabled = isNetworkRotationSharedEgressGuardEnabled();
@@ -614,10 +707,13 @@ export class OpencodeExecutor extends BaseExecutor {
         try {
           // super.execute() here always dispatches the HTTP path (opencode is an
           // OpenAI-compatible API, never the web/scraping bare-Response arm) —
-          // see base.ts:290-294.
-          result = (await runWithProxyContext(account.proxy, () =>
-            super.execute({ ...input, skipUpstreamRetry: true })
-          )) as HttpExecuteResult;
+          // see base.ts:290-294. Wrapped in the muse-spark max-first fallback so
+          // a literal-max 400 retries once with xhigh on the same account.
+          const loopDispatch = (effInput: ExecuteInput) =>
+            runWithProxyContext(account.proxy, () =>
+              super.execute({ ...effInput, skipUpstreamRetry: true })
+            ) as Promise<HttpExecuteResult>;
+          result = await this.dispatchWithMuseSparkMaxFallback(input, loopDispatch);
         } catch (err) {
           const reason = err instanceof Error ? err.message : String(err);
           // A network exception (timeout, connection refused/reset) is only
@@ -931,9 +1027,12 @@ export class OpencodeExecutor extends BaseExecutor {
           // Muse Spark on OpenCode is exclusively a Responses API model on /responses.
           // The /responses upstream strictly expects baseModel in the model field and
           // reasoning.effort for the tier (rejects suffixed model ids with ModelError 401).
-          // Upstream /responses accepts: minimal, low, medium, high, xhigh (clamps max -> xhigh).
+          // Max-first: the requested tier goes to the wire verbatim — if this
+          // upstream does not know `max` it 400s with the unsupported-effort
+          // signature and execute() retries once with `xhigh`
+          // (see dispatchWithMuseSparkMaxFallback).
           mb.model = parsed.baseModel;
-          const responsesEffort = parsed.effort === "max" ? "xhigh" : parsed.effort;
+          const responsesEffort = parsed.effort === "ultra" ? "max" : parsed.effort;
           if (mb.reasoning && typeof mb.reasoning === "object" && !Array.isArray(mb.reasoning)) {
             (mb.reasoning as Record<string, unknown>).effort = responsesEffort;
           } else if (mb.reasoning === undefined) {

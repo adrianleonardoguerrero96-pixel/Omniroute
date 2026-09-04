@@ -153,7 +153,9 @@ test("OpencodeExecutor.transformRequest rewrites muse-spark effort aliases to ba
   const executor = new OpencodeExecutor("opencode-go");
   const creds = { apiKey: "test", authType: "apikey" } as const;
 
-  // muse-spark-1.3-contributor-max rewrites to baseModel + reasoning.effort: "xhigh" (upstream /responses max capability)
+  // muse-spark-1.3-contributor-max rewrites to baseModel + reasoning.effort: "max"
+  // (max-first: execute() retries once with "xhigh" on the unsupported-effort 400 —
+  // see opencode-muse-spark-max-fallback.test.ts)
   const maxReq = executor.transformRequest(
     "muse-spark-1.3-contributor-max",
     { model: "muse-spark-1.3-contributor-max", input: [] },
@@ -161,7 +163,7 @@ test("OpencodeExecutor.transformRequest rewrites muse-spark effort aliases to ba
     creds
   );
   assert.equal(maxReq.model, "muse-spark-1.3-contributor");
-  assert.deepEqual(maxReq.reasoning, { effort: "xhigh" });
+  assert.deepEqual(maxReq.reasoning, { effort: "max" });
 
   // muse-spark-1.3-contributor-low rewrites to baseModel + reasoning.effort: "low"
   const lowReq = executor.transformRequest(
