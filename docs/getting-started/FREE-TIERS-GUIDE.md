@@ -1,6 +1,6 @@
 # Free Tiers Guide: Understand and Combine Free AI Access
 
-> **TL;DR**: OmniRoute registers 351 provider IDs, with **152 provider-catalog entries marked `hasFree`**. The stricter audited free-model catalog covers **38 recurring pool keys / 476 entries** (469 active + 7 discontinued). Connect several suitable providers for broader fallback capacity; every quota, approval rule, privacy policy, and paid-overage condition still applies.
+> **TL;DR**: OmniRoute registers 357 provider IDs, with **152 provider-catalog entries marked `hasFree`**. The stricter audited free-model catalog covers **35 recurring pool keys / 481 entries** (474 active + 7 discontinued). Connect several suitable providers for broader fallback capacity; every quota, approval rule, privacy policy, and paid-overage condition still applies.
 
 ---
 
@@ -161,11 +161,11 @@ The live, pool-deduplicated catalog currently reports:
 
 | Metric                                               |                            Current audited value | Interpretation                                                                            |
 | ---------------------------------------------------- | -----------------------------------------------: | ----------------------------------------------------------------------------------------- |
-| Recurring quantified grant                           |                          **~1.63B tokens/month** | Shared pools counted once; excludes uncapped providers from the sum                       |
+| Recurring quantified grant                           |                          **~1.62B tokens/month** | Shared pools counted once; excludes uncapped providers from the sum                       |
 | First month with signup grants                       |                                **~2.25B tokens** | Recurring total plus one-time and recurring credits                                       |
-| Audited free-model inventory                         | **38 recurring pool keys / 476 catalog entries** | 469 active + 7 discontinued; distinct from the 351-provider catalog                       |
-| Recurring/keyless free-forever providers represented |                                           **55** | Unique providers across recurring daily/monthly/credit/uncapped and keyless catalog types |
-| Provider catalog entries marked `hasFree`            |                                    **152 / 351** | Broader provider metadata; not all have a quantifiable recurring quota                    |
+| Audited free-model inventory                         | **35 recurring pool keys / 481 catalog entries** | 474 active + 7 discontinued; distinct from the 357-provider catalog                       |
+| Recurring/keyless free-forever providers represented |                                           **53** | Unique providers across recurring daily/monthly/credit/uncapped and keyless catalog types |
+| Provider catalog entries marked `hasFree`            |                                    **152 / 357** | Broader provider metadata; not all have a quantifiable recurring quota                    |
 
 These values are computed from `open-sse/config/freeModelCatalog.ts`; see the
 [Free Tiers Reference](../reference/FREE_TIERS.md) for pool deduplication, ToS flags,
