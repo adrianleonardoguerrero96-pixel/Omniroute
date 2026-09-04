@@ -1,3 +1,5 @@
+import { sanitizeErrorMessage } from "../../utils/errorSanitization.ts";
+
 /**
  * Rate-limited fail-open notifier for the compression worker paths.
  *
@@ -18,8 +20,11 @@ const FAIL_OPEN_LOG_INTERVAL_MS = 60_000;
 /** Cap the per-detail map so pathological detail diversity cannot grow it unbounded. */
 const MAX_TRACKED_DETAILS = 16;
 
-export function notifyCompressionFailOpen(detail?: string): void {
-  const key = detail ?? "unknown";
+export function notifyCompressionFailOpen(rawDetail?: string): void {
+  // Every call site funnels here, so sanitize once, centrally: raw error text
+  // may carry absolute paths or multiline runtime messages into the log.
+  const detail = sanitizeErrorMessage(rawDetail ?? "unknown");
+  const key = detail.length > 0 ? detail : "unknown";
   const now = Date.now();
   if (now - failOpenLastLoggedAt >= FAIL_OPEN_LOG_INTERVAL_MS) {
     failOpenLastLoggedAt = now;

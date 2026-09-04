@@ -115,8 +115,9 @@ describe("CompressionWorkerPool spawn-failure queue drain", () => {
     }
   });
 
-  for (const transientCode of ["EMFILE", "ERR_WORKER_INIT_FAILED"] as const) {
-    it(`retries after a transient ${transientCode} spawn failure`, async () => {
+  for (const transientCode of ["EMFILE", "ERR_WORKER_INIT_FAILED", undefined] as const) {
+    const label = transientCode ?? "unknown no-code error";
+    it(`retries after a transient ${label} spawn failure`, async () => {
       let spawns = 0;
       const worker = fakeWorker();
       const pool = new CompressionWorkerPool({
@@ -125,7 +126,7 @@ describe("CompressionWorkerPool spawn-failure queue drain", () => {
           spawns++;
           if (spawns === 1) {
             const error = new Error("temporary worker resource exhaustion");
-            (error as NodeJS.ErrnoException).code = transientCode;
+            if (transientCode) (error as NodeJS.ErrnoException).code = transientCode;
             throw error;
           }
           return worker;
@@ -151,6 +152,26 @@ describe("CompressionWorkerPool spawn-failure queue drain", () => {
       }
     });
   }
+
+  it("treats ERR_WORKER_PATH as a permanent structural failure", async () => {
+    let spawns = 0;
+    const pool = new CompressionWorkerPool({
+      size: 1,
+      workerFactory: () => {
+        spawns++;
+        const error = new Error("invalid worker path");
+        (error as NodeJS.ErrnoException).code = "ERR_WORKER_PATH";
+        throw error;
+      },
+    });
+    try {
+      await withTimeout(pool.run(body, "stacked"), 5000, "first job never resolved");
+      await withTimeout(pool.run(body, "stacked"), 5000, "post-break job hung");
+      assert.equal(spawns, 1, "structural failures must permanently break the pool");
+    } finally {
+      await pool.close();
+    }
+  });
 
   it("fails open immediately for jobs submitted after the pool broke", async () => {
     const pool = new CompressionWorkerPool({
@@ -289,20 +310,21 @@ describe("CompressionWorkerPool spawn-failure queue drain", () => {
     }
   });
 
-  it("close() resolves the job of a busy worker — no stranded promise", async () => {
+  it("close() resolves the busy job and every queued job", async () => {
     const worker = fakeWorker();
     const pool = new CompressionWorkerPool({ size: 1, workerFactory: () => worker });
     try {
-      const pending = pool.run(body, "stacked"); // worker accepts, never replies
-      // Give dispatch() a tick to assign the job to the worker.
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      const jobs = [
+        pool.run(body, "stacked"), // worker accepts, never replies
+        pool.run(body, "stacked"),
+        pool.run(body, "stacked"),
+      ];
+      assert.equal(worker.messages.length, 1, "one job must be busy while two remain queued");
       await pool.close();
-      // The in-flight job must settle fail-open instead of pending forever.
-      assert.deepEqual(await withTimeout(pending, 5000, "close stranded the in-flight job"), {
-        body,
-        compressed: false,
-        stats: null,
-      });
+      const results = await withTimeout(Promise.all(jobs), 5000, "close stranded pool jobs");
+      for (const result of results) {
+        assert.deepEqual(result, { body, compressed: false, stats: null });
+      }
     } finally {
       await pool.close();
     }
@@ -385,5 +407,23 @@ describe("llmlingua worker spawn specifier", () => {
     assert.ok(specifier instanceof URL, "Worker entry must be a URL object, not a string");
     assert.equal(specifier.protocol, "file:");
     assert.equal(specifier.pathname, "/app/onnxWorker.js");
+  });
+});
+
+describe("fail-open notifier sanitization", () => {
+  it("sanitizes secrets, absolute paths, and multiline log injection in the detail", () => {
+    const warn = captureWarn();
+    try {
+      notifyCompressionFailOpen(
+        "spawn failed /home/user/secret-token-path\ninjected second line sk-0123456789abcdef0123456789abcdef"
+      );
+    } finally {
+      warn.restore();
+    }
+    assert.equal(warn.lines.length, 1);
+    const line = warn.lines[0] ?? "";
+    assert.equal(line.split("\n").length, 1, "detail must not introduce extra log lines");
+    assert.doesNotMatch(line, /sk-[0-9a-f]{32}/, "secret-looking tokens must be redacted");
+    assert.doesNotMatch(line, /\/home\/user\//, "absolute paths must not reach the log");
   });
 });
