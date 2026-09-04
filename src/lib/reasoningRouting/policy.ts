@@ -264,6 +264,17 @@ function capabilityFor(
   const capabilities = getResolvedModelCapabilities(model);
   if (capabilities.supportsThinking === false) return "unsupported" as const;
   if (targetEffort === "max" || targetEffort === "ultra") {
+    // A declared (or operator-overridden) effort vocabulary is authoritative for
+    // the exact model: when it lists the requested tier, the dispatch-time
+    // sanitizer (`open-sse/executors/base/reasoningEffort.ts`) will forward it
+    // verbatim, so the gate must not reject it here. This keeps custom
+    // OpenAI-compatible providers (e.g. Merge Gateway routes like
+    // `zai/glm-5.3-flash`, which accept `max` natively) usable with forced-max
+    // rules instead of 400ing on a hardcoded gpt-5.6 regex.
+    const declaredEfforts = capabilities.supportedThinkingEfforts;
+    if (Array.isArray(declaredEfforts) && declaredEfforts.includes(targetEffort)) {
+      return "supported" as const;
+    }
     const normalized = model.toLowerCase().replace(/^(?:codex|cx)\//, "");
     const supported =
       targetEffort === "ultra"

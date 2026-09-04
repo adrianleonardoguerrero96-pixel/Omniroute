@@ -237,3 +237,62 @@ test("schema rejects connection reroutes and none with a fixed budget", () => {
   });
   assert.equal(noneWithBudget.success, false);
 });
+
+test("forced max/ultra is supported when the model declares that effort (#12630)", async () => {
+  const { setModelCapabilityOverride } =
+    await import("../../src/lib/db/modelCapabilityOverrides.ts");
+  const model = "custom-provider/zai/glm-5.3-flash";
+
+  await rulesDb.createReasoningRoutingRule(
+    ruleInput({
+      name: "force max on declared-vocabulary model",
+      scope: "model",
+      modelPattern: model,
+      effortMode: "force",
+      targetEffort: "max",
+      priority: 10,
+    })
+  );
+
+  const beforeDecision = await policy.resolveReasoningRoutingRule({
+    sourceModel: model,
+    sourceEffort: "missing",
+    hasReasoningSignal: false,
+  });
+  assert.ok(beforeDecision, "rule should match");
+  assert.equal(beforeDecision.targetEffort, "max");
+  assert.equal(
+    beforeDecision.capability,
+    "unknown",
+    "without declared vocabulary, forced max on a model with no capability data stays unknown (legacy passthrough)"
+  );
+
+  // Operator declares the model's real effort vocabulary (what the Model
+  // Overrides UI writes via PATCH /api/model-capability-overrides).
+  const set = setModelCapabilityOverride(model, "reasoning_efforts", ["low", "high", "max"]);
+  assert.equal(set, true, "override must accept a low/high/max vocabulary");
+
+  const afterDecision = await policy.resolveReasoningRoutingRule({
+    sourceModel: model,
+    sourceEffort: "missing",
+    hasReasoningSignal: false,
+  });
+  assert.equal(
+    afterDecision?.capability,
+    "supported",
+    "declared vocabulary containing max must make forced max supported"
+  );
+
+  // Declared vocabulary without max still rejects forced max.
+  assert.equal(setModelCapabilityOverride(model, "reasoning_efforts", ["low", "high"]), true);
+  const noMaxDecision = await policy.resolveReasoningRoutingRule({
+    sourceModel: model,
+    sourceEffort: "missing",
+    hasReasoningSignal: false,
+  });
+  assert.equal(
+    noMaxDecision?.capability,
+    "unsupported",
+    "declared vocabulary without max must keep forced max unsupported"
+  );
+});
