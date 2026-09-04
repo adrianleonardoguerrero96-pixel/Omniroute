@@ -19,6 +19,7 @@ import { saveCallLog } from "@/lib/usageDb";
 import type { VideoBridgeLogRedactionEntry } from "@/lib/guardrails/videoBridge";
 import { FORMATS } from "../../translator/formats.ts";
 import { takeEarlyKeepaliveBytes } from "../../utils/earlyKeepaliveByteBuffer.ts";
+import { sanitizeErrorMessage } from "../../utils/error.ts";
 import { cloneBoundedChatLogPayload, truncateForLog } from "./logTruncation.ts";
 import { attachLogMeta } from "./cacheUsageMeta.ts";
 
@@ -317,7 +318,9 @@ export function resolveRequestLifecycleEvent(input: {
     name: "request.failed",
     payload: {
       id: traceId,
-      error: error || `HTTP ${status}`,
+      // Dashboard listeners and event history cross a public WebSocket boundary. Keep the raw
+      // diagnostic in the call log/pipeline above, but expose only the canonical safe projection.
+      error: sanitizeErrorMessage(error || `HTTP ${status}`),
       statusCode: typeof status === "number" ? status : undefined,
       latencyMs,
       model: model || undefined,
