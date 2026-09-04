@@ -5,6 +5,7 @@ const {
   classifyProviderError,
   isResourceNotFoundResponse,
   isCloudflareFingerprintRejection,
+  resetFingerprintRemediationHintForTest,
   PROVIDER_ERROR_TYPES,
 } = await import("../../open-sse/services/errorClassifier.ts");
 
@@ -400,4 +401,37 @@ test("classifyProviderError: 422 without the BYOP code stays unclassified (no mo
     null
   );
   assert.equal(classifyProviderError(422, "some other body", "antigravity"), null);
+});
+
+test("classifyProviderError: fingerprint rejection emits throttled remediation hint (once, only when TLS transport disabled)", async () => {
+  resetFingerprintRemediationHintForTest();
+  const original = process.env.ENABLE_TLS_FINGERPRINT;
+  delete process.env.ENABLE_TLS_FINGERPRINT;
+  const warnings: string[] = [];
+  const originalWarn = console.warn;
+  console.warn = (...args: unknown[]) => {
+    warnings.push(args.map(String).join(" "));
+  };
+  try {
+    const body = JSON.stringify({ error_code: 1010 });
+    assert.equal(classifyProviderError(403, body), PROVIDER_ERROR_TYPES.FINGERPRINT_REJECTION);
+    assert.equal(classifyProviderError(403, body), PROVIDER_ERROR_TYPES.FINGERPRINT_REJECTION);
+    const hints = warnings.filter((w) => w.includes("fingerprint rejection"));
+    assert.equal(hints.length, 1, "hint must be throttled to once per process");
+    assert.match(hints[0], /wreq-js/);
+    assert.match(hints[0], /ENABLE_TLS_FINGERPRINT=true/);
+    // With the transport enabled the operator already has the fix — no hint.
+    resetFingerprintRemediationHintForTest();
+    process.env.ENABLE_TLS_FINGERPRINT = "true";
+    classifyProviderError(403, body);
+    assert.equal(
+      warnings.filter((w) => w.includes("fingerprint rejection")).length,
+      1,
+      "no hint when the TLS fingerprint transport is enabled"
+    );
+  } finally {
+    console.warn = originalWarn;
+    if (original === undefined) delete process.env.ENABLE_TLS_FINGERPRINT;
+    else process.env.ENABLE_TLS_FINGERPRINT = original;
+  }
 });

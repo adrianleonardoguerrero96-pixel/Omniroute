@@ -142,7 +142,13 @@ import {
   type ResilienceSettings,
   type ComboCooldownWaitSettings,
 } from "../../src/lib/resilience/settings";
-import { resolveReasoningBufferedMaxTokens, toPositiveInteger } from "./reasoningTokenBuffer.ts";
+import {
+  resolveReasoningBufferedMaxTokens,
+  toPositiveInteger,
+  isTinyBudgetReasoningProbe,
+  buildReasoningProbeTruncatedResponse,
+  REASONING_BUFFER_MIN_TRIGGER,
+} from "./reasoningTokenBuffer.ts";
 import { RESET_WINDOW_NAMES } from "./combo/types.ts";
 import type {
   ComboLike,
@@ -175,6 +181,7 @@ import {
   releaseQualityClone,
   releaseRejectedQualityResponse,
   toRetryAfterDisplayValue,
+  isReasoningConsumedQualityRejection,
 } from "./combo/validateQuality.ts";
 import {
   resolveComboCooldownWaitDecision,
@@ -217,6 +224,8 @@ import {
   getPersistedConnectionCooldownSkipReason,
   resolvePersistedConnectionCooldownSkipReason,
   isContextOverflow400,
+  isTransportClassNetworkError,
+  shouldAbortComboForTransportFailures,
   isParamValidation400,
   isModelScoped400,
 } from "./combo/comboPredicates.ts";
@@ -265,6 +274,7 @@ import {
   getComboTrace,
   recordComboDecision,
   startComboTrace,
+  summarizeSkippedTargets,
 } from "./combo/decisionTrace.ts";
 import {
   QUOTA_SOFT_DEPRIORITIZE_FACTOR,
@@ -1173,6 +1183,9 @@ async function handleComboChatInner({
       const startTime = Date.now();
       let fallbackCount = 0;
       let recordedAttempts = 0;
+      // Bounded transport abort: consecutive transport-class failures share the
+      // same egress — after the bound, remaining targets would fail identically.
+      let consecutiveTransportFailures = 0;
       comboErrors = [];
 
       // QA P0: assemble a sanitized diagnostic trace from the state already in scope
@@ -1194,6 +1207,10 @@ async function handleComboChatInner({
         attemptOrder: comboAttemptOrder,
         terminalReason,
         recovery: buildRecoveryHint(terminalReason, retryAfterSeconds),
+        // #12294: per-target pre-dispatch skip reasons so operators can see WHY
+        // every target was filtered (quota wall vs allowlist vs lockout) and the
+        // earliest cooldown reset instead of an opaque 503.
+        ...summarizeSkippedTargets(getComboTrace(traceInvocationId)),
       });
 
       let globalResolve: ((res: Response) => void) | null = null;
@@ -1329,6 +1346,15 @@ async function handleComboChatInner({
           if (persistedSkip) {
             log.info("COMBO", persistedSkip);
             clearStaleLKGP(combo.name, target.executionKey, combo.id, log, "COMBO");
+            // #12294: the cooldown detail (with reset timestamp) feeds the
+            // ALL_TARGETS_SKIPPED response diagnostics via the decision trace.
+            recordComboDecision(traceInvocationId, {
+              step: target.executionKey,
+              target: modelStr,
+              decision: "skipped_before_dispatch",
+              reason: "persisted_cooldown",
+              detail: persistedSkip,
+            });
             if (i > 0) fallbackCount++;
             return null;
           }
@@ -1767,9 +1793,41 @@ async function handleComboChatInner({
                 "COMBO",
                 `Model ${modelStr} returned 200 but failed quality check: ${quality.reason}`
               );
-              // #6692: a quality-rejected 200 never marks the connection row
-              // unhealthy, so the sticky pin's lazy headroom recheck would never
-              // catch it either — release it here, on the failing response.
+              // #10281 (combo path): a tiny-budget reasoning probe (max_tokens
+              // below REASONING_BUFFER_MIN_TRIGGER, e.g. Claude Code's /model
+              // check) whose upstream 200 burned the entire budget on thinking
+              // is a budget-truncated response, not a provider fault. Answer
+              // with a valid truncated 200 (finish_reason "length") instead of
+              // burning fallbacks and poisoning model-lockout bookkeeping.
+              if (
+                !clientRequestedStream &&
+                isTinyBudgetReasoningProbe({ model: modelStr, body: attemptBody }) &&
+                isReasoningConsumedQualityRejection(quality.reason)
+              ) {
+                log.warn(
+                  "COMBO",
+                  `Reasoning probe (max_tokens < ${REASONING_BUFFER_MIN_TRIGGER}) answered with truncated 200 — quality: ${quality.reason}`
+                );
+                recordComboRequest(combo.name, modelStr, {
+                  success: true,
+                  latencyMs: Date.now() - startTime,
+                  fallbackCount,
+                  strategy,
+                  target: toRecordedTarget(target),
+                });
+                recordedAttempts++;
+                return {
+                  ok: true,
+                  response: buildReasoningProbeTruncatedResponse({
+                    model: modelStr,
+                    maxTokens: toPositiveInteger(
+                      (attemptBody as Record<string, unknown> | undefined)?.max_tokens ??
+                        (attemptBody as Record<string, unknown> | undefined)?.max_completion_tokens
+                    ),
+                    requestId: traceInvocationId,
+                  }),
+                };
+              }
               releaseStickyPinOnFailure(_sticky.messageHash, effectiveConnectionId);
               recordComboRequest(combo.name, modelStr, {
                 success: false,
@@ -2518,6 +2576,39 @@ async function handleComboChatInner({
           });
           lastStatus = result.status;
           if (i > 0) fallbackCount++;
+          // Bounded transport abort (#12294 incident follow-up): consecutive
+          // transport-class failures share the same egress — after N, every
+          // remaining target would fail identically. Abort the whole combo
+          // instead of burning the remaining fan-out (the 2026-09-04 wedge
+          // trigger: opencode h2 resets -> 8 fallbacks/18 decisions -> pool
+          // saturation -> client abort during cleanup).
+          if (isTransportClassNetworkError(errorText)) {
+            consecutiveTransportFailures++;
+            if (shouldAbortComboForTransportFailures(consecutiveTransportFailures)) {
+              log.warn(
+                "COMBO",
+                `${consecutiveTransportFailures} consecutive transport-class failures (last: ${modelStr}: ${errorText}) — aborting combo; remaining targets share the same egress`
+              );
+              recordComboRequest(combo.name, modelStr, {
+                success: false,
+                latencyMs: Date.now() - startTime,
+                fallbackCount,
+                strategy,
+                target: toRecordedTarget(target),
+              });
+              recordComboFailure(effectiveSessionId, combo.name);
+              return {
+                ok: false,
+                response: errorResponse(
+                  502,
+                  `All upstream transports are failing at the network layer (last: ${errorText}) — try again shortly`
+                ),
+              };
+            }
+          } else {
+            consecutiveTransportFailures = 0;
+          }
+          if (i > 0) fallbackCount++;
           // Wire combo failures into the resilience dashboard (model-level lockout)
           // alongside the provider-level cooldown below — they govern different scopes.
           if (provider && rawModel && !scopedFailure) {
@@ -3265,6 +3356,7 @@ async function handleRoundRobinCombo({
   let lastError: string | null = null;
   let lastStatus: number | null = null;
   let earliestRetryAfter: ComboRetryAfter | null = null;
+  let consecutiveTransportFailures = 0;
   let globalAttempts = 0;
   let fallbackCount = 0;
   let recordedAttempts = 0;
@@ -3532,6 +3624,35 @@ async function handleRoundRobinCombo({
                 "COMBO-RR",
                 `${modelStr} returned 200 but failed quality check: ${quality.reason}`
               );
+              // #10281 (combo path): tiny-budget reasoning probes get a
+              // truncated 200 (see handleComboChat's quality-fail branch for
+              // the full rationale) instead of burning RR fallback slots.
+              if (
+                !clientRequestedStream &&
+                isTinyBudgetReasoningProbe({ model: modelStr, body: attemptBody }) &&
+                isReasoningConsumedQualityRejection(quality.reason)
+              ) {
+                log.warn(
+                  "COMBO-RR",
+                  `Reasoning probe (max_tokens < ${REASONING_BUFFER_MIN_TRIGGER}) answered with truncated 200 — quality: ${quality.reason}`
+                );
+                recordComboRequest(combo.name, modelStr, {
+                  success: true,
+                  latencyMs: Date.now() - startTime,
+                  fallbackCount,
+                  strategy: "round-robin",
+                  target: toRecordedTarget(target),
+                });
+                recordedAttempts++;
+                return buildReasoningProbeTruncatedResponse({
+                  model: modelStr,
+                  maxTokens: toPositiveInteger(
+                    (attemptBody as Record<string, unknown> | undefined)?.max_tokens ??
+                      (attemptBody as Record<string, unknown> | undefined)?.max_completion_tokens
+                  ),
+                  requestId: createInvocationId(),
+                });
+              }
               // #6692: same rationale as handleComboChat's quality-fail branch —
               // a quality-rejected 200 never marks the connection row unhealthy,
               // so release the sticky pin here rather than on the next turn.
@@ -3875,6 +3996,22 @@ async function handleRoundRobinCombo({
             kind: classifyComboOutcome(result.status, errorText),
           });
           if (offset > 0) fallbackCount++;
+          // Bounded transport abort — RR parity with handleComboChat above.
+          if (isTransportClassNetworkError(errorText)) {
+            consecutiveTransportFailures++;
+            if (shouldAbortComboForTransportFailures(consecutiveTransportFailures)) {
+              log.warn(
+                "COMBO-RR",
+                `${consecutiveTransportFailures} consecutive transport-class failures (last: ${modelStr}: ${errorText}) — aborting combo; remaining targets share the same egress`
+              );
+              return errorResponse(
+                502,
+                `All upstream transports are failing at the network layer (last: ${errorText}) — try again shortly`
+              );
+            }
+          } else {
+            consecutiveTransportFailures = 0;
+          }
           log.warn("COMBO-RR", `${modelStr} failed, trying next model`, {
             status: result.status,
             errorBody: redactConnectionLabel(errorText),
