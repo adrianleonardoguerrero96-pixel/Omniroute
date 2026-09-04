@@ -300,4 +300,105 @@ describe("HistoryTab", () => {
     expect(c.textContent).toContain("historyEmpty");
     cleanup();
   });
+
+  describe("compare mode", () => {
+    // Three distinct cells (distinct aria-label substrings) so tests can select each
+    // individually: two a2a runs plus one Cloud Agent run.
+    function threeItems() {
+      return {
+        a2aTasks: [
+          a2aTask({ id: "t1", skill: "smart-routing" }),
+          a2aTask({ id: "t3", skill: "eval-suite", createdAt: hoursAgo(2), completedAt: hoursAgo(1.5) }),
+        ],
+        cloudAgentTasks: [cloudAgentTask()],
+      };
+    }
+
+    function cellFor(c: HTMLElement, needle: string) {
+      return c.querySelector(`button[aria-label*="${needle}"]`) as HTMLButtonElement;
+    }
+
+    function toggleCompareButton(c: HTMLElement) {
+      return Array.from(c.querySelectorAll("button")).find(
+        (b) => b.textContent === "compareMode" || b.textContent === "compareExit"
+      ) as HTMLButtonElement;
+    }
+
+    it("compare mode is off by default: the toggle reports aria-pressed=false and a cell click still opens the drawer", async () => {
+      vi.stubGlobal("fetch", mockFetch(threeItems()));
+      const { c, cleanup } = render(<HistoryTab />);
+      await flush();
+
+      const toggle = toggleCompareButton(c);
+      expect(toggle).toBeTruthy();
+      expect(toggle.getAttribute("aria-pressed")).toBe("false");
+      expect(toggle.textContent).toBe("compareMode");
+
+      const cell = cellFor(c, "smart-routing");
+      act(() => cell.click());
+      const last = drawerCalls.at(-1) as { node: { id: string } | null };
+      expect(last.node?.id).toBe("a2a:t1");
+      cleanup();
+    });
+
+    it("turning compare mode on and clicking two cells marks both and does not open the drawer", async () => {
+      vi.stubGlobal("fetch", mockFetch(threeItems()));
+      const { c, cleanup } = render(<HistoryTab />);
+      await flush();
+
+      act(() => toggleCompareButton(c).click());
+      expect(toggleCompareButton(c).getAttribute("aria-pressed")).toBe("true");
+      expect(toggleCompareButton(c).textContent).toBe("compareExit");
+
+      const cellA = cellFor(c, "smart-routing");
+      const cellB = cellFor(c, "do the thing");
+      act(() => cellA.click());
+      act(() => cellB.click());
+
+      expect(cellFor(c, "smart-routing").getAttribute("aria-pressed")).toBe("true");
+      expect(cellFor(c, "do the thing").getAttribute("aria-pressed")).toBe("true");
+      // The drawer stub keeps re-rendering (parent state changed) but is never given a node —
+      // neither click opened it.
+      const last = drawerCalls.at(-1) as { node: unknown };
+      expect(last.node).toBeNull();
+      cleanup();
+    });
+
+    it("a third selection in compare mode drops the oldest, keeping the 2nd and 3rd marked", async () => {
+      vi.stubGlobal("fetch", mockFetch(threeItems()));
+      const { c, cleanup } = render(<HistoryTab />);
+      await flush();
+
+      act(() => toggleCompareButton(c).click());
+      act(() => cellFor(c, "smart-routing").click());
+      act(() => cellFor(c, "do the thing").click());
+      act(() => cellFor(c, "eval-suite").click());
+
+      expect(cellFor(c, "smart-routing").getAttribute("aria-pressed")).toBe("false");
+      expect(cellFor(c, "do the thing").getAttribute("aria-pressed")).toBe("true");
+      expect(cellFor(c, "eval-suite").getAttribute("aria-pressed")).toBe("true");
+      cleanup();
+    });
+
+    it("leaving compare mode clears the selection", async () => {
+      vi.stubGlobal("fetch", mockFetch(threeItems()));
+      const { c, cleanup } = render(<HistoryTab />);
+      await flush();
+
+      act(() => toggleCompareButton(c).click());
+      act(() => cellFor(c, "smart-routing").click());
+      act(() => cellFor(c, "do the thing").click());
+      expect(cellFor(c, "smart-routing").getAttribute("aria-pressed")).toBe("true");
+
+      // Leave compare mode.
+      act(() => toggleCompareButton(c).click());
+      expect(toggleCompareButton(c).getAttribute("aria-pressed")).toBe("false");
+
+      // Re-enter compare mode: nothing should still be marked.
+      act(() => toggleCompareButton(c).click());
+      expect(cellFor(c, "smart-routing").getAttribute("aria-pressed")).toBe("false");
+      expect(cellFor(c, "do the thing").getAttribute("aria-pressed")).toBe("false");
+      cleanup();
+    });
+  });
 });
