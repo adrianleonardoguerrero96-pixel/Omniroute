@@ -238,7 +238,7 @@ test("schema rejects connection reroutes and none with a fixed budget", () => {
   assert.equal(noneWithBudget.success, false);
 });
 
-test("forced max/ultra is supported when the model declares that effort (#12630)", async () => {
+test("forced max/ultra is supported when the model declares that effort", async () => {
   const { setModelCapabilityOverride } =
     await import("../../src/lib/db/modelCapabilityOverrides.ts");
   // Synthetic id: no static spec, registry row, or models.dev sync row can
@@ -299,7 +299,7 @@ test("forced max/ultra is supported when the model declares that effort (#12630)
   );
 });
 
-test("static registry vocabulary outranks the operator override so the gate matches dispatch clamping (#12630)", async () => {
+test("static registry vocabulary outranks the operator override so the gate matches dispatch clamping", async () => {
   const { setModelCapabilityOverride } =
     await import("../../src/lib/db/modelCapabilityOverrides.ts");
   const { getProviderModels, PROVIDER_ID_TO_ALIAS } =
