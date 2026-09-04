@@ -314,16 +314,13 @@ describe("CompressionWorkerPool spawn-failure queue drain", () => {
     const worker = fakeWorker();
     const pool = new CompressionWorkerPool({ size: 1, workerFactory: () => worker });
     try {
-      const jobs = [
-        pool.run(body, "stacked"), // worker accepts, never replies
-        pool.run(body, "stacked"),
-        pool.run(body, "stacked"),
-      ];
+      const bodies = [body, { ...body, model: "queued-a" }, { ...body, model: "queued-b" }];
+      const jobs = bodies.map((jobBody) => pool.run(jobBody, "stacked"));
       assert.equal(worker.messages.length, 1, "one job must be busy while two remain queued");
       await pool.close();
       const results = await withTimeout(Promise.all(jobs), 5000, "close stranded pool jobs");
-      for (const result of results) {
-        assert.deepEqual(result, { body, compressed: false, stats: null });
+      for (const [index, result] of results.entries()) {
+        assert.deepEqual(result, { body: bodies[index], compressed: false, stats: null });
       }
     } finally {
       await pool.close();
@@ -374,6 +371,24 @@ describe("compression fail-open observability", () => {
     assert.equal(warn.lines.length, 16, "only the bounded set of distinct details may log");
   });
 
+  it("logs a suppressed detail again after the rate-limit window expires", () => {
+    __resetCompressionFailOpenNotifierForTests();
+    const originalNow = Date.now;
+    let now = 60_000;
+    Date.now = () => now;
+    const warn = captureWarn();
+    try {
+      notifyCompressionFailOpen("repeated failure");
+      notifyCompressionFailOpen("repeated failure");
+      now += 60_000;
+      notifyCompressionFailOpen("repeated failure");
+    } finally {
+      warn.restore();
+      Date.now = originalNow;
+    }
+    assert.equal(warn.lines.length, 2, "the detail must log again in a new window");
+  });
+
   it("notifies on the broken-pool short-circuit, not only at spawn time", async () => {
     const pool = new CompressionWorkerPool({
       size: 1,
@@ -387,8 +402,9 @@ describe("compression fail-open observability", () => {
       __resetCompressionFailOpenNotifierForTests();
       const result = await withTimeout(pool.run(body, "stacked"), 5000, "post-break job hung");
       assert.deepEqual(result, { body, compressed: false, stats: null });
-      assert.equal(warn.lines.length, 1, "broken-pool run must notify fail-open");
-      assert.match(warn.lines[0] ?? "", /pool broken/);
+      const postBreakWarnings = warn.lines.filter((line) => line.includes("pool broken"));
+      assert.equal(postBreakWarnings.length, 1, "broken-pool run must notify fail-open");
+      assert.match(postBreakWarnings[0] ?? "", /pool broken/);
     } finally {
       warn.restore();
       await pool.close();
