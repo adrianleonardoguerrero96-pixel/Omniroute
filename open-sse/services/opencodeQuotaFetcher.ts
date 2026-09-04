@@ -12,7 +12,6 @@
 import { registerQuotaFetcher, registerQuotaWindows, type QuotaInfo } from "./quotaPreflight.ts";
 import { registerMonitorFetcher } from "./quotaMonitor.ts";
 import { throttleQuotaFetch } from "./quotaFetchThrottle.ts";
-import { resolveOpenCodeGoDashboardConfig } from "./opencodeOllamaUsage.ts";
 import { buildOpencodeBackgroundHeaders } from "../utils/opencodeHeaders.ts";
 
 const OPENCODE_QUOTA_URL =

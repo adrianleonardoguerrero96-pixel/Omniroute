@@ -224,6 +224,8 @@ import {
   getPersistedConnectionCooldownSkipReason,
   resolvePersistedConnectionCooldownSkipReason,
   isContextOverflow400,
+  isTransportClassNetworkError,
+  shouldAbortComboForTransportFailures,
   isParamValidation400,
   isModelScoped400,
 } from "./combo/comboPredicates.ts";
@@ -1181,6 +1183,9 @@ async function handleComboChatInner({
       const startTime = Date.now();
       let fallbackCount = 0;
       let recordedAttempts = 0;
+      // Bounded transport abort: consecutive transport-class failures share the
+      // same egress — after the bound, remaining targets would fail identically.
+      let consecutiveTransportFailures = 0;
       comboErrors = [];
 
       // QA P0: assemble a sanitized diagnostic trace from the state already in scope
@@ -2571,6 +2576,39 @@ async function handleComboChatInner({
           });
           lastStatus = result.status;
           if (i > 0) fallbackCount++;
+          // Bounded transport abort (#12294 incident follow-up): consecutive
+          // transport-class failures share the same egress — after N, every
+          // remaining target would fail identically. Abort the whole combo
+          // instead of burning the remaining fan-out (the 2026-09-04 wedge
+          // trigger: opencode h2 resets -> 8 fallbacks/18 decisions -> pool
+          // saturation -> client abort during cleanup).
+          if (isTransportClassNetworkError(errorText)) {
+            consecutiveTransportFailures++;
+            if (shouldAbortComboForTransportFailures(consecutiveTransportFailures)) {
+              log.warn(
+                "COMBO",
+                `${consecutiveTransportFailures} consecutive transport-class failures (last: ${modelStr}: ${errorText}) — aborting combo; remaining targets share the same egress`
+              );
+              recordComboRequest(combo.name, modelStr, {
+                success: false,
+                latencyMs: Date.now() - startTime,
+                fallbackCount,
+                strategy,
+                target: toRecordedTarget(target),
+              });
+              recordComboFailure(effectiveSessionId, combo.name);
+              return {
+                ok: false,
+                response: errorResponse(
+                  502,
+                  `All upstream transports are failing at the network layer (last: ${errorText}) — try again shortly`
+                ),
+              };
+            }
+          } else {
+            consecutiveTransportFailures = 0;
+          }
+          if (i > 0) fallbackCount++;
           // Wire combo failures into the resilience dashboard (model-level lockout)
           // alongside the provider-level cooldown below — they govern different scopes.
           if (provider && rawModel && !scopedFailure) {
@@ -3317,7 +3355,7 @@ async function handleRoundRobinCombo({
   const startTime = Date.now();
   let lastError: string | null = null;
   let lastStatus: number | null = null;
-  let earliestRetryAfter: ComboRetryAfter | null = null;
+  let consecutiveTransportFailures = 0;
   let globalAttempts = 0;
   let fallbackCount = 0;
   let recordedAttempts = 0;
@@ -3957,6 +3995,22 @@ async function handleRoundRobinCombo({
             kind: classifyComboOutcome(result.status, errorText),
           });
           if (offset > 0) fallbackCount++;
+          // Bounded transport abort — RR parity with handleComboChat above.
+          if (isTransportClassNetworkError(errorText)) {
+            consecutiveTransportFailures++;
+            if (shouldAbortComboForTransportFailures(consecutiveTransportFailures)) {
+              log.warn(
+                "COMBO-RR",
+                `${consecutiveTransportFailures} consecutive transport-class failures (last: ${modelStr}: ${errorText}) — aborting combo; remaining targets share the same egress`
+              );
+              return errorResponse(
+                502,
+                `All upstream transports are failing at the network layer (last: ${errorText}) — try again shortly`
+              );
+            }
+          } else {
+            consecutiveTransportFailures = 0;
+          }
           log.warn("COMBO-RR", `${modelStr} failed, trying next model`, {
             status: result.status,
             errorBody: redactConnectionLabel(errorText),

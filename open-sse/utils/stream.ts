@@ -180,6 +180,13 @@ type StreamOptions = {
    * codex-compatible `namespace` + `name` fields.
    */
   requestToolIdentityMap?: Map<string, { namespace: string; name: string }> | null;
+  /**
+   * High water mark for the TransformStream internal buffers (default 16384).
+   * #12179: high-throughput providers (GLM) raise it so provider->client pacing
+   * stays ahead of the model's token emission rate. Dropped accidentally by the
+   * #12506 refactor while glm.ts still passed it; re-added.
+   */
+  highWaterMark?: number;
 };
 
 type TranslateState = ReturnType<typeof initState> & {
@@ -2987,8 +2994,8 @@ export function createSSEStream(options: StreamOptions = {}) {
         clearIdleTimer();
       },
     },
-    { highWaterMark: 16384 },
-    { highWaterMark: 16384 }
+    { highWaterMark: options.highWaterMark ?? 16384 },
+    { highWaterMark: options.highWaterMark ?? 16384 }
   );
 }
 
@@ -3010,7 +3017,12 @@ export function createSSETransformStreamWithLogger(
   copilotCompatibleReasoning = false,
   suppressThinkClose = false,
   customToolNames: ReadonlySet<string> = new Set(),
-  requestToolIdentityMap: Map<string, { namespace: string; name: string }> | null = null
+  requestToolIdentityMap: Map<string, { namespace: string; name: string }> | null = null,
+  // #12179: high water mark for the TransformStream internal buffer (default
+  // 16384). GLM passes 65536 to keep provider->client pacing ahead of the
+  // model's token emission rate. Re-added after the #12506 refactor dropped
+  // it while glm.ts still passed it (TS2554 base-red at the tip).
+  highWaterMark?: number
 ) {
   return createSSEStream({
     mode: STREAM_MODE.TRANSLATE,
@@ -3029,6 +3041,7 @@ export function createSSETransformStreamWithLogger(
     suppressThinkClose,
     customToolNames,
     requestToolIdentityMap,
+    highWaterMark,
   });
 }
 
