@@ -26,6 +26,7 @@ import { shouldUseLiveAlibabaFreeModelDiscovery } from "@omniroute/open-sse/serv
 import { isDashscopeTextModelId } from "@omniroute/open-sse/services/dashscopeTextModels.ts";
 import { extractZaiToken } from "@omniroute/open-sse/services/zaiWebCredentials.ts";
 import { buildOpencodeBackgroundHeaders } from "@omniroute/open-sse/utils/opencodeHeaders.ts";
+import { normalizeOpenAiLikeModelsResponse } from "./normalizers";
 
 const QWEN_CLOUD_TEXT_MODEL_IDS = new Set(QWEN_CLOUD_TEXT_MODELS.map((model) => model.id));
 const ALIBABA_MODEL_STUDIO_MODEL_IDS = new Set(

@@ -29,12 +29,12 @@ export const COMBO_SKIP_REASONS = [
   "concurrency_cap",
   "admission_lane",
   "predictive_ttft",
+  "persisted_cooldown",
 ] as const;
 
 export type ComboSkipReason = (typeof COMBO_SKIP_REASONS)[number];
 
 export type ComboDecision = "dispatched" | "skipped_before_dispatch" | "not_reached";
-
 export interface ComboTraceEntry {
   /** Safe internal identifier of the combo step (execution key). */
   step: string;
@@ -42,6 +42,8 @@ export interface ComboTraceEntry {
   target: string;
   decision: ComboDecision;
   reason?: ComboSkipReason;
+  /** Optional human-readable detail (e.g. cooldown reset timestamp). Never contains credentials. */
+  detail?: string;
   ts: number;
 }
 
@@ -120,6 +122,7 @@ export function recordComboDecision(
     target: entry.target,
     decision: entry.decision,
     reason: entry.reason as ComboSkipReason | undefined,
+    detail: entry.detail,
     ts: Date.now(),
   });
 }
@@ -172,4 +175,41 @@ function pruneExpired(): void {
   for (const [id, trace] of traces) {
     if (now - trace.createdAt > TRACE_TTL_MS) traces.delete(id);
   }
+}
+
+/**
+ * #12294: structured per-target view for the ALL_TARGETS_SKIPPED terminal state.
+ * Aggregates every pre-dispatch skip decision into a redacted summary the 503
+ * response can carry, plus the earliest future cooldown reset (parsed from
+ * persisted-cooldown detail lines) so clients learn when to retry instead of
+ * hammering a fully-quota-walled combo.
+ * Pure function over the trace — no DB, no clock dependency beyond Date parsing.
+ */
+export function summarizeSkippedTargets(trace: ComboTrace | null): {
+  skippedTargets: Array<{ target: string; reason: ComboSkipReason; detail?: string }>;
+  nextRetryAt: string | null;
+} {
+  if (!trace) return { skippedTargets: [], nextRetryAt: null };
+  const skippedTargets: Array<{ target: string; reason: ComboSkipReason; detail?: string }> = [];
+  let earliestMs = Number.POSITIVE_INFINITY;
+  for (const entry of trace.decisions) {
+    if (entry.decision !== "skipped_before_dispatch" || !entry.reason) continue;
+    const item: { target: string; reason: ComboSkipReason; detail?: string } = {
+      target: entry.target,
+      reason: entry.reason,
+    };
+    if (entry.detail) item.detail = entry.detail;
+    skippedTargets.push(item);
+    if (entry.reason === "persisted_cooldown" && entry.detail) {
+      const match = entry.detail.match(/until (\d{4}-\d{2}-\d{2}T[\d:.]+Z)/);
+      if (match) {
+        const ms = new Date(match[1]).getTime();
+        if (Number.isFinite(ms) && ms > Date.now() && ms < earliestMs) earliestMs = ms;
+      }
+    }
+  }
+  return {
+    skippedTargets,
+    nextRetryAt: Number.isFinite(earliestMs) ? new Date(earliestMs).toISOString() : null,
+  };
 }
