@@ -358,6 +358,22 @@ describe("compression fail-open observability", () => {
     assert.match(warn.lines[1] ?? "", /failure mode B/);
   });
 
+  it("keeps the distinct-detail rate limiter bounded without clearing suppression", () => {
+    __resetCompressionFailOpenNotifierForTests();
+    const warn = captureWarn();
+    try {
+      const details = Array.from(
+        { length: 20 },
+        (_, i) => `failure ${String.fromCharCode(97 + i)}`
+      );
+      for (const detail of details) notifyCompressionFailOpen(detail);
+      notifyCompressionFailOpen(details[0]);
+    } finally {
+      warn.restore();
+    }
+    assert.equal(warn.lines.length, 16, "only the bounded set of distinct details may log");
+  });
+
   it("notifies on the broken-pool short-circuit, not only at spawn time", async () => {
     const pool = new CompressionWorkerPool({
       size: 1,

@@ -35,7 +35,9 @@ export function notifyCompressionFailOpen(rawDetail?: string): void {
   }
   const lastAt = failOpenLastDetail.get(key) ?? 0;
   if (now - lastAt < FAIL_OPEN_LOG_INTERVAL_MS) return;
-  if (failOpenLastDetail.size >= MAX_TRACKED_DETAILS) failOpenLastDetail.clear();
+  // Preserve the existing suppression set until the global window rolls over.
+  // Clearing it here would let high-cardinality failures bypass the rate limit.
+  if (failOpenLastDetail.size >= MAX_TRACKED_DETAILS) return;
   failOpenLastDetail.set(key, now);
   console.warn(`[compression] worker path failed open — serving uncompressed (detail: ${key})`);
 }
