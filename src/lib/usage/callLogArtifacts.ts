@@ -16,10 +16,6 @@ const SIZE_LIMIT_EXCEEDED_REASON = "call_log_artifact_size_limit_exceeded";
 const OMITTED_FOR_SIZE_LIMIT = "[omitted: call log artifact size limit exceeded]";
 const STREAM_CHUNKS_OMITTED_FOR_SIZE_LIMIT =
   "[stream chunks omitted: call log artifact size limit exceeded]";
-// Error strings are kept even in the size-limit fallback (truncated to this
-// cap) so every log row stays diagnosable; see buildMinimalArtifactForSizeLimit.
-const MAX_CALL_LOG_ARTIFACT_ERROR_BYTES = 4 * 1024;
-const SIZE_LIMIT_EXCEEDED_SUFFIX = "…[truncated: call log artifact size limit exceeded]";
 
 // The error is the only field that says *why* a request failed, and it is
 // typically ~90 bytes next to the multi-hundred-KB bodies that trip the cap.
@@ -184,12 +180,6 @@ function buildMinimalArtifactForSizeLimit(artifact: CallLogArtifact) {
       },
     },
   };
-}
-
-function truncateErrorForSizeLimit(error: unknown): string {
-  const text = typeof error === "string" ? error : JSON.stringify(error) ?? String(error);
-  if (Buffer.byteLength(text) <= MAX_CALL_LOG_ARTIFACT_ERROR_BYTES) return text;
-  return `${text.slice(0, MAX_CALL_LOG_ARTIFACT_ERROR_BYTES)}${SIZE_LIMIT_EXCEEDED_SUFFIX}`;
 }
 
 function serializeFinalSizeLimitFallback(artifact: CallLogArtifact, maxBytes: number): string {

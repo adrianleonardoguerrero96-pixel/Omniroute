@@ -3355,6 +3355,7 @@ async function handleRoundRobinCombo({
   const startTime = Date.now();
   let lastError: string | null = null;
   let lastStatus: number | null = null;
+  let earliestRetryAfter: ComboRetryAfter | null = null;
   let consecutiveTransportFailures = 0;
   let globalAttempts = 0;
   let fallbackCount = 0;
