@@ -661,6 +661,7 @@ export class BaseExecutor {
             model,
           }
         : { model };
+    stripInternalBodyFields(requestBody);
 
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     let activeSignal = signal || null;
