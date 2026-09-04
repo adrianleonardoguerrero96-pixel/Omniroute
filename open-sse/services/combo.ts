@@ -142,7 +142,13 @@ import {
   type ResilienceSettings,
   type ComboCooldownWaitSettings,
 } from "../../src/lib/resilience/settings";
-import { resolveReasoningBufferedMaxTokens, toPositiveInteger } from "./reasoningTokenBuffer.ts";
+import {
+  resolveReasoningBufferedMaxTokens,
+  toPositiveInteger,
+  isTinyBudgetReasoningProbe,
+  buildReasoningProbeTruncatedResponse,
+  REASONING_BUFFER_MIN_TRIGGER,
+} from "./reasoningTokenBuffer.ts";
 import { RESET_WINDOW_NAMES } from "./combo/types.ts";
 import type {
   ComboLike,
@@ -175,6 +181,7 @@ import {
   releaseQualityClone,
   releaseRejectedQualityResponse,
   toRetryAfterDisplayValue,
+  isReasoningConsumedQualityRejection,
 } from "./combo/validateQuality.ts";
 import {
   resolveComboCooldownWaitDecision,
@@ -265,6 +272,7 @@ import {
   getComboTrace,
   recordComboDecision,
   startComboTrace,
+  summarizeSkippedTargets,
 } from "./combo/decisionTrace.ts";
 import {
   QUOTA_SOFT_DEPRIORITIZE_FACTOR,
@@ -1194,6 +1202,10 @@ async function handleComboChatInner({
         attemptOrder: comboAttemptOrder,
         terminalReason,
         recovery: buildRecoveryHint(terminalReason, retryAfterSeconds),
+        // #12294: per-target pre-dispatch skip reasons so operators can see WHY
+        // every target was filtered (quota wall vs allowlist vs lockout) and the
+        // earliest cooldown reset instead of an opaque 503.
+        ...summarizeSkippedTargets(getComboTrace(traceInvocationId)),
       });
 
       let globalResolve: ((res: Response) => void) | null = null;
@@ -1329,6 +1341,15 @@ async function handleComboChatInner({
           if (persistedSkip) {
             log.info("COMBO", persistedSkip);
             clearStaleLKGP(combo.name, target.executionKey, combo.id, log, "COMBO");
+            // #12294: the cooldown detail (with reset timestamp) feeds the
+            // ALL_TARGETS_SKIPPED response diagnostics via the decision trace.
+            recordComboDecision(traceInvocationId, {
+              step: target.executionKey,
+              target: modelStr,
+              decision: "skipped_before_dispatch",
+              reason: "persisted_cooldown",
+              detail: persistedSkip,
+            });
             if (i > 0) fallbackCount++;
             return null;
           }
@@ -1767,9 +1788,41 @@ async function handleComboChatInner({
                 "COMBO",
                 `Model ${modelStr} returned 200 but failed quality check: ${quality.reason}`
               );
-              // #6692: a quality-rejected 200 never marks the connection row
-              // unhealthy, so the sticky pin's lazy headroom recheck would never
-              // catch it either — release it here, on the failing response.
+              // #10281 (combo path): a tiny-budget reasoning probe (max_tokens
+              // below REASONING_BUFFER_MIN_TRIGGER, e.g. Claude Code's /model
+              // check) whose upstream 200 burned the entire budget on thinking
+              // is a budget-truncated response, not a provider fault. Answer
+              // with a valid truncated 200 (finish_reason "length") instead of
+              // burning fallbacks and poisoning model-lockout bookkeeping.
+              if (
+                !clientRequestedStream &&
+                isTinyBudgetReasoningProbe({ model: modelStr, body: attemptBody }) &&
+                isReasoningConsumedQualityRejection(quality.reason)
+              ) {
+                log.warn(
+                  "COMBO",
+                  `Reasoning probe (max_tokens < ${REASONING_BUFFER_MIN_TRIGGER}) answered with truncated 200 — quality: ${quality.reason}`
+                );
+                recordComboRequest(combo.name, modelStr, {
+                  success: true,
+                  latencyMs: Date.now() - startTime,
+                  fallbackCount,
+                  strategy,
+                  target: toRecordedTarget(target),
+                });
+                recordedAttempts++;
+                return {
+                  ok: true,
+                  response: buildReasoningProbeTruncatedResponse({
+                    model: modelStr,
+                    maxTokens: toPositiveInteger(
+                      (attemptBody as Record<string, unknown> | undefined)?.max_tokens ??
+                        (attemptBody as Record<string, unknown> | undefined)?.max_completion_tokens
+                    ),
+                    requestId: traceInvocationId,
+                  }),
+                };
+              }
               releaseStickyPinOnFailure(_sticky.messageHash, effectiveConnectionId);
               recordComboRequest(combo.name, modelStr, {
                 success: false,
@@ -3532,6 +3585,35 @@ async function handleRoundRobinCombo({
                 "COMBO-RR",
                 `${modelStr} returned 200 but failed quality check: ${quality.reason}`
               );
+              // #10281 (combo path): tiny-budget reasoning probes get a
+              // truncated 200 (see handleComboChat's quality-fail branch for
+              // the full rationale) instead of burning RR fallback slots.
+              if (
+                !clientRequestedStream &&
+                isTinyBudgetReasoningProbe({ model: modelStr, body: attemptBody }) &&
+                isReasoningConsumedQualityRejection(quality.reason)
+              ) {
+                log.warn(
+                  "COMBO-RR",
+                  `Reasoning probe (max_tokens < ${REASONING_BUFFER_MIN_TRIGGER}) answered with truncated 200 — quality: ${quality.reason}`
+                );
+                recordComboRequest(combo.name, modelStr, {
+                  success: true,
+                  latencyMs: Date.now() - startTime,
+                  fallbackCount,
+                  strategy: "round-robin",
+                  target: toRecordedTarget(target),
+                });
+                recordedAttempts++;
+                return buildReasoningProbeTruncatedResponse({
+                  model: modelStr,
+                  maxTokens: toPositiveInteger(
+                    (attemptBody as Record<string, unknown> | undefined)?.max_tokens ??
+                      (attemptBody as Record<string, unknown> | undefined)?.max_completion_tokens
+                  ),
+                  requestId: createInvocationId(),
+                });
+              }
               // #6692: same rationale as handleComboChat's quality-fail branch —
               // a quality-rejected 200 never marks the connection row unhealthy,
               // so release the sticky pin here rather than on the next turn.
