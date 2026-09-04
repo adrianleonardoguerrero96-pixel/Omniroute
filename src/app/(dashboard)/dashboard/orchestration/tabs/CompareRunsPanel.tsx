@@ -139,6 +139,17 @@ function useCompareDetail(left: HistoryItem, right: HistoryItem) {
   return { leftState, rightState };
 }
 
+/** Guards `new Date(value).toLocaleString()` / `.toLocaleTimeString()` against an unparseable
+ * `timestamp`/`createdAt` string, which would otherwise leak the literal text `Invalid Date`
+ * into the DOM — the same `—` fallback the panel already uses for absent numeric values
+ * (`formatDuration`/`formatCost`). `Date.parse` never throws, only returns `NaN`, so
+ * `Number.isFinite` is the correct guard (mirrors `formatDurationDelta`/`formatCostDelta`). */
+function formatDateTime(value: string, style: "date" | "time"): string {
+  if (!Number.isFinite(Date.parse(value))) return "—";
+  const date = new Date(value);
+  return style === "time" ? date.toLocaleTimeString() : date.toLocaleString();
+}
+
 function formatDuration(ms: number | null): string {
   if (ms == null) return "—";
   const s = Math.max(0, Math.round(ms / 1000));
@@ -187,18 +198,24 @@ function RunHeader({ item, t, testId }: { item: HistoryItem; t: Translate; testI
       <div className="text-[10px] text-muted">
         {t(sourceKey)} · {t(STATE_KEY[item.state])}
       </div>
-      <div className="text-[10px] text-muted">{new Date(item.createdAt).toLocaleString()}</div>
+      <div className="text-[10px] text-muted">{formatDateTime(item.createdAt, "date")}</div>
     </div>
   );
 }
 
-/** One metric's row: label, left value, right value, signed delta. */
+/** One metric's row: label, left value, right value, signed delta. `metricKey` tags the delta
+ * cell with a stable `data-testid` (`orchestration-compare-metric-<key>-delta`) so tests can
+ * assert the DELTA specifically instead of matching on page-wide text content — the left/right
+ * value cells legitimately render the same `—` glyph for an absent value, so a text-content
+ * assertion alone cannot tell a correctly-absent delta from a broken formatter. */
 function MetricRow({
+  metricKey,
   label,
   leftText,
   rightText,
   deltaText,
 }: {
+  metricKey: string;
   label: string;
   leftText: string;
   rightText: string;
@@ -207,9 +224,14 @@ function MetricRow({
   return (
     <div className="grid grid-cols-[70px_1fr_1fr_70px] gap-2 text-[11px] items-center min-w-[480px]">
       <span className="text-muted uppercase text-[9px]">{label}</span>
-      <span>{leftText}</span>
-      <span>{rightText}</span>
-      <span className="text-right font-medium">{deltaText}</span>
+      <span data-testid={`orchestration-compare-metric-${metricKey}-left`}>{leftText}</span>
+      <span data-testid={`orchestration-compare-metric-${metricKey}-right`}>{rightText}</span>
+      <span
+        data-testid={`orchestration-compare-metric-${metricKey}-delta`}
+        className="text-right font-medium"
+      >
+        {deltaText}
+      </span>
     </div>
   );
 }
@@ -219,7 +241,7 @@ function EventCell({ event }: { event: RunEvent | null }) {
   return (
     <span className="truncate block">
       {event.label}
-      {event.timestamp ? ` · ${new Date(event.timestamp).toLocaleTimeString()}` : ""}
+      {event.timestamp ? ` · ${formatDateTime(event.timestamp, "time")}` : ""}
     </span>
   );
 }
@@ -285,6 +307,28 @@ function MemorySection({ comparison, t }: { comparison: RunComparison; t: Transl
   );
 }
 
+/** Renders the `role="alert"` failure notice for exactly the side that failed its fetch — a
+ * side that succeeded renders an empty, role-less cell (kept only to hold its grid column, so
+ * the left/right pairing above stays aligned) instead of an empty `role="alert"` div. Two
+ * `role="alert"` regions firing whenever EITHER side fails — one of them empty — would announce
+ * a blank alert to assistive tech for the side that loaded fine. */
+function SideErrorCell({
+  error,
+  t,
+  testId,
+}: {
+  error: string | null;
+  t: Translate;
+  testId: string;
+}) {
+  if (!error) return <div data-testid={testId} />;
+  return (
+    <div role="alert" data-testid={testId} className="text-[10px] text-error">
+      {t("compareDetailFailed")}
+    </div>
+  );
+}
+
 export function CompareRunsPanel({
   left,
   right,
@@ -326,12 +370,12 @@ export function CompareRunsPanel({
 
       {(leftState.error || rightState.error) && (
         <div className="grid grid-cols-2 gap-2 min-w-[480px] mb-2">
-          <div role="alert" className="text-[10px] text-error">
-            {leftState.error ? t("compareDetailFailed") : ""}
-          </div>
-          <div role="alert" className="text-[10px] text-error">
-            {rightState.error ? t("compareDetailFailed") : ""}
-          </div>
+          <SideErrorCell error={leftState.error} t={t} testId="orchestration-compare-error-left" />
+          <SideErrorCell
+            error={rightState.error}
+            t={t}
+            testId="orchestration-compare-error-right"
+          />
         </div>
       )}
 
@@ -343,18 +387,21 @@ export function CompareRunsPanel({
 
       <div className="flex flex-col gap-1">
         <MetricRow
+          metricKey="duration"
           label={t("compareDuration")}
           leftText={formatDuration(left.durationMs)}
           rightText={formatDuration(right.durationMs)}
           deltaText={formatDurationDelta(comparison.deltas.durationMs)}
         />
         <MetricRow
+          metricKey="cost"
           label={t("compareCost")}
           leftText={formatCost(left.cost)}
           rightText={formatCost(right.cost)}
           deltaText={formatCostDelta(comparison.deltas.cost)}
         />
         <MetricRow
+          metricKey="events"
           label={t("compareEvents")}
           leftText={String(comparison.left.events.length)}
           rightText={String(comparison.right.events.length)}

@@ -106,7 +106,7 @@ describe("CompareRunsPanel", () => {
     cleanup();
   });
 
-  it("one side failing its fetch shows compareDetailFailed for that side while the other continues rendering", async () => {
+  it("one side failing its fetch shows compareDetailFailed for that side while the other continues rendering, without an empty alert region for the healthy side", async () => {
     const left = historyItem({ id: "a2a:t1", identity: "smart-routing" });
     const right = historyItem({ id: "a2a:t2", identity: "eval-suite" });
     vi.stubGlobal(
@@ -125,6 +125,18 @@ describe("CompareRunsPanel", () => {
     // Both headers keep rendering — the failing side is not blanked out.
     expect(c.textContent).toContain("smart-routing");
     expect(c.textContent).toContain("eval-suite");
+
+    // Only the side that actually failed (right) gets a role="alert" region — the healthy
+    // left side must not emit an empty alert (regression guard, Task A4 review fix #2).
+    // (left/right here also differ in identity, which renders its own separate
+    // compareDifferentIdentity role="alert" banner — asserted on its own test below — so this
+    // checks the two error cells directly instead of counting every role="alert" on the page.)
+    const leftErrorCell = c.querySelector('[data-testid="orchestration-compare-error-left"]');
+    const rightErrorCell = c.querySelector('[data-testid="orchestration-compare-error-right"]');
+    expect(leftErrorCell?.getAttribute("role")).toBeNull();
+    expect(leftErrorCell?.textContent).toBe("");
+    expect(rightErrorCell?.getAttribute("role")).toBe("alert");
+    expect(rightErrorCell?.textContent).toContain("compareDetailFailed");
     cleanup();
   });
 
@@ -152,16 +164,32 @@ describe("CompareRunsPanel", () => {
     cleanup();
   });
 
-  it("renders — instead of NaN when a delta cannot be computed (one side missing the value)", async () => {
-    const left = historyItem({ id: "a2a:t1", identity: "smart-routing", cost: null });
+  it("renders — in the delta cell (never NaN) when only one side has a cost value", async () => {
+    // Regression guard, Task A4 review fix #1: the original version of this test set `cost:
+    // null` on BOTH sides, so the asserted "—" was also produced by the two (unrelated) value
+    // cells — it would have kept passing even if the delta formatter itself were completely
+    // broken. The real "absent delta" case is ONE side missing the value: `signedDelta` in
+    // `model/compareRuns.ts` only returns a number when BOTH sides are finite, so a lone
+    // `left.cost` must still collapse to an absent ("—") delta, never a `NaN` computed from
+    // `finite - null`. Asserting the delta cell specifically (via its `data-testid`, not
+    // page-wide text content) is what makes this test able to fail.
+    const left = historyItem({ id: "a2a:t1", identity: "smart-routing", cost: 12.5 });
     const right = historyItem({ id: "a2a:t2", identity: "smart-routing", cost: null });
     vi.stubGlobal("fetch", mockDetailFetch({}));
     const { c, cleanup } = render(
       <CompareRunsPanel left={left} right={right} onClose={() => {}} />
     );
     await flush();
-    expect(c.textContent).not.toContain("NaN");
-    expect(c.textContent).toContain("—");
+
+    const leftCell = c.querySelector('[data-testid="orchestration-compare-metric-cost-left"]');
+    const rightCell = c.querySelector('[data-testid="orchestration-compare-metric-cost-right"]');
+    const deltaCell = c.querySelector('[data-testid="orchestration-compare-metric-cost-delta"]');
+    // Sanity-check the fixture: the side with a real value must NOT itself render "—", or the
+    // delta assertion below would be vacuous.
+    expect(leftCell?.textContent).toBe("$12.50");
+    expect(rightCell?.textContent).toBe("—");
+    expect(deltaCell?.textContent).toBe("—");
+    expect(deltaCell?.textContent).not.toContain("NaN");
     cleanup();
   });
 
@@ -198,6 +226,39 @@ describe("CompareRunsPanel", () => {
 
     const rows = c.querySelectorAll('[data-testid="orchestration-compare-timeline-row"]');
     expect(rows.length).toBe(3);
+    cleanup();
+  });
+
+  it("renders — instead of the literal 'Invalid Date' for a malformed createdAt or event timestamp", async () => {
+    // Regression guard, Task A4 review fix #3: `new Date(unparseable).toLocaleString()` returns
+    // the literal string "Invalid Date" rather than throwing, so it used to leak straight into
+    // the DOM. Exercises both call sites — RunHeader's `item.createdAt` and EventCell's
+    // `event.timestamp` — with an unparseable (but non-null, non-empty) string each.
+    const left = historyItem({
+      id: "a2a:t1",
+      identity: "smart-routing",
+      createdAt: "not-a-real-date",
+    });
+    const right = historyItem({ id: "a2a:t2", identity: "smart-routing" });
+    vi.stubGlobal(
+      "fetch",
+      mockDetailFetch({
+        left: {
+          ok: true,
+          body: { task: { events: [{ state: "submitted", timestamp: "also-not-a-date" }] } },
+        },
+      })
+    );
+    const { c, cleanup } = render(
+      <CompareRunsPanel left={left} right={right} onClose={() => {}} />
+    );
+    await flush();
+
+    expect(c.textContent).not.toContain("Invalid Date");
+    const leftHeader = c.querySelector('[data-testid="orchestration-compare-header-left"]');
+    expect(leftHeader?.textContent).toContain("—");
+    const timelineRow = c.querySelector('[data-testid="orchestration-compare-timeline-row"]');
+    expect(timelineRow?.textContent).not.toContain("Invalid Date");
     cleanup();
   });
 
