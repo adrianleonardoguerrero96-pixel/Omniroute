@@ -106,12 +106,14 @@ const thinkingLevelsSchema = z.object({ thinking: z.object({ levels: z.unknown()
 // one exists (unpinned requests self-narrow). So the safe synced vocabulary is
 // the INTERSECTION across vendor routes (a forced level must never 400 or be
 // silently adjusted on a route the operator can hit), not the union. A route
-// without `effort_values` declares "no effort control" for that vendor and is
-// excluded from the intersection. Validate with Zod (Hard Rule #7): a
-// malformed vendor entry is dropped individually rather than failing the
-// whole record.
+// without `effort_values` (absent or empty) declares "no effort control" for
+// that vendor and is excluded from the intersection. Like the other shapes in
+// this file, detection is shape-gated, not provider-gated: a record that
+// declares this structure is declaring its effort vocabulary. Validate with
+// Zod (Hard Rule #7); a malformed ENTRY is dropped individually (never the
+// whole route — discarding a route would WIDEN the intersection, fail-open).
 const mergeReasoningCapabilitySchema = z.object({
-  effort_values: z.array(z.string()).optional(),
+  effort_values: z.array(z.unknown()).optional(),
 });
 const mergeVendorsSchema = z.record(z.string(), z.unknown());
 
@@ -127,14 +129,27 @@ function parseMergeVendorEffortValues(record: JsonRecord): string[][] {
     if (!reasoningParsed.success || !reasoningParsed.data) continue;
     const efforts = Array.from(
       new Set(
-        reasoningParsed.data.effort_values
-          ?.filter((effort): effort is string => effort.length > 0)
+        (reasoningParsed.data.effort_values ?? [])
+          .filter((effort): effort is string => typeof effort === "string" && effort.length > 0)
           .map(normalizeSupportedEffort)
       )
     );
     if (efforts.length > 0) perVendor.push(efforts);
   }
   return perVendor;
+}
+
+/**
+ * Intersect `effort_values` across the record's vendor routes. Returns
+ * `undefined` when no vendor route declares a list (shape not present);
+ * returns an EMPTY array when routes declare disjoint vocabularies — that
+ * emptiness is authoritative (no tier works on every route) and must not
+ * fall through to lower-precedence generic shapes.
+ */
+function mergeSharedEfforts(record: JsonRecord): string[] | undefined {
+  const perVendor = parseMergeVendorEffortValues(record);
+  if (perVendor.length === 0) return undefined;
+  return perVendor.reduce((acc, efforts) => acc.filter((effort) => efforts.includes(effort)));
 }
 
 // Maps common upstream synonyms onto OmniRoute's canonical effort vocabulary
@@ -205,17 +220,49 @@ export function detectDefaultThinkingEffort(record: JsonRecord): string | undefi
     const raw = parsed.data.default_effort;
     if (typeof raw === "string" && raw.length > 0) return normalizeSupportedEffort(raw);
   }
-  // Merge Gateway: use the intersected cross-vendor vocabulary's highest tier
-  // as the default — no single route owns a `default_effort` and a guaranteed
-  // level beats an invented default.
-  const mergeVendorEfforts = parseMergeVendorEffortValues(record);
-  if (mergeVendorEfforts.length > 0) {
-    const shared = mergeVendorEfforts.reduce((acc, efforts) =>
-      acc.filter((effort) => efforts.includes(effort))
-    );
-    if (shared.length > 0) return shared[shared.length - 1];
+  // Merge Gateway fallback — only when the Merge vendors shape IS the record's
+  // winning effort-vocabulary source. If a higher-precedence declared shape
+  // (`reasoning.supported_efforts`, `metadata.reasoning.supported_efforts`)
+  // produced a usable list, the record's default must never escape that
+  // winning list. Highest shared tier wins, ranked by the canonical order
+  // (vendor arrays are not guaranteed sorted).
+  const mergeShared = mergeSharedEfforts(record);
+  if (mergeShared && mergeShared.length > 0 && !hasUsableDeclaredEffortList(record)) {
+    const ranked = mergeShared
+      .map((tier) => ({ tier, rank: CANONICAL_EFFORT_VALUES.indexOf(tier as never) }))
+      .filter((x) => x.rank >= 0)
+      .sort((a, b) => b.rank - a.rank);
+    if (ranked.length > 0) return ranked[0].tier;
   }
   return undefined;
+}
+
+/**
+ * Whether a higher-precedence declared shape (the flat import field, or either
+ * #7694 nested `supported_efforts` shape) yields a usable tier list — the
+ * exact "usable" semantics the vocabulary detection applies (non-empty after
+ * filtering + normalization). Used to decide whether the Merge vendors shape
+ * is the record's winning vocabulary source for default-effort derivation.
+ */
+function hasUsableDeclaredEffortList(record: JsonRecord): boolean {
+  if (
+    Array.isArray(record.supportedThinkingEfforts) &&
+    record.supportedThinkingEfforts.some((e) => typeof e === "string" && e.length > 0)
+  ) {
+    return true;
+  }
+  for (const holder of [record.reasoning, asRecord(record.metadata).reasoning]) {
+    const shapeParsed = reasoningSupportedEffortsSchema.safeParse(holder);
+    if (!shapeParsed.success || !shapeParsed.data) continue;
+    const rawEfforts = shapeParsed.data.supported_efforts;
+    if (
+      Array.isArray(rawEfforts) &&
+      rawEfforts.some((e) => typeof e === "string" && e.length > 0)
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -266,13 +313,12 @@ export function detectSupportedThinkingEfforts(record: JsonRecord): string[] | u
   // after the flat import field handling (caller) and the #7694/#9160 nested
   // shapes so those explicit per-model declarations keep precedence; runs
   // before the generic `capabilities.effort_tiers` fallback because
-  // `vendors` is strictly more specific than a flat tier list.
-  const mergeVendorEfforts = parseMergeVendorEffortValues(record);
-  if (mergeVendorEfforts.length > 0) {
-    const shared = mergeVendorEfforts.reduce((acc, efforts) =>
-      acc.filter((effort) => efforts.includes(effort))
-    );
-    if (shared.length > 0) return shared;
+  // `vendors` is strictly more specific than a flat tier list. An empty
+  // intersection (disjoint routes) is authoritative — nothing works on every
+  // route — and must not fall through to a generic tier list.
+  const mergeShared = mergeSharedEfforts(record);
+  if (mergeShared !== undefined) {
+    return mergeShared.length > 0 ? mergeShared : [];
   }
 
   // #9160: fall back to `capabilities.effort_tiers` before the legacy fields.

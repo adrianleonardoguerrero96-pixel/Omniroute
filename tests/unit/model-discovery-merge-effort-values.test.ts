@@ -89,7 +89,7 @@ test("effort synonyms are normalized inside effort_values", () => {
   ]);
 });
 
-test("Merge defaultThinkingEffort falls back to the intersected vocabulary's highest tier", () => {
+test("Merge defaultThinkingEffort falls back to the intersected vocabulary's highest tier (rank-based)", () => {
   // max survives both routes → default max.
   const withMax = mergeRecord({
     zai: ["low", "high", "max"],
@@ -102,6 +102,47 @@ test("Merge defaultThinkingEffort falls back to the intersected vocabulary's hig
     baseten: ["low", "medium", "high"],
   });
   assert.equal(detectDefaultThinkingEffort(withoutSharedMax), "high");
+  // Vendor arrays are not guaranteed sorted: first-route order must not
+  // decide the default — the canonical rank does.
+  const unsorted = mergeRecord({
+    zai: ["max", "low", "high"],
+    makora: ["high", "low", "max"],
+  });
+  assert.equal(detectDefaultThinkingEffort(unsorted), "max");
+});
+
+test("Merge default is skipped when a higher-precedence declared shape wins the list", () => {
+  // Flat import field pins the vocabulary to ["low"]; the vendors
+  // intersection must not inject a default outside it.
+  const pinnedFlat = {
+    ...mergeRecord({ zai: ["low", "high", "max"] }),
+    supportedThinkingEfforts: ["low"],
+  };
+  assert.equal(detectDefaultThinkingEffort(pinnedFlat), undefined);
+  // Same for the nested #7694 shape winning the list.
+  const pinnedNested = {
+    ...mergeRecord({ zai: ["low", "high", "max"] }),
+    reasoning: { supported_efforts: ["low"] },
+  };
+  assert.equal(detectDefaultThinkingEffort(pinnedNested), undefined);
+});
+
+test("disjoint vendor vocabularies produce an authoritative empty list (no fall-through)", () => {
+  const disjoint = mergeRecord({ a: ["low"], b: ["high"] });
+  assert.deepEqual(detectSupportedThinkingEfforts(disjoint), []);
+  // And no default can be derived from an empty intersection.
+  assert.equal(detectDefaultThinkingEffort(disjoint), undefined);
+});
+
+test("a malformed entry inside effort_values is dropped individually, not the whole route", () => {
+  const record = {
+    id: "vendor/partial",
+    vendors: {
+      a: { capabilities: { reasoning: { effort_values: ["low", 42, "high"] } } },
+      b: { capabilities: { reasoning: { effort_values: ["low", "high", "max"] } } },
+    },
+  };
+  assert.deepEqual(detectSupportedThinkingEfforts(record), ["low", "high"]);
 });
 
 test("explicit default_effort keeps precedence over the Merge vendors fallback", () => {
