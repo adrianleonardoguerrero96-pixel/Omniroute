@@ -66,6 +66,28 @@ import {
 import { makeMemoKey, memoLookup, memoStore, isDeterministicMode } from "./resultMemo.ts";
 export { resolveCacheAwareConfig } from "./cacheAwareConfig.ts";
 
+/**
+ * Rate-limited fail-open notifier for the worker compression path. The catch
+ * around runCompressionInWorker used to be fully silent, which made a
+ * structurally broken worker pool (issue #2: Turbopack MODULE_NOT_FOUND) leak
+ * GBs of heap for hours with zero log evidence. Logs at most once per window.
+ */
+let failOpenLastLoggedAt = 0;
+const FAIL_OPEN_LOG_INTERVAL_MS = 60_000;
+
+export function notifyCompressionFailOpen(detail?: string): void {
+  const now = Date.now();
+  if (now - failOpenLastLoggedAt < FAIL_OPEN_LOG_INTERVAL_MS) return;
+  failOpenLastLoggedAt = now;
+  console.warn(
+    `[compression] worker path failed open — serving uncompressed (detail: ${detail ?? "unknown"})`
+  );
+}
+
+export function __resetCompressionFailOpenNotifierForTests(): void {
+  failOpenLastLoggedAt = 0;
+}
+
 // Re-export so existing importers (resolver test + chatCore dynamic import) keep resolving.
 export {
   planFromHeader,
@@ -541,7 +563,8 @@ async function runCompressionAsync(
     try {
       const { runCompressionInWorker } = await import("./compressionWorkerPool.ts");
       return await runCompressionInWorker(body, mode, workerOptions, options?.onEngineStep);
-    } catch {
+    } catch (error) {
+      notifyCompressionFailOpen(error instanceof Error ? error.message : String(error));
       return { body, compressed: false, stats: null };
     }
   }

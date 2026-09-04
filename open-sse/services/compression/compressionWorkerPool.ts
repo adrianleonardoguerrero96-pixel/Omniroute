@@ -99,15 +99,32 @@ export class CompressionWorkerPool {
   private readonly size: number;
   private readonly timeoutMs: number;
   private readonly idleMs: number;
+  private readonly spawnWorker: () => Worker;
+  /**
+   * Set when spawn() throws synchronously (e.g. Turbopack's moduleContext
+   * MODULE_NOT_FOUND in the standalone build). A pool that cannot create a
+   * single worker is structurally broken — every subsequent run() fail-opens
+   * immediately instead of pushing jobs into a queue that can never drain
+   * (unbounded main-isolate heap leak, one full request body per job).
+   */
+  private broken = false;
 
   constructor({
     size = positiveInteger(process.env.OMNI_COMPRESSION_WORKERS, 2),
     timeoutMs = positiveInteger(process.env.OMNI_COMPRESSION_WORKER_TIMEOUT_MS, 120_000),
     idleMs = positiveInteger(process.env.OMNI_COMPRESSION_WORKER_IDLE_MS, 60_000),
-  }: { size?: number; timeoutMs?: number; idleMs?: number } = {}) {
+    workerFactory,
+  }: {
+    size?: number;
+    timeoutMs?: number;
+    idleMs?: number;
+    /** Test seam: replaces `new Worker(resolveWorkerFile())`. */
+    workerFactory?: () => Worker;
+  } = {}) {
     this.size = Math.max(1, Math.floor(size));
     this.timeoutMs = Math.max(1, Math.floor(timeoutMs));
     this.idleMs = Math.max(1, Math.floor(idleMs));
+    this.spawnWorker = workerFactory ?? (() => new Worker(resolveWorkerFile()));
   }
 
   run(
@@ -116,6 +133,7 @@ export class CompressionWorkerPool {
     options?: CompressionWorkerOptions,
     onEngineStep?: (step: StackedCompressionStep) => void
   ): Promise<CompressionResult> {
+    if (this.broken) return Promise.resolve(unchanged(body));
     return new Promise((resolve) => {
       this.queue.push({
         id: this.nextId++,
@@ -135,7 +153,7 @@ export class CompressionWorkerPool {
   }
   private spawn(): PoolWorker {
     const slot: PoolWorker = {
-      worker: new Worker(resolveWorkerFile()),
+      worker: this.spawnWorker(),
       job: null,
       timeout: null,
       idle: null,
@@ -153,7 +171,24 @@ export class CompressionWorkerPool {
   private dispatch(): void {
     while (this.queue.length) {
       let slot = [...this.workers].find((candidate) => !candidate.job);
-      if (!slot && this.workers.size < this.size) slot = this.spawn();
+      if (!slot && this.workers.size < this.size) {
+        try {
+          slot = this.spawn();
+        } catch (error) {
+          // A synchronous spawn failure (bundler module-context miss, bad
+          // worker path, …) is structural — no worker can ever be created.
+          // Fail-open every queued job NOW: leaving them in this.queue leaks
+          // their full request bodies for the process lifetime (issue #2).
+          this.broken = true;
+          console.warn(
+            `[compression] worker spawn failed — failing open permanently: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+          for (const job of this.queue.splice(0)) job.resolve(unchanged(job.originalBody));
+          return;
+        }
+      }
       if (!slot) return;
       if (slot.idle) clearTimeout(slot.idle);
       const job = this.queue.shift();

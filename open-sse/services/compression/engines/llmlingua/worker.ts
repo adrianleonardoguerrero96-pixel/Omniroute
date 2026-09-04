@@ -193,6 +193,15 @@ export function resolveWorkerFile(): { workerFile: string; execArgv: string[] } 
   return { workerFile: path.join(process.cwd(), WORKER_JS_REL), execArgv: [] };
 }
 
+/**
+ * Worker entry specifier for `new Worker(...)`. Must be a URL OBJECT, never a
+ * `file://` string: Node >= 21 throws ERR_WORKER_PATH synchronously for string
+ * file:// URLs ("Wrap file:// URLs with `new URL`"). Exported for tests.
+ */
+export function llmlinguaWorkerSpecifier(workerFile: string): URL {
+  return new URL(pathToFileURL(path.resolve(workerFile)).href);
+}
+
 /** Reset the idle eviction timer; terminates the worker after the idle window. */
 function bumpIdleTimer(): void {
   if (idleTimer) clearTimeout(idleTimer);
@@ -233,8 +242,7 @@ function ensureWorker(): Worker {
   if (worker) return worker;
 
   const { workerFile, execArgv } = resolveWorkerFile();
-  const absoluteWorkerFile = path.resolve(workerFile);
-  const w = new Worker(pathToFileURL(absoluteWorkerFile).href, { execArgv });
+  const w = new Worker(llmlinguaWorkerSpecifier(workerFile), { execArgv });
 
   w.on("message", (reply: WorkerReply) => {
     const entry = pending.get(reply.id);
