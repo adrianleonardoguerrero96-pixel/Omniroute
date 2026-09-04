@@ -551,7 +551,7 @@ async function runCompressionAsync(
       const { runCompressionInWorker } = await import("./compressionWorkerPool.ts");
       return await runCompressionInWorker(body, mode, workerOptions, options?.onEngineStep);
     } catch (error) {
-      notifyCompressionFailOpen(error instanceof Error ? error.message : String(error));
+      notifyCompressionFailOpen(String(error));
       return { body, compressed: false, stats: null };
     }
   }
