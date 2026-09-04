@@ -75,6 +75,7 @@ import {
   AUTO_VARIANT_DESCRIPTIONS,
   type FreeModelFreeType,
 } from "./naming.js";
+import { applyOmniRouteInferenceTelemetry } from "./telemetry.js";
 
 /**
  * Minimal leveled logger sink accepted by the default fetchers and the static
@@ -3769,6 +3770,8 @@ export function createOmniRouteFetchInterceptor(config: {
     baseOrigin = baseUrl.origin;
     const basePath = ensureV1Suffix(baseUrl.pathname);
     inferencePaths.add(`${basePath}/chat/completions`);
+    inferencePaths.add(`${basePath}/responses`);
+    inferencePaths.add(`${basePath}/messages`);
     inferencePaths.add(`${basePath}/models`);
   } catch {
     // Credential-attached base URLs are not schema-validated. A malformed
@@ -3812,7 +3815,7 @@ export function createOmniRouteFetchInterceptor(config: {
       headers.set("Content-Type", "application/json");
     }
 
-    return fetch(input, { ...init, headers });
+    return applyOmniRouteInferenceTelemetry(await fetch(input, { ...init, headers }));
   };
 }
 

@@ -753,6 +753,17 @@ async function handleChatImplementation(
   clientRawRequest = chatAdmission.resolveClientRawAfterAdmission(clientRawRequest, () =>
     deferredClientRawBody.withClientBody((clientBody) => buildClientRawRequest(request, clientBody))
   );
+  // Sibling of clientRawRequest.body, not a replacement: .body stays the raw
+  // pre-reconstruction client bytes (see captureDeferredClientRawBody), while
+  // this is the `input` actually dispatched with -- after the
+  // previous_response_id reconstruction above ran, when it applies. A future
+  // continuation lookup against THIS response must resolve from this field,
+  // not the raw one. See the logClientRawRequest doc comment in requestLogger.ts.
+  if (clientRawRequest && Array.isArray((body as { input?: unknown }).input)) {
+    (clientRawRequest as { effectiveInput?: unknown }).effectiveInput = (
+      body as { input: unknown[] }
+    ).input;
+  }
 
   // Guardrail pre-call pipeline — prompt injection, PII masking, and future custom rules.
   telemetry.startPhase("validate");
