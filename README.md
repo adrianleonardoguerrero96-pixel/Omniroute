@@ -209,7 +209,7 @@ curl http://localhost:20128/v1/chat/completions \
 
 </div>
 
-<img src="./docs/diagrams/promise-pillars.svg" width="100%" alt="The Promise — One endpoint and 356 providers. Automatic fallback keeps routing while another healthy target is available. Six pillars: resilient fallback across 356 providers · up to 95% token savings on eligible workloads · $0 to start with 150+ free tiers and 53 recurring/keyless free-forever providers · 36 CLI/agent integrations through one config · OpenAI, Claude, Gemini and Responses API compatibility at /v1 · production controls including circuit breakers, TLS stealth, MCP 110 tools, A2A, memory, guardrails, evals and 39,000+ static test declarations across 5,100+ tracked test files."/>
+<img src="./docs/diagrams/promise-pillars.svg" width="100%" alt="The Promise — One endpoint and 356 providers. Automatic fallback keeps routing while another healthy target is available. Six pillars: resilient fallback across 356 providers · up to 95% token savings on eligible workloads · $0 to start with 150+ free tiers and 52 recurring/keyless free-forever providers · 36 CLI/agent integrations through one config · OpenAI, Claude, Gemini and Responses API compatibility at /v1 · production controls including circuit breakers, TLS stealth, MCP 110 tools, A2A, memory, guardrails, evals and 39,000+ static test declarations across 5,100+ tracked test files."/>
 
 <br/>
 <br/>
@@ -520,7 +520,7 @@ Pix copia-e-cola:
 
 The main free-tier headline remains **~1.50B tokens/month** from the documented,
 pool-deduplicated catalog above. Temporary provider signup credits can separately lift the first
-month to **~2.13B**. Radar is an optional, signed catalog overlay for people who want fresher
+month to **~2.10B**. Radar is an optional, signed catalog overlay for people who want fresher
 free-model availability between OmniRoute releases; the community catalog and every existing free
 feature remain free.
 
