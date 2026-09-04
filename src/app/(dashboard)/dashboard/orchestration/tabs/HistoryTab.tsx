@@ -18,6 +18,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { OrchestrationDrawer } from "../drawer/OrchestrationDrawer";
+import { CompareRunsPanel } from "./CompareRunsPanel";
 import { orchStateColor, type OrchNode, type OrchState } from "../model/orchestrationTypes";
 import {
   buildHistoryGrid,
@@ -323,9 +324,7 @@ function HistoryGridTable({
                           title={meta}
                           aria-label={meta}
                           aria-pressed={compareMode ? isSelected : undefined}
-                          onClick={() =>
-                            compareMode ? onToggleSelect(item) : onSelectItem(item)
-                          }
+                          onClick={() => (compareMode ? onToggleSelect(item) : onSelectItem(item))}
                         />
                       );
                     })}
@@ -424,19 +423,15 @@ export function HistoryTab() {
         />
       )}
 
-      {/* Placeholder slot for Task A3's comparison panel: this task (A2) only owns the
-          selection queue, not the panel body. Task A3 replaces this div's contents with the
-          actual side-by-side comparison (built from `compareSelected` via
-          `model/compareRuns.ts`'s `normalizeRunSide`/`buildComparison`, Task A1). Kept as a
-          minimal, testable anchor rather than rendering nothing so A3 has a stable mount point
-          and this task's tests can assert the 2-selected condition end-to-end. */}
+      {/* Task A3's side-by-side comparison panel — mounted once `compareSelected` reaches its
+          2-item queue (Task A2). `onClose` clears the selection (not `compareMode` itself) so
+          the operator lands back on the grid, still in compare mode, ready to pick a new pair. */}
       {compareMode && compareSelected.length === 2 && (
-        <div
-          data-testid="orchestration-history-compare-panel"
-          className="text-xs text-muted border border-border rounded p-2"
-        >
-          {compareSelected.map((item) => item.label).join(" ↔ ")}
-        </div>
+        <CompareRunsPanel
+          left={compareSelected[0]}
+          right={compareSelected[1]}
+          onClose={() => setCompareSelected([])}
+        />
       )}
 
       {/* `onActionDone` must NOT close the drawer: the drawer renders its own success toast

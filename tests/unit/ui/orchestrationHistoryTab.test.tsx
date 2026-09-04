@@ -308,7 +308,12 @@ describe("HistoryTab", () => {
       return {
         a2aTasks: [
           a2aTask({ id: "t1", skill: "smart-routing" }),
-          a2aTask({ id: "t3", skill: "eval-suite", createdAt: hoursAgo(2), completedAt: hoursAgo(1.5) }),
+          a2aTask({
+            id: "t3",
+            skill: "eval-suite",
+            createdAt: hoursAgo(2),
+            completedAt: hoursAgo(1.5),
+          }),
         ],
         cloudAgentTasks: [cloudAgentTask()],
       };
@@ -361,6 +366,28 @@ describe("HistoryTab", () => {
       // neither click opened it.
       const last = drawerCalls.at(-1) as { node: unknown };
       expect(last.node).toBeNull();
+      cleanup();
+    });
+
+    it("clicking an already-selected cell in compare mode unmarks it instead of dropping the oldest", async () => {
+      // Isolated coverage for onToggleCompareSelect's unmark branch (`prev.some(...) →
+      // prev.filter(...)`) — the eviction-queue test above only exercises the "new distinct
+      // item" branch, so clicking a cell that is ALREADY marked had no direct test.
+      vi.stubGlobal("fetch", mockFetch(threeItems()));
+      const { c, cleanup } = render(<HistoryTab />);
+      await flush();
+
+      act(() => toggleCompareButton(c).click());
+      act(() => cellFor(c, "smart-routing").click());
+      act(() => cellFor(c, "do the thing").click());
+      expect(cellFor(c, "smart-routing").getAttribute("aria-pressed")).toBe("true");
+      expect(cellFor(c, "do the thing").getAttribute("aria-pressed")).toBe("true");
+
+      // Click the already-selected "smart-routing" cell again: it must unmark, leaving only
+      // "do the thing" marked — not evict the oldest as if a 3rd distinct item were picked.
+      act(() => cellFor(c, "smart-routing").click());
+      expect(cellFor(c, "smart-routing").getAttribute("aria-pressed")).toBe("false");
+      expect(cellFor(c, "do the thing").getAttribute("aria-pressed")).toBe("true");
       cleanup();
     });
 
