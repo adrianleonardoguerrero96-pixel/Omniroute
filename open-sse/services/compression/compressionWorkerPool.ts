@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { Worker } from "node:worker_threads";
+import { sanitizeErrorMessage } from "../../utils/errorSanitization.ts";
 import { notifyCompressionFailOpen } from "./failOpenNotifier.ts";
 import type { CompressionResult } from "./types.ts";
 import type { StackedCompressionStep } from "./strategySelector.ts";
@@ -81,6 +82,17 @@ export function resolveWorkerFile(): string {
 function unchanged(body: Record<string, unknown>): CompressionResult {
   return { body, compressed: false, stats: null };
 }
+
+/** Sanitized, single-line error text for fail-open log details. */
+function errorText(error: unknown): string {
+  return sanitizeErrorMessage(error instanceof Error ? error.message : String(error));
+}
+
+/** Resource exhaustion is transient; path/module/configuration errors are structural. */
+function isStructuralSpawnFailure(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException | undefined)?.code;
+  return code !== "EMFILE" && code !== "ENFILE" && code !== "ENOMEM";
+}
 interface PendingJob extends CompressionWorkerJob {
   originalBody: Record<string, unknown>;
   resolve: (result: CompressionResult) => void;
@@ -155,6 +167,11 @@ export class CompressionWorkerPool {
   }
   async close(): Promise<void> {
     for (const job of this.queue.splice(0)) job.resolve(unchanged(job.originalBody));
+    for (const slot of this.workers) {
+      const job = slot.job;
+      if (job) job.resolve(unchanged(job.originalBody));
+      slot.job = null;
+    }
     await Promise.all([...this.workers].map((slot) => this.remove(slot, true)));
   }
   private spawn(): PoolWorker {
@@ -168,9 +185,9 @@ export class CompressionWorkerPool {
     slot.worker.on("message", (message: CompressionWorkerMessage) =>
       this.handleMessage(slot, message)
     );
-    slot.worker.on("error", () => this.fail(slot));
-    slot.worker.on("exit", () => {
-      if (this.workers.has(slot)) this.fail(slot);
+    slot.worker.on("error", (error) => this.fail(slot, `worker error: ${errorText(error)}`));
+    slot.worker.on("exit", (code) => {
+      if (this.workers.has(slot)) this.fail(slot, `worker exit code ${code}`);
     });
     return slot;
   }
@@ -185,11 +202,10 @@ export class CompressionWorkerPool {
           // worker path, …) is structural — no worker can ever be created.
           // Fail-open every queued job NOW: leaving them in this.queue leaks
           // their full request bodies for the process lifetime (issue #2).
-          this.broken = true;
+          const structural = isStructuralSpawnFailure(error);
+          this.broken = structural;
           notifyCompressionFailOpen(
-            `worker spawn failed — pool failing open permanently: ${
-              error instanceof Error ? error.message : String(error)
-            }`
+            `worker spawn failed — pool failing open${structural ? " permanently" : " for this wave"}: ${errorText(error)}`
           );
           for (const job of this.queue.splice(0)) job.resolve(unchanged(job.originalBody));
           return;
@@ -200,10 +216,17 @@ export class CompressionWorkerPool {
       const job = this.queue.shift();
       if (!job) return;
       slot.job = job;
-      slot.timeout = setTimeout(() => this.fail(slot!), this.timeoutMs);
+      slot.timeout = setTimeout(() => this.fail(slot!, "worker job timeout"), this.timeoutMs);
       slot.timeout.unref();
       const { originalBody: _body, resolve: _resolve, onEngineStep: _step, ...wireJob } = job;
-      slot.worker.postMessage(wireJob);
+      try {
+        slot.worker.postMessage(wireJob);
+      } catch (error) {
+        // Non-cloneable payloads (DataCloneError) must not reject the pool's
+        // never-reject run() contract nor strand the slot until its timeout.
+        this.fail(slot, `worker postMessage failed: ${errorText(error)}`);
+        return;
+      }
     }
   }
   private handleMessage(slot: PoolWorker, message: CompressionWorkerMessage): void {
@@ -230,7 +253,11 @@ export class CompressionWorkerPool {
     slot.idle.unref();
     this.dispatch();
   }
-  private fail(slot: PoolWorker): void {
+  private fail(slot: PoolWorker, reason: string): void {
+    // Every runtime failure path (worker error/exit, job timeout, postMessage
+    // throw) resolves fail-open but was previously invisible — the exact
+    // zero-log condition that let issue #2 run for hours.
+    notifyCompressionFailOpen(`compression worker job failed open (${reason})`);
     const job = slot.job;
     if (job) job.resolve(unchanged(job.originalBody));
     slot.job = null;
