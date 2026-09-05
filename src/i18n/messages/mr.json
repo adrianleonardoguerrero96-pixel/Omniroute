@@ -6173,6 +6173,7 @@
       "gitlawb": "Gitlawb Opengateway डॅशबोर्डवरून तुमची API की मिळवा.",
       "glm": "API की सह GLM Coding कनेक्ट करा.",
       "glm-cn": "API की सह GLM Coding (China) कनेक्ट करा.",
+      "bigmodel": "https://bigmodel.cn/usercenter/proj-mgmt/apikeys वर API की तयार करा. OmniRoute BigModel.cn चा अधिकृत OpenAI-सुसंगत चॅट एंडपॉइंट वापरतो.",
       "glmt": "उच्च टोकन बजेट, थिंकिंग सक्षम आणि दीर्घ टाइमआउटसह प्रीसेट GLM प्रोफाइल.",
       "getgoapi": "API की सह GoAPI कनेक्ट करा.",
       "groq": "__MISSING__:Free plan: per-model caps (200K tokens/day per chat model; see console.groq.com/docs/rate-limits for RPM/RPD) — no payment method on file.",
@@ -6280,7 +6281,7 @@
       "xai": "API की सह xAI (Grok) कनेक्ट करा.",
       "xiaomi-mimo": "API की सह Xiaomi MiMo कनेक्ट करा.",
       "yi": "platform.lingyiwanwu.com वर API की मिळवा",
-      "zai": "https://open.bigmodel.cn/usercenter/apikeys कडून API की",
+      "zai": "https://z.ai/manage-apikey/apikey-list वर API की तयार करा.",
       "zenmux": "ZenMux हे /api/v1/chat/completions येथे OpenAI-सुसंगत चॅट कंप्लिशन एंडपॉइंट, तसेच Anthropic Messages (/api/anthropic/v1/messages) आणि Google Gemini (/api/vertex-ai) प्रोटोकॉल सरफेसेस उपलब्ध करते. OmniRoute हे OpenAI प्रोटोकॉल वापरते.",
       "galadriel": "API की सह Galadriel कनेक्ट करा.",
       "predibase": "$25 मोफत ट्रायल क्रेडिट्स (30 दिवसांची वैधता)",
@@ -6466,7 +6467,10 @@
     "clearConnectionCooldownInProgress": "Clearing…",
     "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
     "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
-    "failedClearConnectionCooldown": "Failed to clear cooldown"
+    "failedClearConnectionCooldown": "Failed to clear cooldown",
+    "importFromFileDownloadTemplate": "Download CSV template",
+    "importFromFileMoreErrors": "+{count} more",
+    "importFromFileSchemaHint": "CSV columns are positional: provider, name, apiKey, baseUrl (optional), priority (optional). The provider column must be an existing managed provider id or an already-registered OpenAI/Anthropic-compatible node id — this import does not create new endpoint nodes."
   },
   "settings": {
     "title": "Settings",
@@ -9680,7 +9684,14 @@
     "updatedShort": "अपडेट केले",
     "lastRefreshed": "शेवटचे रिफ्रेश केलेले",
     "providerQuota": "प्रदाता कोटा",
-    "providerQuotaHomeHint": "कनेक्ट केलेल्या खात्यांमधील थेट स्थिती"
+    "providerQuotaHomeHint": "कनेक्ट केलेल्या खात्यांमधील थेट स्थिती",
+    "kiloAccountBalance": "Account Balance",
+    "kiloPassBonus": "Available bonus",
+    "kiloPassMeterLabel": "Kilo Pass usage meter",
+    "kiloPassPaid": "Paid",
+    "kiloPassRemaining": "Remaining",
+    "kiloPassRenews": "Renews {count} days",
+    "kiloPassUsageLabel": "This month's usage"
   },
   "modals": {
     "waitingAuth": "Waiting for Authorization",

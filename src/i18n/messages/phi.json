@@ -6173,6 +6173,7 @@
       "gitlawb": "Kumuha ng iyong API key mula sa Gitlawb Opengateway dashboard.",
       "glm": "Ikonekta ang GLM Coding gamit ang isang API key.",
       "glm-cn": "Ikonekta ang GLM Coding (China) gamit ang isang API key.",
+      "bigmodel": "Gumawa ng API key sa https://bigmodel.cn/usercenter/proj-mgmt/apikeys. Ginagamit ng OmniRoute ang opisyal na OpenAI-compatible na chat endpoint ng BigModel.cn.",
       "glmt": "Preset na GLM profile na may mas mataas na token budget, naka-enable ang thinking, at mas mahabang timeout.",
       "getgoapi": "Ikonekta ang GoAPI gamit ang isang API key.",
       "groq": "__MISSING__:Free plan: per-model caps (200K tokens/day per chat model; see console.groq.com/docs/rate-limits for RPM/RPD) — no payment method on file.",
@@ -6280,7 +6281,7 @@
       "xai": "Ikonekta ang xAI (Grok) gamit ang isang API key.",
       "xiaomi-mimo": "Ikonekta ang Xiaomi MiMo gamit ang isang API key.",
       "yi": "Kumuha ng API key sa platform.lingyiwanwu.com",
-      "zai": "API key mula sa https://open.bigmodel.cn/usercenter/apikeys",
+      "zai": "Gumawa ng API key sa https://z.ai/manage-apikey/apikey-list.",
       "zenmux": "Naglalantad ang ZenMux ng isang OpenAI-compatible na chat completions endpoint sa /api/v1/chat/completions, kasama ang Anthropic Messages (/api/anthropic/v1/messages) at Google Gemini (/api/vertex-ai) protocol surfaces. Ginagamit ng OmniRoute ang OpenAI protocol.",
       "galadriel": "Ikonekta ang Galadriel gamit ang isang API key.",
       "predibase": "$25 na libreng trial credits (30-araw na validity)",
@@ -6466,7 +6467,10 @@
     "clearConnectionCooldownInProgress": "Clearing…",
     "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
     "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
-    "failedClearConnectionCooldown": "Failed to clear cooldown"
+    "failedClearConnectionCooldown": "Failed to clear cooldown",
+    "importFromFileDownloadTemplate": "Download CSV template",
+    "importFromFileMoreErrors": "+{count} more",
+    "importFromFileSchemaHint": "CSV columns are positional: provider, name, apiKey, baseUrl (optional), priority (optional). The provider column must be an existing managed provider id or an already-registered OpenAI/Anthropic-compatible node id — this import does not create new endpoint nodes."
   },
   "settings": {
     "title": "Mga setting",
@@ -9680,7 +9684,14 @@
     "updatedShort": "Na-update",
     "lastRefreshed": "Huling na-refresh",
     "providerQuota": "Quota ng Provider",
-    "providerQuotaHomeHint": "Live na status sa lahat ng nakakonektang account"
+    "providerQuotaHomeHint": "Live na status sa lahat ng nakakonektang account",
+    "kiloAccountBalance": "Account Balance",
+    "kiloPassBonus": "Available bonus",
+    "kiloPassMeterLabel": "Kilo Pass usage meter",
+    "kiloPassPaid": "Paid",
+    "kiloPassRemaining": "Remaining",
+    "kiloPassRenews": "Renews {count} days",
+    "kiloPassUsageLabel": "This month's usage"
   },
   "modals": {
     "waitingAuth": "Naghihintay ng Awtorisasyon",

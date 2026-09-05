@@ -6173,6 +6173,7 @@
       "gitlawb": "کلید API خود را از داشبورد Gitlawb Opengateway دریافت کنید.",
       "glm": "اتصال GLM Coding با یک کلید API.",
       "glm-cn": "اتصال GLM Coding (China) با یک کلید API.",
+      "bigmodel": "یک کلید API در https://bigmodel.cn/usercenter/proj-mgmt/apikeys ایجاد کنید. OmniRoute از نقطه پایانی گفتگوی رسمی سازگار با OpenAI در BigModel.cn استفاده می‌کند.",
       "glmt": "پروفایل پیش‌فرض GLM با بودجه توکن بالاتر، فعال بودن تفکر (thinking) و زمان انتظار (timeout) طولانی‌تر.",
       "getgoapi": "اتصال GoAPI با یک کلید API.",
       "groq": "__MISSING__:Free plan: per-model caps (200K tokens/day per chat model; see console.groq.com/docs/rate-limits for RPM/RPD) — no payment method on file.",
@@ -6280,7 +6281,7 @@
       "xai": "اتصال به xAI (Grok) با یک کلید API.",
       "xiaomi-mimo": "اتصال به Xiaomi MiMo با یک کلید API.",
       "yi": "دریافت کلید API در platform.lingyiwanwu.com",
-      "zai": "کلید API از https://open.bigmodel.cn/usercenter/apikeys",
+      "zai": "یک کلید API در https://z.ai/manage-apikey/apikey-list ایجاد کنید.",
       "zenmux": "سرویس ZenMux یک نقطه پایانی تکمیل چت سازگار با OpenAI در /api/v1/chat/completions، به علاوه رابط‌های پروتکل Anthropic Messages (/api/anthropic/v1/messages) و Google Gemini (/api/vertex-ai) را ارائه می‌دهد. OmniRoute از پروتکل OpenAI استفاده می‌کند.",
       "galadriel": "اتصال به Galadriel با یک کلید API.",
       "predibase": "$25 اعتبار آزمایشی رایگان (اعتبار ۳۰ روزه)",
@@ -6466,7 +6467,10 @@
     "clearConnectionCooldownInProgress": "Clearing…",
     "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
     "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
-    "failedClearConnectionCooldown": "Failed to clear cooldown"
+    "failedClearConnectionCooldown": "Failed to clear cooldown",
+    "importFromFileDownloadTemplate": "Download CSV template",
+    "importFromFileMoreErrors": "+{count} more",
+    "importFromFileSchemaHint": "CSV columns are positional: provider, name, apiKey, baseUrl (optional), priority (optional). The provider column must be an existing managed provider id or an already-registered OpenAI/Anthropic-compatible node id — this import does not create new endpoint nodes."
   },
   "settings": {
     "title": "Settings",
@@ -9680,7 +9684,14 @@
     "updatedShort": "به‌روزرسانی شد",
     "lastRefreshed": "آخرین به‌روزرسانی",
     "providerQuota": "سهمیه ارائه‌دهنده",
-    "providerQuotaHomeHint": "وضعیت لحظه‌ای در حساب‌های متصل"
+    "providerQuotaHomeHint": "وضعیت لحظه‌ای در حساب‌های متصل",
+    "kiloAccountBalance": "Account Balance",
+    "kiloPassBonus": "Available bonus",
+    "kiloPassMeterLabel": "Kilo Pass usage meter",
+    "kiloPassPaid": "Paid",
+    "kiloPassRemaining": "Remaining",
+    "kiloPassRenews": "Renews {count} days",
+    "kiloPassUsageLabel": "This month's usage"
   },
   "modals": {
     "waitingAuth": "Waiting for Authorization",

@@ -6173,6 +6173,7 @@
       "gitlawb": "Haal je API-sleutel op uit het Gitlawb Opengateway-dashboard.",
       "glm": "Verbind GLM Coding met een API-sleutel.",
       "glm-cn": "Verbind GLM Coding (China) met een API-sleutel.",
+      "bigmodel": "Maak een API-sleutel aan op https://bigmodel.cn/usercenter/proj-mgmt/apikeys. OmniRoute gebruikt het officiële OpenAI-compatibele chat-eindpunt van BigModel.cn.",
       "glmt": "Vooraf ingesteld GLM-profiel met een hoger tokenbudget, denken ingeschakeld en een langere time-out.",
       "getgoapi": "Verbind GoAPI met een API-sleutel.",
       "groq": "__MISSING__:Free plan: per-model caps (200K tokens/day per chat model; see console.groq.com/docs/rate-limits for RPM/RPD) — no payment method on file.",
@@ -6280,7 +6281,7 @@
       "xai": "Verbind xAI (Grok) met een API-sleutel.",
       "xiaomi-mimo": "Verbind Xiaomi MiMo met een API-sleutel.",
       "yi": "Verkrijg API-sleutel op platform.lingyiwanwu.com",
-      "zai": "API-sleutel van https://open.bigmodel.cn/usercenter/apikeys",
+      "zai": "Maak een API-sleutel aan op https://z.ai/manage-apikey/apikey-list.",
       "zenmux": "ZenMux biedt een OpenAI-compatibel chat completions-eindpunt op /api/v1/chat/completions, plus Anthropic Messages (/api/anthropic/v1/messages) en Google Gemini (/api/vertex-ai) protocolinterfaces. OmniRoute gebruikt het OpenAI-protocol.",
       "galadriel": "Verbind Galadriel met een API-sleutel.",
       "predibase": "$25 gratis proeftegoed (30 dagen geldig)",
@@ -6466,7 +6467,10 @@
     "clearConnectionCooldownInProgress": "Clearing…",
     "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
     "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
-    "failedClearConnectionCooldown": "Failed to clear cooldown"
+    "failedClearConnectionCooldown": "Failed to clear cooldown",
+    "importFromFileDownloadTemplate": "Download CSV template",
+    "importFromFileMoreErrors": "+{count} more",
+    "importFromFileSchemaHint": "CSV columns are positional: provider, name, apiKey, baseUrl (optional), priority (optional). The provider column must be an existing managed provider id or an already-registered OpenAI/Anthropic-compatible node id — this import does not create new endpoint nodes."
   },
   "settings": {
     "title": "Instellingen",
@@ -9680,7 +9684,14 @@
     "updatedShort": "Bijgewerkt",
     "lastRefreshed": "Laatst vernieuwd",
     "providerQuota": "Providerquota",
-    "providerQuotaHomeHint": "Live status over verbonden accounts"
+    "providerQuotaHomeHint": "Live status over verbonden accounts",
+    "kiloAccountBalance": "Account Balance",
+    "kiloPassBonus": "Available bonus",
+    "kiloPassMeterLabel": "Kilo Pass usage meter",
+    "kiloPassPaid": "Paid",
+    "kiloPassRemaining": "Remaining",
+    "kiloPassRenews": "Renews {count} days",
+    "kiloPassUsageLabel": "This month's usage"
   },
   "modals": {
     "waitingAuth": "Wachten op toestemming",

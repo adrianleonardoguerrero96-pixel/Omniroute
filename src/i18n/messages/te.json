@@ -6173,6 +6173,7 @@
       "gitlawb": "Gitlawb Opengateway డ్యాష్‌బోర్డ్ నుండి మీ API కీని పొందండి.",
       "glm": "API కీతో GLM Coding ని కనెక్ట్ చేయండి.",
       "glm-cn": "API కీతో GLM Coding (China) ని కనెక్ట్ చేయండి.",
+      "bigmodel": "https://bigmodel.cn/usercenter/proj-mgmt/apikeys వద్ద API కీని సృష్టించండి. OmniRoute BigModel.cn యొక్క అధికారిక OpenAI-అనుకూల చాట్ ఎండ్‌పాయింట్‌ను ఉపయోగిస్తుంది.",
       "glmt": "ఎక్కువ టోకెన్ బడ్జెట్, థింకింగ్ ఎనేబుల్ చేయబడిన మరియు ఎక్కువ టైమ్‌అవుట్‌తో కూడిన ప్రీసెట్ GLM ప్రొఫైల్.",
       "getgoapi": "API కీతో GoAPI ని కనెక్ట్ చేయండి.",
       "groq": "__MISSING__:Free plan: per-model caps (200K tokens/day per chat model; see console.groq.com/docs/rate-limits for RPM/RPD) — no payment method on file.",
@@ -6280,7 +6281,7 @@
       "xai": "API కీతో xAI (Grok)ని కనెక్ట్ చేయండి.",
       "xiaomi-mimo": "API కీతో Xiaomi MiMoని కనెక్ట్ చేయండి.",
       "yi": "platform.lingyiwanwu.com వద్ద API కీని పొందండి",
-      "zai": "https://open.bigmodel.cn/usercenter/apikeys నుండి API కీ",
+      "zai": "https://z.ai/manage-apikey/apikey-list వద్ద API కీని సృష్టించండి.",
       "zenmux": "ZenMux /api/v1/chat/completions వద్ద OpenAI-అనుకూల చాట్ కంప్లీషన్స్ ఎండ్‌పాయింట్‌ను, అలాగే Anthropic Messages (/api/anthropic/v1/messages) మరియు Google Gemini (/api/vertex-ai) ప్రోటోకాల్ సర్ఫేస్‌లను అందిస్తుంది. OmniRoute OpenAI ప్రోటోకాల్‌ను ఉపయోగిస్తుంది.",
       "galadriel": "API కీతో Galadrielని కనెక్ట్ చేయండి.",
       "predibase": "$25 ఉచిత ట్రయల్ క్రెడిట్‌లు (30 రోజుల చెల్లుబాటు)",
@@ -6466,7 +6467,10 @@
     "clearConnectionCooldownInProgress": "Clearing…",
     "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
     "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
-    "failedClearConnectionCooldown": "Failed to clear cooldown"
+    "failedClearConnectionCooldown": "Failed to clear cooldown",
+    "importFromFileDownloadTemplate": "Download CSV template",
+    "importFromFileMoreErrors": "+{count} more",
+    "importFromFileSchemaHint": "CSV columns are positional: provider, name, apiKey, baseUrl (optional), priority (optional). The provider column must be an existing managed provider id or an already-registered OpenAI/Anthropic-compatible node id — this import does not create new endpoint nodes."
   },
   "settings": {
     "title": "Settings",
@@ -9680,7 +9684,14 @@
     "updatedShort": "అప్‌డేట్ చేయబడింది",
     "lastRefreshed": "చివరిగా రిఫ్రెష్ చేయబడింది",
     "providerQuota": "ప్రొవైడర్ కోటా",
-    "providerQuotaHomeHint": "కనెక్ట్ చేయబడిన ఖాతాల ప్రత్యక్ష స్థితి"
+    "providerQuotaHomeHint": "కనెక్ట్ చేయబడిన ఖాతాల ప్రత్యక్ష స్థితి",
+    "kiloAccountBalance": "Account Balance",
+    "kiloPassBonus": "Available bonus",
+    "kiloPassMeterLabel": "Kilo Pass usage meter",
+    "kiloPassPaid": "Paid",
+    "kiloPassRemaining": "Remaining",
+    "kiloPassRenews": "Renews {count} days",
+    "kiloPassUsageLabel": "This month's usage"
   },
   "modals": {
     "waitingAuth": "Waiting for Authorization",

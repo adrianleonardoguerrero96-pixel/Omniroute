@@ -6173,6 +6173,7 @@
       "gitlawb": "Dapatkan kunci API Anda dari dasbor Gitlawb Opengateway.",
       "glm": "Hubungkan GLM Coding dengan kunci API.",
       "glm-cn": "Hubungkan GLM Coding (China) dengan kunci API.",
+      "bigmodel": "Buat kunci API di https://bigmodel.cn/usercenter/proj-mgmt/apikeys. OmniRoute menggunakan endpoint chat resmi BigModel.cn yang kompatibel dengan OpenAI.",
       "glmt": "Profil GLM prasetel dengan anggaran token yang lebih tinggi, proses berpikir diaktifkan, dan batas waktu yang lebih lama.",
       "getgoapi": "Hubungkan GoAPI dengan kunci API.",
       "groq": "__MISSING__:Free plan: per-model caps (200K tokens/day per chat model; see console.groq.com/docs/rate-limits for RPM/RPD) — no payment method on file.",
@@ -6280,7 +6281,7 @@
       "xai": "Hubungkan xAI (Grok) dengan kunci API.",
       "xiaomi-mimo": "Hubungkan Xiaomi MiMo dengan kunci API.",
       "yi": "Dapatkan kunci API di platform.lingyiwanwu.com",
-      "zai": "Kunci API dari https://open.bigmodel.cn/usercenter/apikeys",
+      "zai": "Buat kunci API di https://z.ai/manage-apikey/apikey-list.",
       "zenmux": "ZenMux mengekspos endpoint penyelesaian obrolan yang kompatibel dengan OpenAI di /api/v1/chat/completions, ditambah permukaan protokol Anthropic Messages (/api/anthropic/v1/messages) dan Google Gemini (/api/vertex-ai). OmniRoute menggunakan protokol OpenAI.",
       "galadriel": "Hubungkan Galadriel dengan kunci API.",
       "predibase": "Kredit uji coba gratis $25 (validitas 30 hari)",
@@ -6466,7 +6467,10 @@
     "clearConnectionCooldownInProgress": "Clearing…",
     "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
     "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
-    "failedClearConnectionCooldown": "Failed to clear cooldown"
+    "failedClearConnectionCooldown": "Failed to clear cooldown",
+    "importFromFileDownloadTemplate": "Download CSV template",
+    "importFromFileMoreErrors": "+{count} more",
+    "importFromFileSchemaHint": "CSV columns are positional: provider, name, apiKey, baseUrl (optional), priority (optional). The provider column must be an existing managed provider id or an already-registered OpenAI/Anthropic-compatible node id — this import does not create new endpoint nodes."
   },
   "settings": {
     "title": "Pengaturan",
@@ -9680,7 +9684,14 @@
     "updatedShort": "Diperbarui",
     "lastRefreshed": "Terakhir disegarkan",
     "providerQuota": "Kuota Penyedia",
-    "providerQuotaHomeHint": "Status langsung di seluruh akun yang terhubung"
+    "providerQuotaHomeHint": "Status langsung di seluruh akun yang terhubung",
+    "kiloAccountBalance": "Account Balance",
+    "kiloPassBonus": "Available bonus",
+    "kiloPassMeterLabel": "Kilo Pass usage meter",
+    "kiloPassPaid": "Paid",
+    "kiloPassRemaining": "Remaining",
+    "kiloPassRenews": "Renews {count} days",
+    "kiloPassUsageLabel": "This month's usage"
   },
   "modals": {
     "waitingAuth": "Menunggu Otorisasi",

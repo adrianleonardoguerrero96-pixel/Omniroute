@@ -6173,6 +6173,7 @@
       "gitlawb": "Получите API-ключ в панели управления Gitlawb Opengateway.",
       "glm": "Подключите GLM Coding с помощью API-ключа.",
       "glm-cn": "Подключите GLM Coding (Китай) с помощью API-ключа.",
+      "bigmodel": "Создайте API-ключ на https://bigmodel.cn/usercenter/proj-mgmt/apikeys. OmniRoute использует официальный OpenAI-совместимый chat endpoint BigModel.cn.",
       "glmt": "Предустановленный профиль GLM с увеличенным лимитом токенов, включенным режимом рассуждения и более длительным таймаутом.",
       "getgoapi": "Подключите GoAPI с помощью API-ключа.",
       "groq": "__MISSING__:Free plan: per-model caps (200K tokens/day per chat model; see console.groq.com/docs/rate-limits for RPM/RPD) — no payment method on file.",
@@ -6280,7 +6281,7 @@
       "xai": "Подключите xAI (Grok) с помощью API-ключа.",
       "xiaomi-mimo": "Подключите Xiaomi MiMo с помощью API-ключа.",
       "yi": "Получите API-ключ на platform.lingyiwanwu.com",
-      "zai": "API-ключ с https://open.bigmodel.cn/usercenter/apikeys",
+      "zai": "Создайте API-ключ на https://z.ai/manage-apikey/apikey-list.",
       "zenmux": "ZenMux предоставляет совместимую с OpenAI конечную точку генерации ответов чата по адресу /api/v1/chat/completions, а также интерфейсы протоколов Anthropic Messages (/api/anthropic/v1/messages) и Google Gemini (/api/vertex-ai). OmniRoute использует протокол OpenAI.",
       "galadriel": "Подключите Galadriel с помощью API-ключа.",
       "predibase": "Бесплатный пробный баланс $25 (срок действия 30 дней)",
@@ -6466,7 +6467,10 @@
     "clearConnectionCooldownInProgress": "Clearing…",
     "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
     "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
-    "failedClearConnectionCooldown": "Failed to clear cooldown"
+    "failedClearConnectionCooldown": "Failed to clear cooldown",
+    "importFromFileDownloadTemplate": "Download CSV template",
+    "importFromFileMoreErrors": "+{count} more",
+    "importFromFileSchemaHint": "CSV columns are positional: provider, name, apiKey, baseUrl (optional), priority (optional). The provider column must be an existing managed provider id or an already-registered OpenAI/Anthropic-compatible node id — this import does not create new endpoint nodes."
   },
   "settings": {
     "title": "Настройки",
@@ -9680,7 +9684,14 @@
     "updatedShort": "Обновлено",
     "lastRefreshed": "Последнее обновление",
     "providerQuota": "Квота Провайдера",
-    "providerQuotaHomeHint": "Живой статус по подключенным аккаунтам"
+    "providerQuotaHomeHint": "Живой статус по подключенным аккаунтам",
+    "kiloAccountBalance": "Account Balance",
+    "kiloPassBonus": "Available bonus",
+    "kiloPassMeterLabel": "Kilo Pass usage meter",
+    "kiloPassPaid": "Paid",
+    "kiloPassRemaining": "Remaining",
+    "kiloPassRenews": "Renews {count} days",
+    "kiloPassUsageLabel": "This month's usage"
   },
   "modals": {
     "waitingAuth": "Ожидание авторизации",

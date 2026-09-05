@@ -6173,6 +6173,7 @@
       "gitlawb": "Get your API key from Gitlawb Opengateway dashboard.",
       "glm": "Connect GLM Coding with an API key.",
       "glm-cn": "Connect GLM Coding (China) with an API key.",
+      "bigmodel": "Crea una clave de API en https://bigmodel.cn/usercenter/proj-mgmt/apikeys. OmniRoute usa el endpoint oficial de chat compatible con OpenAI de BigModel.cn.",
       "glmt": "Preset GLM profile with higher token budget, thinking enabled, and longer timeout.",
       "getgoapi": "Connect GoAPI with an API key.",
       "groq": "__MISSING__:Free plan: per-model caps (200K tokens/day per chat model; see console.groq.com/docs/rate-limits for RPM/RPD) — no payment method on file.",
@@ -6280,7 +6281,7 @@
       "xai": "Connect xAI (Grok) with an API key.",
       "xiaomi-mimo": "Connect Xiaomi MiMo with an API key.",
       "yi": "Get API key at platform.lingyiwanwu.com",
-      "zai": "API key from https://open.bigmodel.cn/usercenter/apikeys",
+      "zai": "Crea una clave de API en https://z.ai/manage-apikey/apikey-list.",
       "zenmux": "ZenMux exposes an OpenAI-compatible chat completions endpoint at /api/v1/chat/completions, plus Anthropic Messages (/api/anthropic/v1/messages) and Google Gemini (/api/vertex-ai) protocol surfaces. OmniRoute uses the OpenAI protocol.",
       "galadriel": "Connect Galadriel with an API key.",
       "predibase": "$25 free trial credits (30-day validity)",
@@ -6466,7 +6467,10 @@
     "clearConnectionCooldownInProgress": "Clearing…",
     "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
     "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
-    "failedClearConnectionCooldown": "Failed to clear cooldown"
+    "failedClearConnectionCooldown": "Failed to clear cooldown",
+    "importFromFileDownloadTemplate": "Download CSV template",
+    "importFromFileMoreErrors": "+{count} more",
+    "importFromFileSchemaHint": "CSV columns are positional: provider, name, apiKey, baseUrl (optional), priority (optional). The provider column must be an existing managed provider id or an already-registered OpenAI/Anthropic-compatible node id — this import does not create new endpoint nodes."
   },
   "settings": {
     "title": "Configuración",
@@ -9680,7 +9684,14 @@
     "updatedShort": "Updated",
     "lastRefreshed": "Last refreshed",
     "providerQuota": "Provider Quota",
-    "providerQuotaHomeHint": "Live status across connected accounts"
+    "providerQuotaHomeHint": "Live status across connected accounts",
+    "kiloAccountBalance": "Account Balance",
+    "kiloPassBonus": "Available bonus",
+    "kiloPassMeterLabel": "Kilo Pass usage meter",
+    "kiloPassPaid": "Paid",
+    "kiloPassRemaining": "Remaining",
+    "kiloPassRenews": "Renews {count} days",
+    "kiloPassUsageLabel": "This month's usage"
   },
   "modals": {
     "waitingAuth": "Esperando autorización",

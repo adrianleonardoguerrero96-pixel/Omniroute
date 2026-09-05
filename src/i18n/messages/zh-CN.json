@@ -6173,6 +6173,7 @@
       "gitlawb": "从 Gitlawb Opengateway 控制面板获取您的 API 密钥。",
       "glm": "使用 API 密钥连接 GLM Coding。",
       "glm-cn": "使用 API 密钥连接 GLM Coding (China)。",
+      "bigmodel": "智谱开放平台：请在 https://bigmodel.cn/usercenter/proj-mgmt/apikeys 创建 API 密钥。OmniRoute 使用官方兼容 OpenAI 的对话补全端点。",
       "glmt": "预设 GLM 配置文件，具有更高的 Token 预算、启用思考功能以及更长的超时时间。",
       "getgoapi": "使用 API 密钥连接 GoAPI。",
       "groq": "__MISSING__:Free plan: per-model caps (200K tokens/day per chat model; see console.groq.com/docs/rate-limits for RPM/RPD) — no payment method on file.",
@@ -6280,7 +6281,7 @@
       "xai": "使用 API 密钥连接 xAI (Grok)。",
       "xiaomi-mimo": "使用 API 密钥连接 Xiaomi MiMo。",
       "yi": "在 platform.lingyiwanwu.com 获取 API 密钥",
-      "zai": "来自 https://open.bigmodel.cn/usercenter/apikeys 的 API 密钥",
+      "zai": "请在 https://z.ai/manage-apikey/apikey-list 创建 API 密钥。",
       "zenmux": "ZenMux 在 /api/v1/chat/completions 提供了兼容 OpenAI 的 chat completions 端点，以及 Anthropic Messages (/api/anthropic/v1/messages) 和 Google Gemini (/api/vertex-ai) 协议接口。OmniRoute 使用 OpenAI 协议。",
       "galadriel": "使用 API 密钥连接 Galadriel。",
       "predibase": "$25 免费试用额度（30 天有效期）",
@@ -6466,7 +6467,10 @@
     "clearConnectionCooldownInProgress": "Clearing…",
     "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
     "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
-    "failedClearConnectionCooldown": "Failed to clear cooldown"
+    "failedClearConnectionCooldown": "Failed to clear cooldown",
+    "importFromFileDownloadTemplate": "Download CSV template",
+    "importFromFileMoreErrors": "+{count} more",
+    "importFromFileSchemaHint": "CSV columns are positional: provider, name, apiKey, baseUrl (optional), priority (optional). The provider column must be an existing managed provider id or an already-registered OpenAI/Anthropic-compatible node id — this import does not create new endpoint nodes."
   },
   "settings": {
     "title": "设置",
@@ -9680,7 +9684,14 @@
     "updatedShort": "更新于",
     "lastRefreshed": "上次刷新",
     "providerQuota": "提供者配额",
-    "providerQuotaHomeHint": "已连接账户的实时状态"
+    "providerQuotaHomeHint": "已连接账户的实时状态",
+    "kiloAccountBalance": "Account Balance",
+    "kiloPassBonus": "Available bonus",
+    "kiloPassMeterLabel": "Kilo Pass usage meter",
+    "kiloPassPaid": "Paid",
+    "kiloPassRemaining": "Remaining",
+    "kiloPassRenews": "Renews {count} days",
+    "kiloPassUsageLabel": "This month's usage"
   },
   "modals": {
     "waitingAuth": "等待授权",

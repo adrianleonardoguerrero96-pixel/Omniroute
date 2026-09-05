@@ -6173,6 +6173,7 @@
       "gitlawb": "Gitlawb Opengateway ڈیش بورڈ سے اپنی API کی حاصل کریں۔",
       "glm": "GLM Coding کو ایک API کی کے ساتھ منسلک کریں۔",
       "glm-cn": "GLM Coding (China) کو ایک API کی کے ساتھ منسلک کریں۔",
+      "bigmodel": "https://bigmodel.cn/usercenter/proj-mgmt/apikeys پر API کلید بنائیں۔ OmniRoute BigModel.cn کا سرکاری OpenAI-مطابق چیٹ اینڈپوائنٹ استعمال کرتا ہے۔",
       "glmt": "زیادہ ٹوکن بجٹ، تھنکنگ فعال، اور طویل ٹائم آؤٹ کے ساتھ پہلے سے سیٹ کردہ GLM پروفائل۔",
       "getgoapi": "GoAPI کو ایک API کی کے ساتھ منسلک کریں۔",
       "groq": "__MISSING__:Free plan: per-model caps (200K tokens/day per chat model; see console.groq.com/docs/rate-limits for RPM/RPD) — no payment method on file.",
@@ -6280,7 +6281,7 @@
       "xai": "xAI (Grok) کو ایک API کلید کے ساتھ منسلک کریں۔",
       "xiaomi-mimo": "Xiaomi MiMo کو ایک API کلید کے ساتھ منسلک کریں۔",
       "yi": "platform.lingyiwanwu.com پر API کلید حاصل کریں",
-      "zai": "https://open.bigmodel.cn/usercenter/apikeys سے API کلید",
+      "zai": "https://z.ai/manage-apikey/apikey-list پر API کلید بنائیں۔",
       "zenmux": "ZenMux /api/v1/chat/completions پر ایک OpenAI سے مطابقت رکھنے والا چیٹ کمپلیشنز اینڈ پوائنٹ، اور ساتھ ہی Anthropic Messages (/api/anthropic/v1/messages) اور Google Gemini (/api/vertex-ai) پروٹوکول انٹرفیس فراہم کرتا ہے۔ OmniRoute، OpenAI پروٹوکول استعمال کرتا ہے۔",
       "galadriel": "Galadriel کو ایک API کلید کے ساتھ منسلک کریں۔",
       "predibase": "$25 کے مفت ٹرائل کریڈٹس (30 دن کی میعاد)",
@@ -6466,7 +6467,10 @@
     "clearConnectionCooldownInProgress": "Clearing…",
     "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
     "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
-    "failedClearConnectionCooldown": "Failed to clear cooldown"
+    "failedClearConnectionCooldown": "Failed to clear cooldown",
+    "importFromFileDownloadTemplate": "Download CSV template",
+    "importFromFileMoreErrors": "+{count} more",
+    "importFromFileSchemaHint": "CSV columns are positional: provider, name, apiKey, baseUrl (optional), priority (optional). The provider column must be an existing managed provider id or an already-registered OpenAI/Anthropic-compatible node id — this import does not create new endpoint nodes."
   },
   "settings": {
     "title": "Settings",
@@ -9680,7 +9684,14 @@
     "updatedShort": "اپ ڈیٹ شدہ",
     "lastRefreshed": "آخری بار ریفریش کیا گیا",
     "providerQuota": "فراہم کنندہ کا کوٹہ",
-    "providerQuotaHomeHint": "منسلک اکاؤنٹس میں لائیو اسٹیٹس"
+    "providerQuotaHomeHint": "منسلک اکاؤنٹس میں لائیو اسٹیٹس",
+    "kiloAccountBalance": "Account Balance",
+    "kiloPassBonus": "Available bonus",
+    "kiloPassMeterLabel": "Kilo Pass usage meter",
+    "kiloPassPaid": "Paid",
+    "kiloPassRemaining": "Remaining",
+    "kiloPassRenews": "Renews {count} days",
+    "kiloPassUsageLabel": "This month's usage"
   },
   "modals": {
     "waitingAuth": "Waiting for Authorization",

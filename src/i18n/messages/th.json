@@ -6173,6 +6173,7 @@
       "gitlawb": "รับคีย์ API ของคุณจากแดชบอร์ด Gitlawb Opengateway",
       "glm": "เชื่อมต่อ GLM Coding ด้วยคีย์ API",
       "glm-cn": "เชื่อมต่อ GLM Coding (China) ด้วยคีย์ API",
+      "bigmodel": "สร้างคีย์ API ที่ https://bigmodel.cn/usercenter/proj-mgmt/apikeys OmniRoute ใช้เอนด์พอยต์แชทอย่างเป็นทางการที่เข้ากันได้กับ OpenAI ของ BigModel.cn",
       "glmt": "โปรไฟล์ GLM ที่ตั้งค่าไว้ล่วงหน้าพร้อมงบประมาณโทเค็นที่สูงขึ้น เปิดใช้งานการคิด และหมดเวลาการทำงานที่นานขึ้น",
       "getgoapi": "เชื่อมต่อ GoAPI ด้วยคีย์ API",
       "groq": "__MISSING__:Free plan: per-model caps (200K tokens/day per chat model; see console.groq.com/docs/rate-limits for RPM/RPD) — no payment method on file.",
@@ -6280,7 +6281,7 @@
       "xai": "เชื่อมต่อ xAI (Grok) ด้วยคีย์ API",
       "xiaomi-mimo": "เชื่อมต่อ Xiaomi MiMo ด้วยคีย์ API",
       "yi": "รับคีย์ API ได้ที่ platform.lingyiwanwu.com",
-      "zai": "คีย์ API จาก https://open.bigmodel.cn/usercenter/apikeys",
+      "zai": "สร้างคีย์ API ที่ https://z.ai/manage-apikey/apikey-list",
       "zenmux": "ZenMux ให้บริการปลายทาง chat completions ที่เข้ากันได้กับ OpenAI ที่ /api/v1/chat/completions รวมถึงส่วนต่อประสานโปรโตคอล Anthropic Messages (/api/anthropic/v1/messages) และ Google Gemini (/api/vertex-ai) OmniRoute ใช้โปรโตคอล OpenAI",
       "galadriel": "เชื่อมต่อ Galadriel ด้วยคีย์ API",
       "predibase": "เครดิตทดลองใช้ฟรี $25 (มีอายุ 30 วัน)",
@@ -6466,7 +6467,10 @@
     "clearConnectionCooldownInProgress": "Clearing…",
     "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
     "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
-    "failedClearConnectionCooldown": "Failed to clear cooldown"
+    "failedClearConnectionCooldown": "Failed to clear cooldown",
+    "importFromFileDownloadTemplate": "Download CSV template",
+    "importFromFileMoreErrors": "+{count} more",
+    "importFromFileSchemaHint": "CSV columns are positional: provider, name, apiKey, baseUrl (optional), priority (optional). The provider column must be an existing managed provider id or an already-registered OpenAI/Anthropic-compatible node id — this import does not create new endpoint nodes."
   },
   "settings": {
     "title": "การตั้งค่า",
@@ -9680,7 +9684,14 @@
     "updatedShort": "อัปเดตแล้ว",
     "lastRefreshed": "รีเฟรชล่าสุดเมื่อ",
     "providerQuota": "โควตาผู้ให้บริการ",
-    "providerQuotaHomeHint": "สถานะแบบเรียลไทม์ของบัญชีที่เชื่อมต่อทั้งหมด"
+    "providerQuotaHomeHint": "สถานะแบบเรียลไทม์ของบัญชีที่เชื่อมต่อทั้งหมด",
+    "kiloAccountBalance": "Account Balance",
+    "kiloPassBonus": "Available bonus",
+    "kiloPassMeterLabel": "Kilo Pass usage meter",
+    "kiloPassPaid": "Paid",
+    "kiloPassRemaining": "Remaining",
+    "kiloPassRenews": "Renews {count} days",
+    "kiloPassUsageLabel": "This month's usage"
   },
   "modals": {
     "waitingAuth": "รอการอนุญาต",

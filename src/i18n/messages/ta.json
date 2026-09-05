@@ -6173,6 +6173,7 @@
       "gitlawb": "Gitlawb Opengateway டாஷ்போர்டிலிருந்து உங்கள் API விசையைப் பெறவும்.",
       "glm": "GLM Coding ஐ ஒரு API விசையுடன் இணைக்கவும்.",
       "glm-cn": "GLM Coding (China) ஐ ஒரு API விசையுடன் இணைக்கவும்.",
+      "bigmodel": "https://bigmodel.cn/usercenter/proj-mgmt/apikeys இல் API key உருவாக்கவும். OmniRoute BigModel.cn-இன் அதிகாரப்பூர்வ OpenAI-இணக்க chat endpoint-ஐப் பயன்படுத்துகிறது.",
       "glmt": "அதிக டோக்கன் பட்ஜெட், சிந்தனை இயக்கப்பட்டது மற்றும் நீண்ட காலாவதி நேரத்துடன் கூடிய முன்னமைக்கப்பட்ட GLM சுயவிவரம்.",
       "getgoapi": "GoAPI ஐ ஒரு API விசையுடன் இணைக்கவும்.",
       "groq": "__MISSING__:Free plan: per-model caps (200K tokens/day per chat model; see console.groq.com/docs/rate-limits for RPM/RPD) — no payment method on file.",
@@ -6280,7 +6281,7 @@
       "xai": "API key மூலம் xAI (Grok)-ஐ இணைக்கவும்.",
       "xiaomi-mimo": "API key மூலம் Xiaomi MiMo-ஐ இணைக்கவும்.",
       "yi": "platform.lingyiwanwu.com இல் API key-ஐப் பெறவும்",
-      "zai": "https://open.bigmodel.cn/usercenter/apikeys இலிருந்து API key",
+      "zai": "https://z.ai/manage-apikey/apikey-list இல் API key உருவாக்கவும்.",
       "zenmux": "ZenMux ஆனது /api/v1/chat/completions இல் OpenAI-இணக்கமான chat completions endpoint-ஐயும், Anthropic Messages (/api/anthropic/v1/messages) மற்றும் Google Gemini (/api/vertex-ai) protocol surfaces-ஐயும் வழங்குகிறது. OmniRoute ஆனது OpenAI protocol-ஐப் பயன்படுத்துகிறது.",
       "galadriel": "API key மூலம் Galadriel-ஐ இணைக்கவும்.",
       "predibase": "$25 இலவச சோதனை கிரெடிட்கள் (30 நாள் செல்லுபடியாகும்)",
@@ -6466,7 +6467,10 @@
     "clearConnectionCooldownInProgress": "Clearing…",
     "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
     "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
-    "failedClearConnectionCooldown": "Failed to clear cooldown"
+    "failedClearConnectionCooldown": "Failed to clear cooldown",
+    "importFromFileDownloadTemplate": "Download CSV template",
+    "importFromFileMoreErrors": "+{count} more",
+    "importFromFileSchemaHint": "CSV columns are positional: provider, name, apiKey, baseUrl (optional), priority (optional). The provider column must be an existing managed provider id or an already-registered OpenAI/Anthropic-compatible node id — this import does not create new endpoint nodes."
   },
   "settings": {
     "title": "Settings",
@@ -9680,7 +9684,14 @@
     "updatedShort": "புதுப்பிக்கப்பட்டது",
     "lastRefreshed": "கடைசியாகப் புதுப்பிக்கப்பட்டது",
     "providerQuota": "வழங்குநர் ஒதுக்கீடு",
-    "providerQuotaHomeHint": "இணைக்கப்பட்ட கணக்குகளின் நேரலை நிலை"
+    "providerQuotaHomeHint": "இணைக்கப்பட்ட கணக்குகளின் நேரலை நிலை",
+    "kiloAccountBalance": "Account Balance",
+    "kiloPassBonus": "Available bonus",
+    "kiloPassMeterLabel": "Kilo Pass usage meter",
+    "kiloPassPaid": "Paid",
+    "kiloPassRemaining": "Remaining",
+    "kiloPassRenews": "Renews {count} days",
+    "kiloPassUsageLabel": "This month's usage"
   },
   "modals": {
     "waitingAuth": "Waiting for Authorization",

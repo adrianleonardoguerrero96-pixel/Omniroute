@@ -6173,6 +6173,7 @@
       "gitlawb": "Hanki API-avaimesi Gitlawb Opengateway -hallintapaneelista.",
       "glm": "Yhdistä GLM Coding API-avaimella.",
       "glm-cn": "Yhdistä GLM Coding (China) API-avaimella.",
+      "bigmodel": "Luo API-avain osoitteessa https://bigmodel.cn/usercenter/proj-mgmt/apikeys. OmniRoute käyttää BigModel.cn:n virallista OpenAI-yhteensopivaa chat-päätepistettä.",
       "glmt": "Esiasetettu GLM-profiili suuremmalla token-budjetilla, ajattelu käytössä ja pidemmällä aikakatkaisulla.",
       "getgoapi": "Yhdistä GoAPI API-avaimella.",
       "groq": "__MISSING__:Free plan: per-model caps (200K tokens/day per chat model; see console.groq.com/docs/rate-limits for RPM/RPD) — no payment method on file.",
@@ -6280,7 +6281,7 @@
       "xai": "Yhdistä xAI (Grok) API-avaimella.",
       "xiaomi-mimo": "Yhdistä Xiaomi MiMo API-avaimella.",
       "yi": "Hanki API-avain osoitteesta platform.lingyiwanwu.com",
-      "zai": "API-avain osoitteesta https://open.bigmodel.cn/usercenter/apikeys",
+      "zai": "Luo API-avain osoitteessa https://z.ai/manage-apikey/apikey-list.",
       "zenmux": "ZenMux tarjoaa OpenAI-yhteensopivan chat completions -päätepisteen osoitteessa /api/v1/chat/completions sekä Anthropic Messages- (/api/anthropic/v1/messages) ja Google Gemini (/api/vertex-ai) -protokollapinnat. OmniRoute käyttää OpenAI-protokollaa.",
       "galadriel": "Yhdistä Galadriel API-avaimella.",
       "predibase": "$25 ilmaista kokeilusaldoa (voimassa 30 päivää)",
@@ -6466,7 +6467,10 @@
     "clearConnectionCooldownInProgress": "Clearing…",
     "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
     "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
-    "failedClearConnectionCooldown": "Failed to clear cooldown"
+    "failedClearConnectionCooldown": "Failed to clear cooldown",
+    "importFromFileDownloadTemplate": "Download CSV template",
+    "importFromFileMoreErrors": "+{count} more",
+    "importFromFileSchemaHint": "CSV columns are positional: provider, name, apiKey, baseUrl (optional), priority (optional). The provider column must be an existing managed provider id or an already-registered OpenAI/Anthropic-compatible node id — this import does not create new endpoint nodes."
   },
   "settings": {
     "title": "Asetukset",
@@ -9680,7 +9684,14 @@
     "updatedShort": "Päivitetty",
     "lastRefreshed": "Viimeksi päivitetty",
     "providerQuota": "Tarjoajan kiintiö",
-    "providerQuotaHomeHint": "Reaaliaikainen tila yhdistetyissä tileissä"
+    "providerQuotaHomeHint": "Reaaliaikainen tila yhdistetyissä tileissä",
+    "kiloAccountBalance": "Account Balance",
+    "kiloPassBonus": "Available bonus",
+    "kiloPassMeterLabel": "Kilo Pass usage meter",
+    "kiloPassPaid": "Paid",
+    "kiloPassRemaining": "Remaining",
+    "kiloPassRenews": "Renews {count} days",
+    "kiloPassUsageLabel": "This month's usage"
   },
   "modals": {
     "waitingAuth": "Odotetaan valtuutusta",

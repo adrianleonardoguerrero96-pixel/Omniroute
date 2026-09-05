@@ -6173,6 +6173,7 @@
       "gitlawb": "API anahtarınızı Gitlawb Opengateway panelinden alın.",
       "glm": "GLM Coding'i bir API anahtarı ile bağlayın.",
       "glm-cn": "GLM Coding'i (Çin) bir API anahtarı ile bağlayın.",
+      "bigmodel": "https://bigmodel.cn/usercenter/proj-mgmt/apikeys adresinde bir API anahtarı oluşturun. OmniRoute, BigModel.cn'in resmi OpenAI uyumlu sohbet uç noktasını kullanır.",
       "glmt": "Daha yüksek token bütçesi, düşünme etkinleştirilmiş ve daha uzun zaman aşımına sahip önceden ayarlanmış GLM profili.",
       "getgoapi": "GoAPI'yi bir API anahtarı ile bağlayın.",
       "groq": "__MISSING__:Free plan: per-model caps (200K tokens/day per chat model; see console.groq.com/docs/rate-limits for RPM/RPD) — no payment method on file.",
@@ -6280,7 +6281,7 @@
       "xai": "xAI (Grok) uygulamasını bir API anahtarı ile bağlayın.",
       "xiaomi-mimo": "Xiaomi MiMo'yu bir API anahtarı ile bağlayın.",
       "yi": "platform.lingyiwanwu.com adresinden API anahtarı alın",
-      "zai": "https://open.bigmodel.cn/usercenter/apikeys adresinden API anahtarı",
+      "zai": "https://z.ai/manage-apikey/apikey-list adresinde bir API anahtarı oluşturun.",
       "zenmux": "ZenMux, /api/v1/chat/completions adresinde OpenAI uyumlu bir sohbet tamamlama uç noktası, ayrıca Anthropic Messages (/api/anthropic/v1/messages) ve Google Gemini (/api/vertex-ai) protokol arayüzleri sunar. OmniRoute, OpenAI protokolünü kullanır.",
       "galadriel": "Galadriel'i bir API anahtarı ile bağlayın.",
       "predibase": "25$ ücretsiz deneme kredisi (30 gün geçerli)",
@@ -6466,7 +6467,10 @@
     "clearConnectionCooldownInProgress": "Clearing…",
     "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
     "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
-    "failedClearConnectionCooldown": "Failed to clear cooldown"
+    "failedClearConnectionCooldown": "Failed to clear cooldown",
+    "importFromFileDownloadTemplate": "Download CSV template",
+    "importFromFileMoreErrors": "+{count} more",
+    "importFromFileSchemaHint": "CSV columns are positional: provider, name, apiKey, baseUrl (optional), priority (optional). The provider column must be an existing managed provider id or an already-registered OpenAI/Anthropic-compatible node id — this import does not create new endpoint nodes."
   },
   "settings": {
     "title": "Ayarlar",
@@ -9680,7 +9684,14 @@
     "updatedShort": "Güncellendi",
     "lastRefreshed": "Son yenileme",
     "providerQuota": "Sağlayıcı Kotası",
-    "providerQuotaHomeHint": "Bağlı hesaplar genelinde canlı durum"
+    "providerQuotaHomeHint": "Bağlı hesaplar genelinde canlı durum",
+    "kiloAccountBalance": "Account Balance",
+    "kiloPassBonus": "Available bonus",
+    "kiloPassMeterLabel": "Kilo Pass usage meter",
+    "kiloPassPaid": "Paid",
+    "kiloPassRemaining": "Remaining",
+    "kiloPassRenews": "Renews {count} days",
+    "kiloPassUsageLabel": "This month's usage"
   },
   "modals": {
     "waitingAuth": "Yetkilendirme bekleniyor",
