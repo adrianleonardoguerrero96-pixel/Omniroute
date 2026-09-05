@@ -770,11 +770,16 @@ function CombosPageContent() {
   // both passes and correct it client-only, after hydration, in an effect.
   const [showUsageGuide, setShowUsageGuide] = useState(true);
   useEffect(() => {
-    try {
-      setShowUsageGuide(globalThis.localStorage?.getItem(COMBO_USAGE_GUIDE_STORAGE_KEY) !== "1");
-    } catch {
-      // Ignore storage access errors (privacy mode / restricted environments)
-    }
+    // Post-hydration correction must not be a synchronous setState inside the
+    // effect body (react-hooks/set-state-in-effect fires on the sync path);
+    // defer one microtask so the correction happens after the effect settles.
+    queueMicrotask(() => {
+      try {
+        setShowUsageGuide(globalThis.localStorage?.getItem(COMBO_USAGE_GUIDE_STORAGE_KEY) !== "1");
+      } catch {
+        // Ignore storage access errors (privacy mode / restricted environments)
+      }
+    });
   }, []);
   const [recentlyCreatedCombo, setRecentlyCreatedCombo] = useState("");
   const [creatingKimiPreset, setCreatingKimiPreset] = useState(false);
