@@ -1,0 +1,1 @@
+- **fix(orchestration):** Keep the first `staleSince` a failing agent source was stamped with while it keeps failing, so the source node reports when it actually went stale instead of the last poll and the canvas snapshot stops re-minting every tick (#12544 — thanks @pacocartones)
