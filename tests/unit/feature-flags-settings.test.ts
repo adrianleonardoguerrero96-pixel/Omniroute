@@ -39,7 +39,8 @@ const {
 // OMNIROUTE_DISABLE_THINKING_LEVEL_VARIANTS bumped it from 53 to 54;
 // the dead ONEPROXY_ENABLED (readerless since the 1proxy purge, #12091)
 // brought it back to 53. UNIVERSAL_CONTEXT_HANDOFF_ENABLED bumped it to 54.
-const EXPECTED_FEATURE_FLAG_COUNT = 54;
+// REASONING_REPLAY_ENABLED bumped it to 55.
+const EXPECTED_FEATURE_FLAG_COUNT = 55;
 
 // ──────────────────────────────────────────────────────
 // Test group 1 — Flag definitions registry
@@ -211,6 +212,18 @@ describe("featureFlagDefinitions", () => {
     assert.strictEqual(def.type, "boolean");
     assert.strictEqual(def.defaultValue, "true");
     assert.strictEqual(def.requiresRestart, false);
+  });
+
+  it("defines reasoning replay as a runtime boolean flag enabled by default", () => {
+    // Default ON: the cache already shipped on. Wrapping it in a flag must not
+    // silently stop storing/replaying reasoning for existing operators.
+    const def = FEATURE_FLAG_DEFINITIONS.find((d) => d.key === "REASONING_REPLAY_ENABLED");
+    assert.ok(def, "REASONING_REPLAY_ENABLED should exist");
+    assert.strictEqual(def.category, "runtime");
+    assert.strictEqual(def.type, "boolean");
+    assert.strictEqual(def.defaultValue, "true");
+    assert.strictEqual(def.requiresRestart, false);
+    assert.strictEqual(def.descriptionI18nKey, "featureFlagReasoningReplayEnabledDescription");
   });
 
   it("defines CLI profile auto-sync flags as CLI booleans disabled by default", () => {
