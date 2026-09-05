@@ -25,12 +25,14 @@ import {
   type AutoCategory,
   type AutoTier,
 } from "./suffixComposition";
-import { classifyTier } from "../tierResolver";
+import { classifyTier, resolveExplicitTierOverride } from "../tierResolver";
 import type { AutoVariant } from "./autoPrefix";
 import { buildFamilyCandidateFilter, type ModelFamily } from "./modelFamily";
 import { getHiddenModelsByProvider } from "@/models";
 import { getSyncedAvailableModelsByConnection, getCustomModels } from "@/lib/db/models";
+import { isProviderModelDiscoveryFresh } from "@/lib/providerModels/discoveryFreshness";
 import { filterPaidOnlyCandidates } from "./paidModelFilter";
+import { discoveredFreeConnectionScope } from "./freeCandidateEconomics";
 import { filterModelExposureCandidates } from "./modelExposureFilter";
 import {
   filterSubscriptionOnlyCandidates,
@@ -102,6 +104,8 @@ export interface VirtualAutoComboCandidate {
   connectionId: string | null;
   /** Credentialed accounts that are eligible to serve this provider/model pair. */
   allowedConnectionIds?: string[];
+  /** Subset whose synced discovery explicitly reported this model free. */
+  freeConnectionIds?: string[];
   model: string;
   modelStr: string; // e.g., 'openai/gpt-4o'
   costPer1MTokens: number; // from providerRegistry
@@ -716,6 +720,7 @@ export async function prepareVirtualAutoComboInputs(
         provider: providerId,
         connectionId: null,
         allowedConnectionIds,
+        ...discoveredFreeConnectionScope(allowedConnectionIds, syncedByConnection, modelId),
         model: modelId,
         modelStr: `${providerId}/${modelId}`,
         costPer1MTokens: 0, // Not used in virtual auto-combo (LKGP uses session stickiness)
@@ -747,9 +752,12 @@ export async function prepareVirtualAutoComboInputs(
     const resilienceFilteredPool = filterResilienceBlockedCandidates(pool, connectionsById, skip);
     if (resilienceFilteredPool !== pool) pool = resilienceFilteredPool;
 
-    // #6512 (follow-up to #6328/#6495): when the operator opts into `hidePaidModels`,
-    // exclude paid-only backends from EVERY `auto/*` candidate pool.
-    const paidFilteredPool = filterPaidOnlyCandidates(pool, settings.hidePaidModels === true);
+    // #6512: when hidePaidModels is on, exclude paid-only backends from every auto/* pool.
+    const paidFilteredPool = filterPaidOnlyCandidates(
+      pool,
+      settings.hidePaidModels === true,
+      resolveExplicitTierOverride
+    );
     if (paidFilteredPool !== pool) pool = paidFilteredPool;
 
     // #11481: mandatory mirror of the /v1/models exposure allow/deny list —
@@ -757,34 +765,23 @@ export async function prepareVirtualAutoComboInputs(
     const exposureFilteredPool = filterModelExposureCandidates(pool, settings);
     if (exposureFilteredPool !== pool) pool = exposureFilteredPool;
 
-    // STRICT_ZERO_COST: opt-in, off by default (`settings.freeAccessPolicy !== "strict"`
-    // leaves `pool` byte-identical, same contract as `hidePaidModels`). See
-    // `strictZeroCostFilter.ts` for why this is stricter than `hidePaidModels` alone —
-    // including the connection-safety invariant it enforces per-connection, not just
-    // per-candidate: `resolveFreeAccessState` here is a raw pass-through of the real
-    // per-(provider,connectionId) resolver; the filter itself decides which connection(s)
-    // on each candidate to check and rewrites `allowedConnectionIds` to the SAFE subset.
+    // STRICT_ZERO_COST is opt-in, connection-scoped, and narrows to proven-safe accounts.
     const strictZeroCostThresholds = {
-      // 1 percentage point of headroom, not 0: `freeAccessQuota.ts` reports
-      // remaining allowance as a percentage, and a raw ">0" comparison would
-      // let a reading of e.g. 0.3% (rounding noise, not real headroom) pass.
+      // Require 1 percentage point of real headroom, not rounding noise above zero.
       minRemainingAllowance: 1,
       maxStateAgeMs: toNumber(settings.autoRefreshProviderQuotaInterval, 180) * 1000,
+      resolveOperatorTier: resolveExplicitTierOverride,
+      isDiscoveryEvidenceFresh: isProviderModelDiscoveryFresh,
     };
     const strictZeroCostOn = settings.freeAccessPolicy === "strict";
     const strictFilteredPool = filterStrictZeroCostCandidates(pool, {
-      // The read-only candidate inspector (#9133) must be able to see what the
-      // guard would exclude, and why — the same opt-out the resilience filter
-      // already honours through `skip`. Dispatch (`skip === false`) is unaffected.
+      // Inspector skips enforcement but still reports the same exclusion verdicts.
       enabled: strictZeroCostOn && !skip,
       resolveFreeAccessState,
       ...strictZeroCostThresholds,
     });
     if (strictFilteredPool !== pool) pool = strictFilteredPool;
 
-    // Annotate here rather than in the handler: this is where the thresholds and
-    // `resolveFreeAccessState` already live. Doing it downstream would mean a second
-    // copy of both, with nothing to keep them in agreement.
     if (strictZeroCostOn && skip) {
       pool = pool.map((candidate) => {
         const verdict = classifyStrictZeroCostCandidate(
@@ -982,7 +979,10 @@ export async function createVirtualAutoComboFromPrepared(
       ? `auto/${spec.family}`
       : `auto/${spec?.category ?? ""}${spec?.tier ? `:${spec.tier}` : ""}`;
     if (narrowed.length > 0) {
-      effectivePool = narrowed;
+      effectivePool =
+        spec?.tier === "free"
+          ? filterPaidOnlyCandidates(narrowed, true, resolveExplicitTierOverride)
+          : narrowed;
     } else if (
       !spec?.family &&
       (process.env.OMNIROUTE_AUTO_FREE_FALLBACK_TO_FULL_POOL === "true" ||

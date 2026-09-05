@@ -125,6 +125,13 @@ describe("TierResolver", () => {
       expect(result.reason.includes("override")).toBe(true);
     });
 
+    it("lets an explicit non-free override beat default free-provider classification", () => {
+      setTierConfig({ providerOverrides: [{ provider: "groq", tier: "premium" }] });
+      const result = classifyTier("groq", "openai/gpt-oss-120b");
+      expect(result.tier).toBe(PROVIDER_TIER.PREMIUM);
+      expect(result.hasFreeTier).toBe(false);
+    });
+
     it("respects model-level glob pattern override", () => {
       setTierConfig({
         modelOverrides: [{ provider: "openai", modelPattern: "gpt-4o-mini*", tier: "cheap" }],

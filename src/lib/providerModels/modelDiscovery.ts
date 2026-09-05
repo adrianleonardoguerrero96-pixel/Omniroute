@@ -5,6 +5,8 @@ import {
   type SyncedAvailableModel,
 } from "@/lib/db/models";
 import { CANONICAL_EFFORT_VALUES } from "@/shared/reasoning/effortStandardization";
+import { isFreeModel } from "@/shared/utils/freeModels";
+import { markProviderModelDiscoveryFresh } from "./discoveryFreshness";
 import { isObsoleteKiroModelAlias } from "@omniroute/open-sse/services/kiroModels.ts";
 import { filterSelectableModels } from "@omniroute/open-sse/services/modelLifecycle.ts";
 
@@ -328,6 +330,28 @@ export function normalizeDiscoveredModels(
     // models reached the catalog with no vision flag and vision-capable models
     // (which work at request time) showed up as non-vision after import.
     const supportsVision = detectVisionInput(record);
+    const pricing = asRecord(record.pricing);
+    const promptPrice =
+      typeof pricing.prompt === "string" || typeof pricing.prompt === "number"
+        ? pricing.prompt
+        : undefined;
+    const completionPrice =
+      typeof pricing.completion === "string" || typeof pricing.completion === "number"
+        ? pricing.completion
+        : undefined;
+    // Persist only evidence present in THIS discovery payload. Passing an empty
+    // provider intentionally disables provider/catalog membership inside
+    // isFreeModel while retaining its explicit isFree / :free / zero-price rules.
+    // Otherwise a stale shipped catalog row could masquerade as connection-scoped
+    // live economics and populate freeConnectionIds later in virtualFactory.
+    const isFree =
+      record._omnirouteDiscoveryFreeEvidence === false
+        ? false
+        : isFreeModel("", {
+            id,
+            isFree: record.isFree === true,
+            pricing: { prompt: promptPrice, completion: completionPrice },
+          });
 
     deduped.set(id, {
       id,
@@ -356,6 +380,7 @@ export function normalizeDiscoveredModels(
       ...(record.alwaysThinking === true ? { alwaysThinking: true } : {}),
       ...(typeof record.supportsTools === "boolean" ? { supportsTools: record.supportsTools } : {}),
       ...(typeof record.supportsVideo === "boolean" ? { supportsVideo: record.supportsVideo } : {}),
+      ...(isFree ? { isFree: true } : {}),
       ...(supportsVision ? { supportsVision: true } : {}),
     });
   }
@@ -376,7 +401,8 @@ export async function getCachedDiscoveredModels(
 export async function persistDiscoveredModels(
   providerId: string,
   connectionId: string,
-  models: unknown
+  models: unknown,
+  markFresh = true
 ): Promise<SyncedAvailableModel[]> {
   // #11088 (option 1): the synced store is endpoint-agnostic — images/embeddings
   // models must persist so per-connection endpoint routing (#11088) and the
@@ -387,5 +413,6 @@ export async function persistDiscoveredModels(
     normalizeDiscoveredModels(models, providerId)
   );
   await replaceSyncedAvailableModelsForConnection(providerId, connectionId, normalized);
+  if (markFresh) markProviderModelDiscoveryFresh(providerId, connectionId);
   return normalized;
 }

@@ -46,3 +46,29 @@ test("hidePaidModels ON preserves extra candidate fields on kept entries", () =>
   const result = filterPaidOnlyCandidates([enriched, PAID], true);
   assert.deepEqual(result, [enriched], "generic <T> filter must not strip candidate fields");
 });
+
+test("hidePaidModels honors an explicit operator free-tier override", () => {
+  const wandb = { provider: "wandb", model: "openai/gpt-oss-120b" };
+  assert.deepEqual(
+    filterPaidOnlyCandidates([wandb, PAID], true, (provider) =>
+      provider === "wandb" ? "free" : undefined
+    ),
+    [wandb]
+  );
+});
+
+test("hidePaidModels lets an explicit non-free override beat catalog free inference", () => {
+  assert.deepEqual(filterPaidOnlyCandidates([FREE], true, () => "premium"), []);
+});
+
+test("hidePaidModels narrows a discovered-free model to the connections that reported it free", () => {
+  const candidate = {
+    provider: "example-provider",
+    model: "model-a",
+    allowedConnectionIds: ["free-account", "paid-account"],
+    freeConnectionIds: ["free-account"],
+  };
+  assert.deepEqual(filterPaidOnlyCandidates([candidate], true), [
+    { ...candidate, allowedConnectionIds: ["free-account"] },
+  ]);
+});

@@ -26,6 +26,11 @@ import { shouldUseLiveAlibabaFreeModelDiscovery } from "@omniroute/open-sse/serv
 import { isDashscopeTextModelId } from "@omniroute/open-sse/services/dashscopeTextModels.ts";
 import { extractZaiToken } from "@omniroute/open-sse/services/zaiWebCredentials.ts";
 import { normalizeOpenAiLikeModelsResponse } from "./normalizers";
+import {
+  hasNousRecommendationPayloadShape,
+  parseNousRecommendedModels,
+  parsePerplexitySonarModels,
+} from "./recommendationCatalog";
 
 const QWEN_CLOUD_TEXT_MODEL_IDS = new Set(QWEN_CLOUD_TEXT_MODELS.map((model) => model.id));
 const ALIBABA_MODEL_STUDIO_MODEL_IDS = new Set(
@@ -88,21 +93,6 @@ export function parseQwenCloudTextModels(data: any): any[] {
   return parseCuratedDashscopeModels(data, QWEN_CLOUD_TEXT_MODELS, QWEN_CLOUD_TEXT_MODEL_IDS);
 }
 
-// Perplexity's /v1/models lists the Agent API catalog (vendor-prefixed ids like
-// "anthropic/claude-fable-5"), but chat requests always go to the classic
-// /chat/completions endpoint, which only accepts the Sonar family. Filter
-// discovery to Sonar-family ids so agent-style ids never surface as routable
-// chat models (#11060). Bounded pattern — no ReDoS-prone quantifiers.
-export function parsePerplexitySonarModels(data: any): any[] {
-  const models = Array.isArray(data?.data)
-    ? data.data
-    : Array.isArray(data?.models)
-      ? data.models
-      : [];
-  return models.filter(
-    (model: any) => typeof model?.id === "string" && /^sonar(-|$)/.test(model.id)
-  );
-}
 type ProviderModelsHeaderContext = {
   authType?: string;
   providerSpecificData?: unknown;
@@ -121,6 +111,7 @@ export type ProviderModelsConfigEntry = {
     token: string,
     connection?: ProviderModelsHeaderContext
   ) => Record<string, string>;
+  validateResponse?: (data: unknown) => boolean;
   parseResponse: (data: any) => any;
 };
 
@@ -462,6 +453,13 @@ export const PROVIDER_MODELS_CONFIG: Record<string, ProviderModelsConfigEntry> =
       });
     },
     parseResponse: parseGrokBuildModels,
+  },
+  "nous-research": {
+    url: "https://portal.nousresearch.com/api/nous/recommended-models",
+    method: "GET",
+    headers: { Accept: "application/json" },
+    validateResponse: hasNousRecommendationPayloadShape,
+    parseResponse: parseNousRecommendedModels,
   },
   openrouter: {
     url: "https://openrouter.ai/api/v1/models",

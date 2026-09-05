@@ -16,6 +16,7 @@ import { test } from "vitest";
 import assert from "node:assert/strict";
 
 import {
+  classifyStrictZeroCostCandidate,
   evaluateCandidateConnections,
   filterStrictZeroCostCandidates,
   filterTosAvoidCandidates,
@@ -63,6 +64,11 @@ const QUOTA_UNGUARANTEED = {
 const UNKNOWN_MODEL = {
   provider: "groq",
   model: "definitely-not-cataloged",
+  connectionId: REAL_CONN,
+};
+const NOUS_DYNAMIC_FREE = {
+  provider: "nous-research",
+  model: "stepfun/step-3.7-flash:free",
   connectionId: REAL_CONN,
 };
 // A provider with no free models documented anywhere (mirrors paid-model-filter-6512's own PAID fixture).
@@ -116,6 +122,46 @@ test("model absent from the free catalog is excluded even under a known provider
   assert.deepEqual(
     evaluateCandidateConnections(UNKNOWN_MODEL, undefined, () => undefined, BASE_OPTIONS),
     []
+  );
+});
+
+test("dynamic Nous Portal :free model passes strict mode without a stale catalog row", () => {
+  assert.deepEqual(
+    evaluateCandidateConnections(NOUS_DYNAMIC_FREE, undefined, () => undefined, BASE_OPTIONS),
+    [REAL_CONN]
+  );
+});
+
+test("live discovered-free evidence narrows strict mode to the proven connection", () => {
+  const candidate = {
+    provider: "example-provider",
+    model: "model-a",
+    connectionId: null,
+    allowedConnectionIds: ["free-account", "paid-account"],
+    freeConnectionIds: ["free-account"],
+  };
+  assert.deepEqual(
+    evaluateCandidateConnections(candidate, undefined, () => undefined, {
+      ...BASE_OPTIONS,
+      isDiscoveryEvidenceFresh: (_provider, connectionId) => connectionId === "free-account",
+    }),
+    ["free-account"]
+  );
+});
+
+test("stale discovered-free evidence remains UNKNOWN in strict mode", () => {
+  const candidate = {
+    provider: "example-provider",
+    model: "model-a",
+    connectionId: REAL_CONN,
+    freeConnectionIds: [REAL_CONN],
+  };
+  assert.deepEqual(
+    classifyStrictZeroCostCandidate(candidate, undefined, () => undefined, {
+      ...BASE_OPTIONS,
+      isDiscoveryEvidenceFresh: () => false,
+    }),
+    { outcome: "state-unknown" }
   );
 });
 
@@ -232,6 +278,27 @@ test("freeAccessPolicy off (default) returns the pool UNCHANGED (identity, regre
     ...BASE_OPTIONS,
   });
   assert.equal(result, pool, "must return the exact same array reference when opt-in is off");
+});
+
+test("strict pool filter honors an explicit operator free declaration", () => {
+  const wandb = { provider: "wandb", model: "openai/gpt-oss-120b", connectionId: REAL_CONN };
+  const result = filterStrictZeroCostCandidates([wandb, PAID], {
+    enabled: true,
+    resolveFreeAccessState: () => undefined,
+    resolveOperatorTier: (provider) => (provider === "wandb" ? "free" : undefined),
+    ...BASE_OPTIONS,
+  });
+  assert.deepEqual(result, [wandb]);
+});
+
+test("strict mode lets an explicit non-free override beat a Nous :free variant", () => {
+  const result = filterStrictZeroCostCandidates([NOUS_DYNAMIC_FREE], {
+    enabled: true,
+    resolveFreeAccessState: () => undefined,
+    resolveOperatorTier: () => "premium",
+    ...BASE_OPTIONS,
+  });
+  assert.deepEqual(result, []);
 });
 
 test("strict pool filter keeps only keyless(no-auth) + guaranteed-quota-SAFE candidates", () => {

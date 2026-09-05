@@ -27,6 +27,10 @@ test("isFreeModel: catalog membership works when called with the provider alias"
   assert.equal(isFreeModel("ollamacloud", { id: "deepseek-v4-pro" }), true);
 });
 
+test("isFreeModel: provider-declared isFree metadata is authoritative", () => {
+  assert.equal(isFreeModel("example-provider", { id: "rotating-model", isFree: true }), true);
+});
+
 test("isFreeModel: model id ending in :free is free", () => {
   assert.equal(isFreeModel("openrouter", { id: "deepseek/deepseek-r1:free" }), true);
 });
