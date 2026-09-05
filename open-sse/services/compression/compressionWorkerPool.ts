@@ -85,7 +85,7 @@ function unchanged(body: Record<string, unknown>): CompressionResult {
 
 /** Sanitized, single-line error text for fail-open log details. */
 function errorText(error: unknown): string {
-  return sanitizeErrorMessage(error instanceof Error ? error.message : String(error));
+  return sanitizeErrorMessage(error instanceof Error ? error.message : error);
 }
 
 /**

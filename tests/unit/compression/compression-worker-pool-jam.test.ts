@@ -10,7 +10,12 @@ import {
   __resetCompressionFailOpenNotifierForTests,
   notifyCompressionFailOpen,
 } from "../../../open-sse/services/compression/failOpenNotifier.ts";
-import { llmlinguaWorkerSpecifier } from "../../../open-sse/services/compression/engines/llmlingua/worker.ts";
+import {
+  __resetLlmlinguaWorkerForTests,
+  __setLlmlinguaWorkerHarnessForTests,
+  llmlinguaWorkerSpecifier,
+  workerBackend,
+} from "../../../open-sse/services/compression/engines/llmlingua/worker.ts";
 
 /**
  * Regression guards for insoln/OmniRoute#2: a synchronous throw from spawn()
@@ -182,6 +187,29 @@ describe("CompressionWorkerPool spawn-failure queue drain", () => {
       await withTimeout(pool.run(body, "stacked"), 5000, "first job never resolved");
       // A second wave must not hang waiting for a worker that can never spawn.
       const result = await withTimeout(pool.run(body, "stacked"), 5000, "post-break job hung");
+      assert.deepEqual(result, { body, compressed: false, stats: null });
+    } finally {
+      await pool.close();
+    }
+  });
+
+  it("fails open even when a non-Error throwable cannot be stringified", async () => {
+    const hostile = {
+      toString(): string {
+        throw new Error("hostile toString");
+      },
+      valueOf(): string {
+        throw new Error("hostile valueOf");
+      },
+    };
+    const pool = new CompressionWorkerPool({
+      size: 1,
+      workerFactory: () => {
+        throw hostile;
+      },
+    });
+    try {
+      const result = await withTimeout(pool.run(body, "stacked"), 5000, "hostile error hung");
       assert.deepEqual(result, { body, compressed: false, stats: null });
     } finally {
       await pool.close();
@@ -439,6 +467,76 @@ describe("llmlingua worker spawn specifier", () => {
     assert.ok(specifier instanceof URL, "Worker entry must be a URL object, not a string");
     assert.equal(specifier.protocol, "file:");
     assert.equal(specifier.pathname, "/app/onnxWorker.js");
+  });
+});
+
+describe("llmlingua worker fail-open catch paths", () => {
+  /** Restore the real factory + dep gate after harness injection. */
+  function restoreHarness(): void {
+    __setLlmlinguaWorkerHarnessForTests({ factory: null, depsAvailable: null });
+    __resetLlmlinguaWorkerForTests();
+    __resetCompressionFailOpenNotifierForTests();
+  }
+
+  it("fails open every queued text with a rate-limited warn when spawn throws", async () => {
+    let spawns = 0;
+    __setLlmlinguaWorkerHarnessForTests({
+      depsAvailable: true,
+      factory: () => {
+        spawns++;
+        throw new Error("simulated MODULE_NOT_FOUND");
+      },
+    });
+    const warn = captureWarn();
+    try {
+      const texts = ["first prose", "second prose", "third prose"];
+      const results = await Promise.all(texts.map((t) => workerBackend(t, {})));
+      for (const [i, out] of results.entries()) {
+        assert.equal(out, texts[i], "every queued item must fail open with its original text");
+      }
+      const spawnWarnings = warn.lines.filter((l) => l.includes("llmlingua worker spawn failed"));
+      assert.equal(spawnWarnings.length, 1, "spawn failure must warn (rate-limited to one)");
+      assert.match(spawnWarnings[0] ?? "", /simulated MODULE_NOT_FOUND/);
+      assert.ok(spawns >= 1, "the injected throwing factory must have been exercised");
+    } finally {
+      warn.restore();
+      restoreHarness();
+    }
+  });
+
+  it("fails open and respawns when postMessage throws", async () => {
+    let spawns = 0;
+    const flaky = fakeWorker();
+    flaky.postMessage = (() => {
+      throw new Error("DataCloneError: could not clone");
+    }) as Worker["postMessage"];
+    const healthy = fakeWorker();
+    __setLlmlinguaWorkerHarnessForTests({
+      depsAvailable: true,
+      factory: () => {
+        spawns++;
+        return spawns === 1 ? flaky : healthy;
+      },
+    });
+    const warn = captureWarn();
+    try {
+      const first = await workerBackend("flaky prose", {});
+      assert.equal(first, "flaky prose", "postMessage failure must return the original text");
+      const postWarnings = warn.lines.filter((l) => l.includes("postMessage failed"));
+      assert.equal(postWarnings.length, 1, "postMessage failure must warn (rate-limited to one)");
+
+      // The next call must RESPAWN (postMessage failure nulls the worker), not hang.
+      const second = workerBackend("retry prose", {});
+      const wireJob = healthy.messages[0] as { id: number };
+      assert.ok(wireJob, "the respawned worker must receive the retried call");
+      assert.equal((wireJob as { text?: string }).text, "retry prose");
+      healthy.emit("message", { id: wireJob.id, ok: true, text: "compressed" });
+      assert.equal(await second, "compressed");
+      assert.equal(spawns, 2, "postMessage failure must respawn the worker on the next call");
+    } finally {
+      warn.restore();
+      restoreHarness();
+    }
   });
 });
 
