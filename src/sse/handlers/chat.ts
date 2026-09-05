@@ -175,7 +175,10 @@ import { registerBailianCodingPlanQuotaFetcher } from "@omniroute/open-sse/servi
 import { registerQwenTokenPlanQuotaFetcher } from "@omniroute/open-sse/services/qwenTokenPlanQuotaFetcher.ts";
 import { registerCrofUsageFetcher } from "@omniroute/open-sse/services/crofUsageFetcher.ts";
 import { registerDeepseekQuotaFetcher } from "@omniroute/open-sse/services/deepseekQuotaFetcher.ts";
-import { registerMoonshotQuotaFetcher, registerMoonshotFetchersForNodes } from "@omniroute/open-sse/services/moonshotQuotaFetcher.ts";
+import {
+  registerMoonshotQuotaFetcher,
+  registerMoonshotFetchersForNodes,
+} from "@omniroute/open-sse/services/moonshotQuotaFetcher.ts";
 import { registerOpenrouterQuotaFetcher } from "@omniroute/open-sse/services/openrouterQuotaFetcher.ts";
 import { registerOpencodeQuotaFetcher } from "@omniroute/open-sse/services/opencodeQuotaFetcher.ts";
 import { registerGrokWebQuotaFetcher } from "@omniroute/open-sse/services/grokQuotaFetcher.ts";
@@ -232,7 +235,7 @@ void import("@/lib/db/providers")
         id: typeof node.id === "string" ? node.id : null,
         prefix: typeof node.prefix === "string" ? node.prefix : null,
         baseUrl: typeof node.baseUrl === "string" ? node.baseUrl : null,
-      })),
+      }))
     );
   })
   .catch((error) => {
@@ -469,6 +472,16 @@ async function handleChatImplementation(
   if (Array.isArray(msgBody.messages) && msgBody.messages.length === 0) {
     log.warn("CHAT", "Rejecting request with empty messages array");
     return errorResponse(HTTP_STATUS.BAD_REQUEST, "messages: at least one message is required");
+  }
+  // Reject non-object entries before they reach code that reads `msg.role` /
+  // `msg.content` off them (crash-then-500 in translators — #12643). The
+  // route schema accepts `z.array(z.unknown())`, so `[null]` gets this far.
+  if (
+    Array.isArray(msgBody.messages) &&
+    msgBody.messages.some((m) => m === null || typeof m !== "object" || Array.isArray(m))
+  ) {
+    log.warn("CHAT", "Rejecting request with non-object message entries");
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, "messages: Expected array of objects");
   }
   if (!("messages" in msgBody) && !("input" in msgBody) && sourceFormat !== "antigravity") {
     log.warn("CHAT", "Rejecting request with missing messages");
