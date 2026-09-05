@@ -1018,7 +1018,18 @@ async function handleChatImplementation(
         (Boolean(apiKeyInfo.allowedModels?.length) || apiKeyInfo.disableNonPublicModels === true);
       if (hasModelRestrictions && apiKey) {
         const modelAllowed = await isModelAllowedForKey(apiKey, modelString);
-        if (!modelAllowed) return false;
+        if (!modelAllowed) {
+          // #12294: an API-key allowlist rejection silently emptied the combo pool
+          // (surfaced only as a generic "availability" skip). Log it at info so
+          // operators can spot the mismatch (e.g. allowed_models has an alias
+          // wildcard like "bailian/*" but the target's provider id is a dynamic
+          // openai-compatible-* id) without enabling debug logging.
+          log.info(
+            "COMBO",
+            `Skipping ${modelString} — model not allowed for API key ${apiKeyInfo?.name || "(unnamed)"} (allowed_models mismatch)`
+          );
+          return false;
+        }
       }
 
       // Use getModelInfo to resolve custom prefixes, but prefer the combo

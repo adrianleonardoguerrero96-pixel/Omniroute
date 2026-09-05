@@ -128,6 +128,127 @@ export function setTlsClientForTest(client: TlsClientLike | null): void {
   activeTlsClient = client ?? tlsClient;
 }
 
+// ── Adaptive TLS-fingerprint ladder ──────────────────────────────────────────
+// The wreq-js (browser-JA3) transport fixes Cloudflare 1010 signature bans but
+// empirically STALLS streaming inference: the response object resolves yet its
+// body produces no bytes for minutes (observed 2026-09-03/04 — opencode-go,
+// command-code, bailian all zero-byte while plain node fetch streamed the same
+// requests in seconds). So the transport must never be eager by default:
+//
+//   1. Plain direct fetch is the fast path.
+//   2. When a response is a Cloudflare fingerprint rejection (403 +
+//      error_code 1010 / browser_signature_banned), the provider is ARMED in a
+//      TTL cache and the request is retried once through wreq-js.
+//   3. Every wreq response carries a first-byte watchdog: if the gateway
+//      buffers beyond the window, the request falls back to the direct
+//      dispatcher instead of hanging the caller.
+//
+// Operators can still force eager impersonation per provider with the legacy
+// TLS_FINGERPRINT_PROVIDERS allowlist (then the watchdog is the only guard).
+const FINGERPRINT_ARM_TTL_MS = 60 * 60 * 1000;
+const fingerprintArmedUntil = new Map<string, number>();
+
+function tlsFirstByteWatchdogMs(): number {
+  const parsed = Number(process.env.TLS_FINGERPRINT_FIRST_BYTE_WATCHDOG_MS || "10000");
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 10_000;
+}
+
+function providerFingerprintArmed(provider: string | null | undefined): boolean {
+  if (!provider) return false;
+  const key = provider.trim().toLowerCase();
+  const until = fingerprintArmedUntil.get(key);
+  if (until === undefined) return false;
+  if (Date.now() >= until) {
+    fingerprintArmedUntil.delete(key);
+    return false;
+  }
+  return true;
+}
+
+function armProviderFingerprint(provider: string | null | undefined): boolean {
+  if (!provider) return false;
+  fingerprintArmedUntil.set(provider.trim().toLowerCase(), Date.now() + FINGERPRINT_ARM_TTL_MS);
+  return true;
+}
+
+/** Cheap transport-level sniff: Cloudflare 1010 / browser-signature ban body. */
+async function looksLikeFingerprintRejection(response: Response): Promise<boolean> {
+  if (response.status !== 403) return false;
+  try {
+    const peek = response.clone();
+    const text = await peek.text();
+    return /error_code"?\s*:\s*"?1010|browser_signature_banned|fingerprint_rejection/i.test(text);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Guard a wreq-js response against the buffering stall: the first body byte
+ * must arrive within the watchdog window or the body is cancelled and a
+ * transport error thrown (callers fall back to the direct dispatcher).
+ * The returned Response yields the first chunk before continuing the original
+ * stream, so no bytes are lost when the watchdog does not fire.
+ */
+async function withTlsFirstByteWatchdog(response: Response): Promise<Response> {
+  if (!response.body) return response;
+  const reader = response.body.getReader();
+  let first: ReadableStreamReadResult<Uint8Array>;
+  try {
+    first = await Promise.race([
+      reader.read(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => {
+          const err = new Error("TLS fingerprint first-byte watchdog fired") as Error & {
+            code?: string;
+          };
+          err.code = "TLS_FIRST_BYTE_TIMEOUT";
+          reject(err);
+        }, tlsFirstByteWatchdogMs())
+      ),
+    ]);
+  } catch (err) {
+    try {
+      await reader.cancel(err);
+    } catch {
+      // reader already closed
+    }
+    throw err;
+  }
+  // The first chunk was already consumed by the watchdog race — re-emit it
+  // before continuing the original stream so no bytes are lost.
+  const rest = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      if (first && !first.done) {
+        controller.enqueue(first.value);
+        first = null;
+        return;
+      }
+      try {
+        const chunk = await reader.read();
+        if (chunk.done) {
+          controller.close();
+        } else {
+          controller.enqueue(chunk.value);
+        }
+      } catch (error) {
+        controller.error(error);
+      }
+    },
+    async cancel(reason) {
+      try {
+        await reader.cancel(reason);
+      } catch {
+        // upstream already gone
+      }
+    },
+  });
+  return new Response(rest, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
 // #8376: transport-level connect-failure codes that mean "the configured upstream
 // proxy (or the target itself, for direct egress) is unreachable" — as opposed to an
 // ordinary upstream HTTP error. Read `.code` first (stable across undici/node
@@ -792,7 +913,12 @@ async function patchedFetch(
     if (
       isTlsFingerprintEnabled() &&
       activeTlsClient.available &&
-      tlsFingerprintProviderAllowed(tlsStore?.provider, false) &&
+      // Adaptive ladder: eager wreq only for explicitly allowlisted providers.
+      // Everyone else rides the plain direct path and is armed reactively when
+      // a Cloudflare fingerprint rejection is observed (the ladder retry below).
+      (process.env.TLS_FINGERPRINT_PROVIDERS?.trim()
+        ? tlsFingerprintProviderAllowed(tlsStore?.provider, false)
+        : providerFingerprintArmed(tlsStore?.provider)) &&
       isTlsRequestEligible(input, options)
     ) {
       try {
@@ -807,7 +933,9 @@ async function patchedFetch(
           ...tlsProfileForProvider(tlsStore?.provider),
         });
         if (tlsStore) tlsStore.used = true;
-        return response;
+        // Buffering-stall guard: if the gateway never sends a first byte, fall
+        // back to the direct dispatcher instead of hanging the caller.
+        return await withTlsFirstByteWatchdog(response);
       } catch (error) {
         if (isCallerAbort(error, getEffectiveSignal(input, options))) throw error;
         const sessionHadCookies =
@@ -837,7 +965,41 @@ async function patchedFetch(
     if (process.versions.bun) {
       const _nativeFetch =
         (deps.nativeFetch as FetchWithDispatcher | undefined) ?? originalFetchWithDispatcher;
-      return _nativeFetch(input, options);
+      const response = await _nativeFetch(input, options);
+      // Adaptive ladder step 2: a Cloudflare fingerprint rejection on the plain
+      // path arms the provider and retries once through wreq-js. Replay-safe
+      // requests only (GET/HEAD) — never replay a non-idempotent body.
+      if (
+        response.status === 403 &&
+        isTlsFingerprintEnabled() &&
+        activeTlsClient.available &&
+        isTlsRequestEligible(input, options) &&
+        isTlsFallbackReplaySafe(input, options) &&
+        (await looksLikeFingerprintRejection(response)) &&
+        armProviderFingerprint(tlsStore?.provider)
+      ) {
+        console.warn(
+          `[ProxyFetch] Cloudflare fingerprint rejection on ${tlsStore?.provider ?? targetUrl} — retrying once via the TLS-impersonation transport`
+        );
+        try {
+          const wreqResponse = await activeTlsClient.fetch(targetUrl, {
+            method: options.method,
+            headers: options.headers,
+            body: options.body as TlsFetchOptions["body"],
+            redirect: options.redirect,
+            signal: getEffectiveSignal(input, options),
+            proxy: null,
+            sessionScope: tlsStore?.sessionScope,
+            ...tlsProfileForProvider(tlsStore?.provider),
+          });
+          if (tlsStore) tlsStore.used = true;
+          return await withTlsFirstByteWatchdog(wreqResponse);
+        } catch (error) {
+          if (isCallerAbort(error, getEffectiveSignal(input, options))) throw error;
+          console.warn("[ProxyFetch] TLS-impersonation retry failed; returning the original 403");
+        }
+      }
+      return response;
     }
     // Direct undici path: bound response-start, fresh-socket retry, and body guard.
     const hasNonReplayableBody = requestHasNonReplayableBody(input, options);
@@ -1100,7 +1262,7 @@ async function patchedFetch(
         ...tlsProfileForProvider(tlsStore?.provider),
       });
       if (tlsStore) tlsStore.used = true;
-      return response;
+      return await withTlsFirstByteWatchdog(response);
     } catch (error) {
       if (isCallerAbort(error, getEffectiveSignal(input, options))) throw error;
       const sessionHadCookies =
