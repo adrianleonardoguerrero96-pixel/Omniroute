@@ -38,6 +38,7 @@ interface OpenAiMessage {
   content?: MessageContent;
   tool_calls?: OpenAiToolCall[];
   tool_call_id?: string;
+  function_call?: { name?: string; arguments?: string };
 }
 
 interface OpenAiChatRequest {
@@ -211,6 +212,20 @@ export function chatRequestToXaiResponses(req: OpenAiChatRequest): XaiResponsesR
           arguments: tc.function.arguments ?? "",
         });
       }
+      continue;
+    }
+    if (m.role === "assistant" && m.function_call?.name) {
+      // Legacy function_call form (still accepted by OpenAI): map it the
+      // same way instead of dropping the name + arguments (#12692).
+      if (m.content) {
+        input.push({ role: "assistant", content: messageContentToXaiBlocks(m.content) });
+      }
+      input.push({
+        type: "function_call",
+        call_id: genId("call"),
+        name: m.function_call.name,
+        arguments: m.function_call.arguments ?? "",
+      });
       continue;
     }
     input.push({ role: m.role ?? "user", content: messageContentToXaiBlocks(m.content ?? "") });
