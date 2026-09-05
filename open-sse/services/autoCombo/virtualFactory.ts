@@ -749,6 +749,39 @@ function clonePreparedCandidates(
   }));
 }
 
+/**
+ * `auto/*:free` is itself a routing guarantee. When a model is admitted only
+ * because one or more synced connections reported it free, narrow dispatch to
+ * those exact connections even when the global `hidePaidModels` and strict
+ * zero-cost settings are off. Models that are globally classified free keep
+ * their existing provider-wide connection scope.
+ */
+function narrowConnectionScopedFreeCandidates(
+  candidates: VirtualAutoComboCandidate[]
+): VirtualAutoComboCandidate[] {
+  return candidates.flatMap((candidate) => {
+    const discoveredFree = candidate.freeConnectionIds ?? [];
+    if (discoveredFree.length === 0) return [candidate];
+
+    try {
+      if (classifyTier(candidate.provider, candidate.model).tier === "free") {
+        return [candidate];
+      }
+    } catch {
+      // If global tier classification is unavailable, fail closed to the
+      // connection-scoped free evidence that admitted this candidate.
+    }
+
+    const allowed = candidate.allowedConnectionIds ?? [];
+    const narrowed = discoveredFree.filter((id) => allowed.includes(id));
+    if (narrowed.length === 0) return [];
+
+    const same =
+      allowed.length === narrowed.length && narrowed.every((id) => allowed.includes(id));
+    return same ? [candidate] : [{ ...candidate, allowedConnectionIds: narrowed }];
+  });
+}
+
 export async function createVirtualAutoComboFromPrepared(
   prepared: PreparedVirtualAutoComboInputs,
   variant: AutoVariant | undefined,
@@ -823,7 +856,10 @@ export async function createVirtualAutoComboFromPrepared(
       ? buildAutoCandidateFilter(spec.category, spec.tier)
       : null;
   if (candidateFilter) {
-    const narrowed = candidatePool.filter((candidate) => candidateFilter(candidate));
+    let narrowed = candidatePool.filter((candidate) => candidateFilter(candidate));
+    if (!spec?.family && spec?.tier === "free") {
+      narrowed = narrowConnectionScopedFreeCandidates(narrowed);
+    }
     const label = spec?.family
       ? `auto/${spec.family}`
       : `auto/${spec?.category ?? ""}${spec?.tier ? `:${spec.tier}` : ""}`;
