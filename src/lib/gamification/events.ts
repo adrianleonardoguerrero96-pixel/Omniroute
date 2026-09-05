@@ -172,14 +172,18 @@ async function checkActionCountBadges(apiKeyId: string, action: string): Promise
   const { getDbInstance } = await import("../db/core");
   const db = getDbInstance();
 
-  // Count total actions of this type
+  // Read the durable per-key/per-action counter (#12546), the same source
+  // getActionCount() (badges.ts) reads. Counting xp_audit_log directly here
+  // undercounted every "lifetime" milestone once the retention prune
+  // (cleanupXpAuditLog, default 30 days) aged the rows out. The counter is
+  // maintained in addXp() alongside the audit insert and survives the prune.
   const row = db
     .prepare(
-      "SELECT COALESCE(COUNT(*), 0) AS count FROM xp_audit_log WHERE api_key_id = ? AND action = ?"
+      "SELECT COALESCE(count, 0) AS count FROM xp_action_counts WHERE api_key_id = ? AND action = ?"
     )
-    .get(apiKeyId, action) as { count: number };
+    .get(apiKeyId, action) as { count: number } | undefined;
 
-  const count = row.count;
+  const count = row?.count ?? 0;
 
   // Badge thresholds
   const thresholds: Record<string, Array<{ id: string; threshold: number }>> = {

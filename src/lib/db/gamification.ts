@@ -162,6 +162,21 @@ export function addXp(apiKeyId: string, action: string, amount: number, metadata
     )
     .run(apiKeyId, action, amount, metadata ?? null);
 
+  // Durable per-key/per-action counter (#12546). xp_audit_log is pruned by
+  // retention.xpAuditLog (default 30 days), so counting action-count badge
+  // progress directly off that table silently reset every "lifetime" milestone.
+  // Increment a durable counter here, alongside the audit insert, using the same
+  // per-row weight getActionCount() reads: the metadata `amount` when present
+  // (token_share stores the shared amount there), otherwise 1.
+  db()
+    .prepare(
+      `INSERT INTO xp_action_counts (api_key_id, action, count, updated_at)
+     VALUES (?, ?, COALESCE(CAST(json_extract(?, '$.amount') AS INTEGER), 1), datetime('now'))
+     ON CONFLICT(api_key_id, action)
+     DO UPDATE SET count = count + excluded.count, updated_at = datetime('now')`
+    )
+    .run(apiKeyId, action, metadata ?? null);
+
   db()
     .prepare(
       `INSERT INTO user_levels (api_key_id, total_xp, current_level, updated_at)
