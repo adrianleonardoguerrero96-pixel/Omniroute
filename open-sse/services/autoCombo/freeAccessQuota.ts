@@ -20,7 +20,6 @@ import {
   type UsageFetcherProvider,
 } from "./../usage.ts";
 import { getCachedProviderConnections } from "@/lib/db/readCache";
-import { invalidateProviderModelDiscoveryFreshness } from "@/lib/providerModels/discoveryFreshness";
 import { defaultLogger as log } from "@omniroute/open-sse/utils/logger";
 import type { FreeAccessState } from "./strictZeroCostFilter";
 import { isStateStaleForReset } from "./subscriptionLadder";
@@ -212,7 +211,6 @@ export function resolveFreeAccessState(
  * build reads a clean cache miss (UNKNOWN) rather than a stale SAFE. */
 export function invalidateFreeAccessState(provider: string, connectionId: string): void {
   cache.delete(cacheKey(provider, connectionId));
-  invalidateProviderModelDiscoveryFreshness(provider, connectionId);
 }
 
 export const __testing = { cache, extractRemainingAllowance, sweepIfDue };

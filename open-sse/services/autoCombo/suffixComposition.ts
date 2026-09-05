@@ -17,7 +17,7 @@
  * `virtualFactory.createVirtualAutoCombo`, and the weights reuse the existing mode packs.
  */
 import type { AutoVariant } from "./autoPrefix";
-import { classifyTier, resolveExplicitTierOverride } from "../tierResolver";
+import { classifyTier } from "../tierResolver";
 import { getResolvedModelCapabilities } from "@/lib/modelCapabilities";
 import { isVisionModelId } from "@/shared/constants/visionModels";
 import { isVisionBridgeForcedModel } from "@/shared/constants/visionBridgeDefaults";
@@ -113,8 +113,6 @@ export function tierToWeightVariant(tier?: AutoTier): AutoVariant | "reliability
 interface PoolCandidate {
   provider: string;
   model: string;
-  /** Connections whose synced discovery explicitly marks this model free. */
-  freeConnectionIds?: string[];
   resolvedSupportsVision?: boolean;
   resolvedReasoning?: boolean;
   resolvedSupportsThinking?: boolean;
@@ -164,12 +162,7 @@ export function buildAutoCandidateFilter(
     });
   }
   if (tier === "free") {
-    checks.push((c) => {
-      const override = resolveExplicitTierOverride(c.provider, c.model);
-      return override !== undefined
-        ? override === "free"
-        : (c.freeConnectionIds?.length ?? 0) > 0 || safeClassifyTier(c) === "free";
-    });
+    checks.push((c) => safeClassifyTier(c) === "free");
   }
   if (tier === "pro") {
     checks.push((c) => safeClassifyTier(c) === "premium");

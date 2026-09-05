@@ -24,10 +24,6 @@ import {
   isNamedOpenAIStyleProvider,
 } from "../../src/app/api/providers/[id]/models/discovery/providerSets.ts";
 import { PROVIDER_MODELS_CONFIG } from "../../src/app/api/providers/[id]/models/discovery/providerModelsConfig.ts";
-import {
-  hasNousRecommendationPayloadShape,
-  mergeNousRecommendedModelsWithCurated,
-} from "../../src/app/api/providers/[id]/models/discovery/recommendationCatalog.ts";
 import { isCodexDiscoveryModelExcluded as isSharedCodexDiscoveryModelExcluded } from "../../src/shared/services/codexDiscoveryPolicy.ts";
 import {
   applyCodexDiscoveryFilters,
@@ -181,63 +177,6 @@ test("providerModelsConfig grok-cli.parseResponse preserves exact supported reas
   assert.deepEqual(parsed[1].supportedThinkingEfforts, ["low", "medium", "high"]);
   assert.equal(parsed[2].supportsThinking, true);
   assert.equal(parsed[2].supportedThinkingEfforts, undefined);
-});
-
-test("providerModelsConfig recognizes valid empty Nous payloads but rejects malformed 200 bodies", () => {
-  assert.equal(hasNousRecommendationPayloadShape({ freeRecommendedModels: [] }), true);
-  assert.equal(hasNousRecommendationPayloadShape({ paidRecommendedModels: [] }), true);
-  assert.equal(hasNousRecommendationPayloadShape({ recommendedModels: [] }), true);
-  assert.equal(hasNousRecommendationPayloadShape({ freeRecommendedModels: "bad" }), false);
-  assert.equal(
-    hasNousRecommendationPayloadShape({ freeRecommendedModels: [], paidRecommendedModels: "bad" }),
-    false
-  );
-  assert.equal(hasNousRecommendationPayloadShape({}), false);
-  assert.equal(hasNousRecommendationPayloadShape(null), false);
-});
-
-test("providerModelsConfig nous-research keeps paid recommendations and marks the live free subset", () => {
-  const config = PROVIDER_MODELS_CONFIG["nous-research"];
-  assert.equal(config.url, "https://portal.nousresearch.com/api/nous/recommended-models");
-  const parsed = config.parseResponse({
-    paidRecommendedModels: [{ modelName: "paid/model", displayName: "Paid Model" }],
-    freeRecommendedModels: [
-      { modelName: "stepfun/step-3.7-flash:free", displayName: "Step 3.7 Flash" },
-      { modelName: "stepfun/step-3.7-flash:free", displayName: "duplicate" },
-      "poolside/laguna-xs-2.1:free",
-      { id: "tencent/hy3:free" },
-      { nope: true },
-    ],
-  });
-  assert.deepEqual(parsed.slice(0, 4), [
-    { id: "stepfun/step-3.7-flash:free", name: "Step 3.7 Flash", isFree: true },
-    {
-      id: "poolside/laguna-xs-2.1:free",
-      name: "poolside/laguna-xs-2.1:free",
-      isFree: true,
-    },
-    { id: "tencent/hy3:free", name: "tencent/hy3:free", isFree: true },
-    { id: "paid/model", name: "Paid Model" },
-  ]);
-});
-
-test("providerModelsConfig Nous recommendations augment curated models without erasing live free metadata", () => {
-  const live = [
-    { id: "shared", name: "Live Shared", isFree: true },
-    { id: "portal-only:free", name: "Portal Only", isFree: true },
-  ];
-  const curated = [
-    { id: "shared", name: "Curated Shared" },
-    { id: "curated-paid", name: "Curated Paid" },
-  ];
-  const merged = mergeNousRecommendedModelsWithCurated(live, curated);
-  assert.deepEqual(merged, [
-    { id: "shared", name: "Live Shared", isFree: true },
-    { id: "portal-only:free", name: "Portal Only", isFree: true },
-    { id: "curated-paid", name: "Curated Paid" },
-  ]);
-  assert.equal((merged[2] as Record<string, unknown>)._omnirouteDiscoveryFreeEvidence, false);
-  assert.equal(JSON.stringify(merged).includes("_omnirouteDiscoveryFreeEvidence"), false);
 });
 
 test("providerModelsConfig openrouter.parseResponse keeps the full catalog (LLMs not filtered out)", () => {

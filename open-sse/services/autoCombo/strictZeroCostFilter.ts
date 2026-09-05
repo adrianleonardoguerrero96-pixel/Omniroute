@@ -16,11 +16,11 @@
  * lives in `freeAccessQuota.ts` and is injected here as a plain function —
  * this file never imports the DB or makes a network call itself.
  *
- * The normal path is provider-agnostic: a candidate passes or fails on catalog
- * metadata (`freeType`, `tos`, `hardStopGuaranteed`) plus, for quota-based
- * types, a `FreeAccessState` resolved elsewhere. Higher-precedence facts are
- * admitted before that path: local operator policy, connection-scoped live free
- * evidence, and Nous Portal's provider-owned `:free` variants. Everything else fails closed — see
+ * No provider or model name appears anywhere in this file. A candidate passes
+ * or fails purely on the metadata it carries (`freeType`, `tos`,
+ * `hardStopGuaranteed`) plus, for quota-based types, a `FreeAccessState`
+ * resolved elsewhere. A future provider that ships correct metadata is
+ * handled automatically; one that doesn't is excluded automatically — see
  * `docs/routing/STRICT_ZERO_COST.md`.
  *
  * ## Connection safety (fixed after code review, see `docs/routing/STRICT_ZERO_COST.md`)
@@ -81,7 +81,6 @@ export interface StrictZeroCostCandidate {
   model: string;
   connectionId: string | null;
   allowedConnectionIds?: string[];
-  freeConnectionIds?: string[];
 }
 
 export interface StrictZeroCostOptions {
@@ -110,13 +109,6 @@ export interface StrictZeroCostOptions {
   maxStateAgeMs: number;
   /** `now` injection for deterministic tests; defaults to `Date.now`. */
   now?: () => number;
-  /** Explicit local policy wins over catalog/live inference in either direction. */
-  resolveOperatorTier?: (
-    provider: string,
-    model: string
-  ) => "free" | "cheap" | "premium" | undefined;
-  /** Whether this connection's model discovery was live-verified recently enough. */
-  isDiscoveryEvidenceFresh?: (provider: string, connectionId: string, maxAgeMs: number) => boolean;
   /**
    * The free-model catalog to look candidates up against. Defaults to the
    * real, live `FREE_MODEL_BUDGETS` — overridable so tests can prove the
@@ -137,19 +129,9 @@ export function findBudgetEntry(
   return catalog.find((m) => m.provider === candidate.provider && m.modelId === candidate.model);
 }
 
-function candidateConnectionIds(candidate: StrictZeroCostCandidate): string[] {
-  return candidate.connectionId ? [candidate.connectionId] : (candidate.allowedConnectionIds ?? []);
-}
-
-/** Nous Portal rotates price-locked free variants independently of releases. */
-function isNousPortalFreeVariant(candidate: StrictZeroCostCandidate): boolean {
-  return candidate.provider === "nous-research" && candidate.model.toLowerCase().endsWith(":free");
-}
-
 /** Why the guard cannot trust a candidate right now. */
 export type StrictZeroCostExclusionReason =
   | "not-in-catalog"
-  | "operator-non-free"
   | "regime-not-free"
   | "no-hard-stop"
   | "contradictory-noauth"
@@ -211,14 +193,7 @@ export function evaluateCandidateConnections(
   candidate: StrictZeroCostCandidate,
   budgetEntry: FreeModelBudget | undefined,
   resolveFreeAccessState: StrictZeroCostOptions["resolveFreeAccessState"],
-  options: Pick<
-    StrictZeroCostOptions,
-    | "minRemainingAllowance"
-    | "maxStateAgeMs"
-    | "now"
-    | "resolveOperatorTier"
-    | "isDiscoveryEvidenceFresh"
-  >
+  options: Pick<StrictZeroCostOptions, "minRemainingAllowance" | "maxStateAgeMs" | "now">
 ): string[] {
   const verdict = classifyStrictZeroCostCandidate(
     candidate,
@@ -239,43 +214,9 @@ export function classifyStrictZeroCostCandidate(
   candidate: StrictZeroCostCandidate,
   budgetEntry: FreeModelBudget | undefined,
   resolveFreeAccessState: StrictZeroCostOptions["resolveFreeAccessState"],
-  options: Pick<
-    StrictZeroCostOptions,
-    | "minRemainingAllowance"
-    | "maxStateAgeMs"
-    | "now"
-    | "resolveOperatorTier"
-    | "isDiscoveryEvidenceFresh"
-  >
+  options: Pick<StrictZeroCostOptions, "minRemainingAllowance" | "maxStateAgeMs" | "now">
 ): StrictZeroCostVerdict {
-  const directConnectionIds = candidateConnectionIds(candidate).filter(
-    (connectionId) => connectionId !== SYNTHETIC_NOAUTH_CONNECTION_ID
-  );
-  const operatorTier = options.resolveOperatorTier?.(candidate.provider, candidate.model);
-  if (operatorTier !== undefined) {
-    if (operatorTier !== "free") return { outcome: "operator-non-free" };
-    return directConnectionIds.length > 0
-      ? { outcome: "safe", safeConnectionIds: directConnectionIds }
-      : { outcome: "no-connection" };
-  }
-  let hasStaleDiscoveryFreeEvidence = false;
-  if ((candidate.freeConnectionIds?.length ?? 0) > 0) {
-    const liveFree = directConnectionIds.filter(
-      (id) =>
-        candidate.freeConnectionIds!.includes(id) &&
-        options.isDiscoveryEvidenceFresh?.(candidate.provider, id, options.maxStateAgeMs) === true
-    );
-    if (liveFree.length > 0) return { outcome: "safe", safeConnectionIds: liveFree };
-    hasStaleDiscoveryFreeEvidence = true;
-  }
-  if (isNousPortalFreeVariant(candidate)) {
-    return directConnectionIds.length > 0
-      ? { outcome: "safe", safeConnectionIds: directConnectionIds }
-      : { outcome: "no-connection" };
-  }
-
-  if (!budgetEntry)
-    return { outcome: hasStaleDiscoveryFreeEvidence ? "state-unknown" : "not-in-catalog" };
+  if (!budgetEntry) return { outcome: "not-in-catalog" }; // paid, or genuinely unknown
 
   const isGenuineNoAuthCandidate = candidate.connectionId === SYNTHETIC_NOAUTH_CONNECTION_ID;
   if (allowsNoAuthShortcut(budgetEntry.freeType)) {
@@ -301,19 +242,21 @@ export function classifyStrictZeroCostCandidate(
   // trust regardless of its answer.
   if (budgetEntry.hardStopGuaranteed !== true) return { outcome: "no-hard-stop" };
 
-  const connectionIds = candidateConnectionIds(candidate);
+  const candidateConnectionIds = candidate.connectionId
+    ? [candidate.connectionId]
+    : (candidate.allowedConnectionIds ?? []);
 
   // No account at all to check. Reporting `state-unknown` here would send the
   // operator hunting a quota lookup that was never attempted; this is a wiring
   // problem, not a quota one.
-  if (connectionIds.length === 0) return { outcome: "no-connection" };
+  if (candidateConnectionIds.length === 0) return { outcome: "no-connection" };
 
   const safe: string[] = [];
   // An observed exhaustion outranks a missing reading: one is a fact, the other
   // is the absence of one, and the operator needs the fact. Without this rule the
   // reason would depend on the order the connections happen to be listed in.
   let sawExhausted = false;
-  for (const connectionId of connectionIds) {
+  for (const connectionId of candidateConnectionIds) {
     if (connectionId === SYNTHETIC_NOAUTH_CONNECTION_ID) continue; // never reachable here, defensive
     const state = classifyConnectionState(
       candidate.provider,

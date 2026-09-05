@@ -2105,7 +2105,7 @@ export async function GET(
         cachedDiscoveryModels.every((model, index) => model.id === cachedCatalogModels[index]?.id);
       const persistFilteredCacheIfNeeded = async () => {
         if (cachedIdsMatchFinalCatalog) return;
-        await persistDiscoveredModels(provider, connectionId, cachedCatalogModels, false);
+        await persistDiscoveredModels(provider, connectionId, cachedCatalogModels);
       };
 
       if (!refresh && cachedDiscoveryModels.length > 0) {
@@ -2249,8 +2249,12 @@ export async function GET(
         config.url.replace(/\/models\/?$/, "")
       );
     }
-    // VibeProxy: honor a custom OpenAI-compatible base URL so discovery uses the
-    // configured gateway rather than api.openai.com; config.url remains the fallback.
+    // VibeProxy: honor a user-configured custom base URL for the built-in
+    // `openai` provider (e.g. an OpenAI-compatible gateway / proxy). Without
+    // this, model discovery always hit the hardcoded api.openai.com and ignored
+    // the configured endpoint — returning the wrong catalog (or failing auth)
+    // for gateway users, and preventing instant access to gateway-served models.
+    // Falls back to config.url (api.openai.com) when no custom base URL is set.
     if (provider === "openai") {
       const customBaseUrl = getProviderBaseUrl(connection.providerSpecificData);
       if (customBaseUrl) {
@@ -2260,7 +2264,9 @@ export async function GET(
         } else if (base.endsWith("/completions")) {
           base = base.slice(0, -"/completions".length);
         }
-        // #5899: strip trailing /v1 so custom gateways never become /v1/v1/models.
+        // Strip a trailing /v1 unconditionally (same #5899 double-prefix guard as the
+        // discovery path above): a customBaseUrl like ".../v1/chat/completions" would
+        // otherwise leave base as ".../v1" and produce ".../v1/v1/models" below.
         if (base.endsWith("/v1") && !base.endsWith("://v1")) {
           base = base.slice(0, -"/v1".length);
         }
@@ -2339,11 +2345,6 @@ export async function GET(
       }
 
       const data = await response.json();
-      if (config.validateResponse && !config.validateResponse(data))
-        return (
-          buildDiscoveryFallbackResponse() ??
-          NextResponse.json({ error: "Invalid provider model payload" }, { status: 502 })
-        );
       let pageModels = config.parseResponse(data);
       if (provider === "alibaba" || provider === "alibaba-cn") {
         const { parseAlibabaModelStudioModelsForConnection } =

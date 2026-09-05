@@ -1,7 +1,7 @@
 ---
 title: "STRICT_ZERO_COST"
-version: 3.8.51
-lastUpdated: 2026-09-04
+version: 3.8.50
+lastUpdated: 2026-08-20
 ---
 
 # STRICT_ZERO_COST
@@ -13,9 +13,9 @@ lastUpdated: 2026-09-04
 
 ## Why this exists, and why `hidePaidModels` alone isn't enough
 
-`hidePaidModels` answers "is this candidate classified free?" using the shared free-model
-classifier plus connection-scoped discovery evidence and explicit local tier policy. It is still
-a classification filter, not a current-spend proof, and says nothing about two real risks:
+`hidePaidModels` answers "is this model classified free in `FREE_MODEL_BUDGETS` right now?" —
+a point-in-time catalog fact, checked via `isFreeModel()`/`providerHasFreeModels()`
+(`src/shared/utils/freeModels.ts`). It says nothing about two real risks:
 
 1. A `recurring-*`/`one-time-initial` free tier's allowance can be **exhausted** — the catalog
    still lists the model as free, but the account behind it has no headroom left.
@@ -32,18 +32,9 @@ dispatch — never after a request has already gone out.
 For every candidate in the pool (`open-sse/services/autoCombo/virtualFactory.ts::buildPreparedPool`,
 right after `filterPaidOnlyCandidates`):
 
-1. **Explicit local tier policy** is highest precedence. `free` admits the real connection set;
-   `cheap`/`premium` excludes even when lower-precedence catalog or discovery evidence says free.
-2. **Fresh connection-scoped discovery evidence** (`isFree`, a `:free` id, or exact zero pricing
-   observed in that provider response) admits only the connections that reported it free. The
-   successful discovery must be newer than `autoRefreshProviderQuotaInterval`; after restart or
-   expiry it becomes `state-unknown`, while the ordinary non-strict router may still use the LKG.
-3. **Nous Portal `:free` variants** are provider-owned no-cost variants and may pass without a
-   static catalog row. Other Nous models do not get this shortcut; Portal recommendations/pricing
-   determine their tier dynamically.
-4. **Not in `FREE_MODEL_BUDGETS` after those higher-precedence checks** → excluded. This covers
-   genuinely paid models and candidates OmniRoute still cannot prove zero-cost.
-5. **`freeType: "keyless"`** → passes immediately, **but only for a candidate that genuinely
+1. **Not in `FREE_MODEL_BUDGETS` at all** → excluded. This covers genuinely paid models and any
+   provider/model OmniRoute hasn't classified yet — new candidates start excluded, not included.
+2. **`freeType: "keyless"`** → passes immediately, **but only for a candidate that genuinely
    arrived via the no-auth path** (`connectionId === SYNTHETIC_NOAUTH_CONNECTION_ID`,
    `open-sse/services/autoCombo/resilienceCandidateFilter.ts`). No credential exists for that
    candidate, so no request against it can ever be billed — no runtime check is needed or
@@ -51,10 +42,10 @@ right after `filterPaidOnlyCandidates`):
    connection (`connectionId` is an actual connection id, or the candidate carries
    `allowedConnectionIds`) does **not** get this shortcut — `keyless` metadata describes the
    no-auth path specifically, not the provider in general, and never authorizes a real,
-   credentialed account. Such a candidate falls through to check 6 like any other, where it is
+   credentialed account. Such a candidate falls through to check 3 like any other, where it is
    excluded unless the catalog entry separately carries `hardStopGuaranteed: true` (real
    `keyless` entries never do — the shortcut was their only path to safety).
-6. **Any other `freeType`** (`recurring-daily`, `recurring-monthly`, `recurring-credit`,
+3. **Any other `freeType`** (`recurring-daily`, `recurring-monthly`, `recurring-credit`,
    `recurring-uncapped`, `one-time-initial`, and any future type this module doesn't
    special-case) → passes only if **all** of the following hold:
    - `hardStopGuaranteed: true` is set on the catalog entry (`FreeModelBudget.hardStopGuaranteed`,
@@ -69,7 +60,7 @@ right after `filterPaidOnlyCandidates`):
      evaluated** is `status: "SAFE"`, was checked within
      `settings.autoRefreshProviderQuotaInterval` (default 180s — the existing setting, not a new
      number), and reports `remainingFreeAllowance` above a small safety margin.
-7. **`freeType: "discontinued"`** → always excluded.
+4. **`freeType: "discontinued"`** → always excluded.
 
 ## Connection safety (per-connection verification, never per-candidate)
 
@@ -134,18 +125,17 @@ leaves the field `null` everywhere and costs nothing.
 
 | `freeAccessExclusion`  | What it means                                                                                                 | What to do about it                                                                                                                 |
 | :--------------------- | :------------------------------------------------------------------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------- |
-| `operator-non-free`    | Local tier policy explicitly marks this provider/model `cheap` or `premium`.                                  | Change/remove the local override only if that policy is no longer intended.                                                         |
-| `not-in-catalog`       | No higher-precedence free proof exists and the pair is absent from `FREE_MODEL_BUDGETS`.                      | Add a curated entry or obtain live/explicit zero-cost evidence; unknown pairs fail closed.                                          |
+| `not-in-catalog`       | The provider/model pair is absent from `FREE_MODEL_BUDGETS`.                                                  | Add a curated entry, or accept that new pairs start excluded — that is the design.                                                  |
 | `regime-not-free`      | Catalogued, but its `freeType` is not one that grants free access (a discontinued tier, for instance).        | Nothing to fix. The model costs money.                                                                                              |
 | `no-hard-stop`         | Free regime, but `hardStopGuaranteed` is not `true`, so exceeding the allowance might silently start billing. | Verify the provider's terms and set the flag with the source in a comment — never to grow the catalog.                              |
 | `contradictory-noauth` | A no-auth candidate whose catalog entry is not `keyless`. Fail-closed on inconsistent metadata.               | Fix the catalog entry; the two facts disagree.                                                                                      |
 | `exhausted`            | A fresh reading says the allowance is used up.                                                                | Wait for the reset. This one resolves itself.                                                                                       |
-| `state-unknown`        | No fresh quota or live-discovery proof exists for this account.                                               | Refresh discovery/quota state; missing adapters or expired process-local evidence stay fail-closed.                                |
+| `state-unknown`        | No quota reading, or one too old to trust.                                                                    | Go look: the provider may have no usage adapter registered, or the quota fetch is failing.                                          |
 | `no-connection`        | The candidate carries no account to check at all.                                                             | Not a quota problem: the candidate was built without a connection, so nothing was ever looked up. Check how the pool was assembled. |
 
-The `exhausted` / `state-unknown` pair is worth separating. An exhausted allowance resets on its
-own; a reading that never arrives or live-discovery proof that expires means current safety is
-unknown, and until now both looked identical from outside — the candidate simply vanished.
+The last two are the pair worth separating. An exhausted allowance resets on its own; a reading
+that never arrives means the lookup itself is broken, and until now both looked identical from
+outside — the candidate simply vanished.
 
 **One gap remains, and it is deliberate.** `excludeTosAvoid` still removes candidates before the
 listing is built, so a model curated `tos: "avoid"` is absent with no reason given — the same

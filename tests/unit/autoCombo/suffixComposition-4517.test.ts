@@ -20,7 +20,6 @@ import {
   buildAutoCandidateFilter,
   parseAutoSuffix,
 } from "../../../open-sse/services/autoCombo/suffixComposition";
-import { setTierConfig } from "../../../open-sse/services/tierResolver";
 
 describe("suffixComposition :free tier (#4517)", () => {
   const ORIGINAL_ENV = { ...process.env };
@@ -30,9 +29,9 @@ describe("suffixComposition :free tier (#4517)", () => {
   });
 
   beforeEach(() => {
-    // Reset env/config so neighboring Vitest files cannot leak tier policy here.
+    // Reset env to a known state so OMNIROUTE_AUTO_FREE_FALLBACK_TO_FULL_POOL
+    // doesn't leak between cases.
     process.env = { ...ORIGINAL_ENV };
-    setTierConfig({ providerOverrides: [], modelOverrides: [] });
   });
 
   afterAll(() => {
@@ -65,44 +64,6 @@ describe("suffixComposition :free tier (#4517)", () => {
     assert.equal(filter!({ provider: "kiro", model: "claude-sonnet-4-5" }), true);
     assert.equal(filter!({ provider: "groq", model: "llama-3.3-70b" }), true);
     assert.equal(filter!({ provider: "qoder", model: "qwen3-coder-plus" }), true);
-  });
-
-  it("buildAutoCandidateFilter keeps rotating Nous Portal :free model ids", () => {
-    const filter = buildAutoCandidateFilter("coding", "free");
-    assert.equal(
-      filter!({ provider: "nous-research", model: "stepfun/step-3.7-flash:free" }),
-      true
-    );
-    assert.equal(filter!({ provider: "nous-research", model: "some-paid-model" }), false);
-  });
-
-  it("buildAutoCandidateFilter keeps connection-scoped discovered-free models", () => {
-    const filter = buildAutoCandidateFilter("coding", "free");
-    assert.equal(
-      filter!({
-        provider: "example-provider",
-        model: "provider-priced-zero-model",
-        freeConnectionIds: ["free-account"],
-      }),
-      true
-    );
-  });
-
-  it("buildAutoCandidateFilter lets an explicit non-free override beat discovery", () => {
-    setTierConfig({ providerOverrides: [{ provider: "example-provider", tier: "premium" }] });
-    try {
-      const filter = buildAutoCandidateFilter("coding", "free");
-      assert.equal(
-        filter!({
-          provider: "example-provider",
-          model: "provider-priced-zero-model",
-          freeConnectionIds: ["free-account"],
-        }),
-        false
-      );
-    } finally {
-      setTierConfig({ providerOverrides: [] });
-    }
   });
 
   it("buildAutoCandidateFilter rejects paid models under :free", () => {

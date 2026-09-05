@@ -6,7 +6,6 @@ import {
 } from "@/lib/db/models";
 import { CANONICAL_EFFORT_VALUES } from "@/shared/reasoning/effortStandardization";
 import { isFreeModel } from "@/shared/utils/freeModels";
-import { markProviderModelDiscoveryFresh } from "./discoveryFreshness";
 import { isObsoleteKiroModelAlias } from "@omniroute/open-sse/services/kiroModels.ts";
 import { filterSelectableModels } from "@omniroute/open-sse/services/modelLifecycle.ts";
 
@@ -339,19 +338,14 @@ export function normalizeDiscoveredModels(
       typeof pricing.completion === "string" || typeof pricing.completion === "number"
         ? pricing.completion
         : undefined;
-    // Persist only evidence present in THIS discovery payload. Passing an empty
-    // provider intentionally disables provider/catalog membership inside
-    // isFreeModel while retaining its explicit isFree / :free / zero-price rules.
-    // Otherwise a stale shipped catalog row could masquerade as connection-scoped
-    // live economics and populate freeConnectionIds later in virtualFactory.
-    const isFree =
-      record._omnirouteDiscoveryFreeEvidence === false
-        ? false
-        : isFreeModel("", {
-            id,
-            isFree: record.isFree === true,
-            pricing: { prompt: promptPrice, completion: completionPrice },
-          });
+    // Persist only evidence present in this discovery payload. Passing an empty
+    // provider disables provider/catalog membership inside isFreeModel while
+    // retaining its explicit isFree / :free / exact-zero-price rules.
+    const isFree = isFreeModel("", {
+      id,
+      isFree: record.isFree === true,
+      pricing: { prompt: promptPrice, completion: completionPrice },
+    });
 
     deduped.set(id, {
       id,
@@ -401,8 +395,7 @@ export async function getCachedDiscoveredModels(
 export async function persistDiscoveredModels(
   providerId: string,
   connectionId: string,
-  models: unknown,
-  markFresh = true
+  models: unknown
 ): Promise<SyncedAvailableModel[]> {
   // #11088 (option 1): the synced store is endpoint-agnostic — images/embeddings
   // models must persist so per-connection endpoint routing (#11088) and the
@@ -413,6 +406,5 @@ export async function persistDiscoveredModels(
     normalizeDiscoveredModels(models, providerId)
   );
   await replaceSyncedAvailableModelsForConnection(providerId, connectionId, normalized);
-  if (markFresh) markProviderModelDiscoveryFresh(providerId, connectionId);
   return normalized;
 }

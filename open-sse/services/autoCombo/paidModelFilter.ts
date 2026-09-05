@@ -11,52 +11,34 @@
  * Kept as a pure, dependency-light function so the filter is unit-testable in
  * isolation without seeding the DB-backed virtual factory.
  */
-import { isFreeModel } from "@/shared/utils/freeModels";
+import { isFreeModel, providerHasFreeModels } from "@/shared/utils/freeModels";
 
 interface PaidFilterCandidate {
   provider: string;
   model: string;
-  allowedConnectionIds?: string[];
-  freeConnectionIds?: string[];
+}
+
+/** A candidate is kept only when its provider has documented free models AND the
+ * selected model itself qualifies as free — mirrors `shouldHidePaid` in
+ * `src/app/api/v1/models/catalog.ts`. */
+function isFreeCandidate(candidate: PaidFilterCandidate): boolean {
+  return (
+    providerHasFreeModels(candidate.provider) &&
+    isFreeModel(candidate.provider, { id: candidate.model })
+  );
 }
 
 /**
  * Return the candidate pool filtered to free-only backends when
  * `hidePaidModels` is on; otherwise return the pool unchanged (identity — the
- * default, opt-in-off path). Connection-scoped discovery is honored without
- * widening it: when only some credentials reported this model free, the
- * candidate's dispatch allowlist is narrowed to exactly those connections.
+ * default, opt-in-off path). If every candidate is paid the result is empty, and
+ * the caller's existing graceful empty-pool path handles it (consistent with the
+ * opt-in intent — the operator asked not to route to paid models).
  */
 export function filterPaidOnlyCandidates<T extends PaidFilterCandidate>(
   pool: T[],
-  hidePaidModels: boolean,
-  resolveOperatorTier: (
-    provider: string,
-    model: string
-  ) => "free" | "cheap" | "premium" | undefined = () => undefined
+  hidePaidModels: boolean
 ): T[] {
   if (!hidePaidModels) return pool;
-
-  const kept: T[] = [];
-  for (const candidate of pool) {
-    const override = resolveOperatorTier(candidate.provider, candidate.model);
-    if (override !== undefined) {
-      if (override === "free") kept.push(candidate);
-      continue;
-    }
-    if (isFreeModel(candidate.provider, { id: candidate.model })) {
-      kept.push(candidate);
-      continue;
-    }
-
-    const freeConnections = candidate.freeConnectionIds ?? [];
-    if (freeConnections.length === 0) continue;
-    const allowed = candidate.allowedConnectionIds ?? [];
-    const narrowed = freeConnections.filter((id) => allowed.includes(id));
-    if (narrowed.length === 0) continue;
-    const same =
-      allowed.length === narrowed.length && narrowed.every((id) => allowed.includes(id));
-    kept.push(same ? candidate : ({ ...candidate, allowedConnectionIds: narrowed } as T));
-  }
-  return kept;
+  return pool.filter(isFreeCandidate);
 }
