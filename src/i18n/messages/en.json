@@ -11294,10 +11294,11 @@
       "tokens": "Tokens",
       "compressed": "Compression",
       "tps": "TPS",
+      "ttft": "TTFT",
+      "ttftTitle": "Time to first token (client-side estimate)",
       "duration": "Duration",
       "time": "Time",
-      "conversation": "Conversation",
-      "ttft": "TTFT"
+      "conversation": "Conversation"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",

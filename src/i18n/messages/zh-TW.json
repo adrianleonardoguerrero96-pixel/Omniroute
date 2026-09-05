@@ -11287,7 +11287,8 @@
       "duration": "時長",
       "time": "時間",
       "conversation": "Conversation",
-      "ttft": "TTFT"
+      "ttft": "TTFT",
+      "ttftTitle": "首次 token 延遲（客戶端估算）"
     },
     "loadingLogs": "正在載入日誌...",
     "noLogs": "暫無日誌記錄。進行一些API呼叫以在此處檢視它們。",

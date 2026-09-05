@@ -35,6 +35,14 @@ import {
   shouldTriggerInfiniteScroll,
 } from "./requestLoggerSignature";
 import {
+  COLUMN_SORT_MAP,
+  compareRequestLogs,
+  formatTps,
+  formatTtft,
+  getLogTps,
+  getLogTtft,
+} from "./requestLoggerMetrics";
+import {
   DEFAULT_REFRESH_INTERVAL_SEC,
   clampRefreshIntervalSec,
   readSavedRefreshIntervalSec,
@@ -54,33 +62,6 @@ import {
 // page (previously hardcoded to a single 300-row window). See #2565.
 // Reduced from 300 → 50 to avoid browser freeze and network saturation.
 const PAGE_SIZE = 50;
-
-// Column sort toggle mapping: clicking a column header toggles asc/desc.
-const COLUMN_SORT_MAP = {
-  status: { desc: "status_desc", asc: "status_asc" },
-  model: { desc: "model_desc", asc: "model_asc" },
-  tokens: { desc: "tokens_desc", asc: "tokens_asc" },
-  tps: { desc: "tps_desc", asc: "tps_asc" },
-  duration: { desc: "duration_desc", asc: "duration_asc" },
-  time: { desc: "newest", asc: "oldest" },
-} as const;
-
-function getLogTotalTokens(log) {
-  return (log?.tokens?.in || 0) + (log?.tokens?.out || 0);
-}
-
-function getLogTps(log): number {
-  const tokensOut = log?.tokens?.out || 0;
-  const durationMs = log?.duration || 0;
-  if (tokensOut <= 0 || durationMs <= 0) return 0;
-  return tokensOut / (durationMs / 1000);
-}
-
-function formatTps(tps: number): string {
-  if (tps <= 0) return "—";
-  if (tps >= 100) return Math.round(tps).toLocaleString();
-  return tps.toFixed(1);
-}
 
 function getCacheSourceMeta(cacheSource: unknown) {
   if (cacheSource === "semantic") {
@@ -133,6 +114,7 @@ const RequestLoggerV2 = forwardRef<RequestLoggerV2Handle, { initialSelectedId?: 
         { key: "apiKey", label: t("columns.apiKey") },
         { key: "combo", label: t("columns.combo") },
         { key: "tokens", label: t("columns.tokens") },
+        { key: "ttft", label: t("columns.ttft") },
         { key: "tps", label: t("columns.tps") },
         { key: "duration", label: t("columns.duration") },
         { key: "time", label: t("columns.time") },
@@ -469,37 +451,7 @@ const RequestLoggerV2 = forwardRef<RequestLoggerV2Handle, { initialSelectedId?: 
 
     const sortedLogs = useMemo(() => {
       const arr = [...dedupedLogs];
-
-      arr.sort((a, b) => {
-        switch (sortBy) {
-          case "oldest":
-            return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-          case "tokens_desc":
-            return getLogTotalTokens(b) - getLogTotalTokens(a);
-          case "tokens_asc":
-            return getLogTotalTokens(a) - getLogTotalTokens(b);
-          case "duration_desc":
-            return (b.duration || 0) - (a.duration || 0);
-          case "duration_asc":
-            return (a.duration || 0) - (b.duration || 0);
-          case "tps_desc":
-            return getLogTps(b) - getLogTps(a);
-          case "tps_asc":
-            return getLogTps(a) - getLogTps(b);
-          case "status_desc":
-            return (b.status || 0) - (a.status || 0);
-          case "status_asc":
-            return (a.status || 0) - (b.status || 0);
-          case "model_asc":
-            return (a.model || "").localeCompare(b.model || "");
-          case "model_desc":
-            return (b.model || "").localeCompare(a.model || "");
-          case "newest":
-          default:
-            return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-        }
-      });
-
+      arr.sort((a, b) => compareRequestLogs(a, b, sortBy));
       return arr;
     }, [dedupedLogs, sortBy]);
 
@@ -1265,6 +1217,18 @@ const RequestLoggerV2 = forwardRef<RequestLoggerV2Handle, { initialSelectedId?: 
                         {getSortIndicator("tokens")}
                       </th>
                     )}
+                    {visibleColumns.ttft && (
+                      <th
+                        className={`${LOG_TABLE_HEADER_CELL_RIGHT_CLASS} cursor-pointer select-none`}
+                        onClick={() => toggleSort("ttft")}
+                        title={
+                          t("columns.ttftTitle") || "Time to first token (client-side estimate)"
+                        }
+                      >
+                        {t("columns.ttft")}
+                        {getSortIndicator("ttft")}
+                      </th>
+                    )}
                     {visibleColumns.tps && (
                       <th
                         className={`${LOG_TABLE_HEADER_CELL_RIGHT_CLASS} cursor-pointer select-none`}
@@ -1606,6 +1570,15 @@ const RequestLoggerV2 = forwardRef<RequestLoggerV2Handle, { initialSelectedId?: 
                                   </>
                                 )}
                               </>
+                            )}
+                          </td>
+                        )}
+                        {visibleColumns.ttft && (
+                          <td className="px-3 py-2 text-right whitespace-nowrap font-mono">
+                            {isActive ? (
+                              <span className="text-text-muted text-[10px]">—</span>
+                            ) : (
+                              <span className="text-text-muted">{formatTtft(getLogTtft(log))}</span>
                             )}
                           </td>
                         )}

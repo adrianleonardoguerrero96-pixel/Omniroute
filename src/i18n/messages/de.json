@@ -11294,7 +11294,8 @@
       "duration": "Duration",
       "time": "Time",
       "conversation": "Conversation",
-      "ttft": "TTFT"
+      "ttft": "TTFT",
+      "ttftTitle": "Zeit bis zum ersten Token (clientseitige Schätzung)"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",

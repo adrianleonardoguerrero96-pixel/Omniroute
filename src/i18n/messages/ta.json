@@ -11287,7 +11287,8 @@
       "duration": "Duration",
       "time": "Time",
       "conversation": "Conversation",
-      "ttft": "TTFT"
+      "ttft": "TTFT",
+      "ttftTitle": "முதல் டோக்கனுக்கான நேரம் (கிளையன்ட் பக்க மதிப்பீடு)"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",

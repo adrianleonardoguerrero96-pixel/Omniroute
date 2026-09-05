@@ -11287,7 +11287,8 @@
       "duration": "Duration",
       "time": "Time",
       "conversation": "Conversation",
-      "ttft": "TTFT"
+      "ttft": "TTFT",
+      "ttftTitle": "Час до першого токена (оцінка на стороні клієнта)"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",

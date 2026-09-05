@@ -85,6 +85,7 @@ type CallLogSummaryRow = {
   account: string | null;
   connection_id: string | null;
   duration: number | null;
+  ttft_ms: number | null;
   tokens_in: number | null;
   tokens_out: number | null;
   tokens_cache_read: number | null;
@@ -265,6 +266,11 @@ function buildArtifact(
   };
 }
 
+export function normalizeTtftMs(v: unknown): number | null {
+  if (typeof v !== "number" || !Number.isFinite(v) || v <= 0) return null;
+  return Math.round(v);
+}
+
 // #6187: extract the assistant message from a chat-completion-shaped response
 // body so we can inspect its reasoning_content / <think> content.
 function extractAssistantMessage(responseBody: unknown): unknown {
@@ -384,6 +390,7 @@ function mapSummaryRow(row: CallLogSummaryRow) {
     account: row.resolved_account || row.account,
     connectionId: row.connection_id,
     duration: toNumber(row.duration),
+    timeToFirstTokenMs: row.ttft_ms != null ? toNumber(row.ttft_ms) : null,
     tokens: {
       in: toNumber(row.tokens_in),
       out: toNumber(row.tokens_out),
@@ -496,6 +503,7 @@ async function saveCallLogOperation(entry: any): Promise<void> {
       account,
       connectionId: entry.connectionId || null,
       duration: entry.duration || 0,
+      ttftMs: normalizeTtftMs(entry.timeToFirstTokenMs ?? entry.ttftMs ?? entry.ttft),
       tokensIn: toNumber(getLoggedInputTokens(entry.tokens)),
       tokensOut: toNumber(getLoggedOutputTokens(entry.tokens)),
       tokensCacheRead: getPromptCacheReadTokensOrNull(entry.tokens),
@@ -563,7 +571,7 @@ async function saveCallLogOperation(entry: any): Promise<void> {
       `
       INSERT INTO call_logs (
         id, timestamp, method, path, status, model, requested_model, provider,
-        account, connection_id, duration, tokens_in, tokens_out,
+        account, connection_id, duration, ttft_ms, tokens_in, tokens_out,
         tokens_cache_read, tokens_cache_creation, tokens_reasoning, tokens_compressed,
         reasoning_source, reasoning_chars,
         cache_source, request_type, source_format, target_format, api_key_id, api_key_name,
@@ -574,7 +582,7 @@ async function saveCallLogOperation(entry: any): Promise<void> {
       )
       VALUES (
         @id, @timestamp, @method, @path, @status, @model, @requestedModel, @provider,
-        @account, @connectionId, @duration, @tokensIn, @tokensOut,
+        @account, @connectionId, @duration, @ttftMs, @tokensIn, @tokensOut,
         @tokensCacheRead, @tokensCacheCreation, @tokensReasoning, @tokensCompressed,
         @reasoningSource, @reasoningChars,
         @cacheSource, @requestType, @sourceFormat, @targetFormat, @apiKeyId, @apiKeyName,
@@ -672,6 +680,61 @@ function pushLikeFilter(
   params[paramKey] = `%${value}%`;
 }
 
+function callLogSearchLikeSql(tokenKey: string): string {
+  return `(
+    cl.model LIKE @${tokenKey} OR cl.path LIKE @${tokenKey} OR cl.account LIKE @${tokenKey} OR
+    ${RESOLVED_ACCOUNT_SQL} LIKE @${tokenKey} OR
+    cl.requested_model LIKE @${tokenKey} OR cl.provider LIKE @${tokenKey} OR
+    cl.api_key_name LIKE @${tokenKey} OR cl.api_key_id LIKE @${tokenKey} OR
+    cl.combo_name LIKE @${tokenKey} OR CAST(cl.status AS TEXT) LIKE @${tokenKey}
+    OR cl.combo_step_id LIKE @${tokenKey} OR cl.combo_execution_key LIKE @${tokenKey}
+    OR cl.error_summary LIKE @${tokenKey}
+    OR cl.correlation_id LIKE @${tokenKey}
+  )`;
+}
+
+function callLogSearchNotLikeSql(tokenKey: string): string {
+  return `(
+    IFNULL(cl.model, '') NOT LIKE @${tokenKey} AND IFNULL(cl.path, '') NOT LIKE @${tokenKey} AND IFNULL(cl.account, '') NOT LIKE @${tokenKey} AND
+    IFNULL(${RESOLVED_ACCOUNT_SQL}, '') NOT LIKE @${tokenKey} AND
+    IFNULL(cl.requested_model, '') NOT LIKE @${tokenKey} AND IFNULL(cl.provider, '') NOT LIKE @${tokenKey} AND
+    IFNULL(cl.api_key_name, '') NOT LIKE @${tokenKey} AND IFNULL(cl.api_key_id, '') NOT LIKE @${tokenKey} AND
+    IFNULL(cl.combo_name, '') NOT LIKE @${tokenKey} AND IFNULL(CAST(cl.status AS TEXT), '') NOT LIKE @${tokenKey}
+    AND IFNULL(cl.combo_step_id, '') NOT LIKE @${tokenKey} AND IFNULL(cl.combo_execution_key, '') NOT LIKE @${tokenKey}
+    AND IFNULL(cl.error_summary, '') NOT LIKE @${tokenKey}
+    AND IFNULL(cl.correlation_id, '') NOT LIKE @${tokenKey}
+  )`;
+}
+
+/** AND-token + -negation search, extracted so getCallLogs stays under max-lines. */
+function pushSearchTokenFilters(
+  conditions: string[],
+  params: Record<string, unknown>,
+  search: unknown
+) {
+  if (!search) return;
+  const tokens = String(search)
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((t) => t.trim());
+  const positiveTokens = tokens.filter((t) => !t.startsWith("-"));
+  const negativeTokens = tokens
+    .filter((t) => t.startsWith("-") && t.length > 1)
+    .map((t) => t.substring(1));
+
+  let searchIdx = 0;
+  for (const token of positiveTokens) {
+    const pKey = `searchPosQ${searchIdx++}`;
+    conditions.push(callLogSearchLikeSql(pKey));
+    params[pKey] = `%${token}%`;
+  }
+  for (const token of negativeTokens) {
+    const pKey = `searchNegQ${searchIdx++}`;
+    conditions.push(callLogSearchNotLikeSql(pKey));
+    params[pKey] = `%${token}%`;
+  }
+}
+
 export async function getCallLogs(filter: any = {}) {
   const db = getDbInstance();
   let sql = `
@@ -736,19 +799,7 @@ export async function getCallLogs(filter: any = {}) {
     conditions.push("cl.timestamp <= @until");
     params.until = filter.until instanceof Date ? filter.until.toISOString() : String(filter.until);
   }
-  if (filter.search) {
-    conditions.push(`(
-      cl.model LIKE @searchQ OR cl.path LIKE @searchQ OR cl.account LIKE @searchQ OR
-      ${RESOLVED_ACCOUNT_SQL} LIKE @searchQ OR
-      cl.requested_model LIKE @searchQ OR cl.provider LIKE @searchQ OR
-      cl.api_key_name LIKE @searchQ OR cl.api_key_id LIKE @searchQ OR
-      cl.combo_name LIKE @searchQ OR CAST(cl.status AS TEXT) LIKE @searchQ
-      OR cl.combo_step_id LIKE @searchQ OR cl.combo_execution_key LIKE @searchQ
-      OR cl.error_summary LIKE @searchQ
-      OR cl.correlation_id LIKE @searchQ
-    )`);
-    params.searchQ = `%${filter.search}%`;
-  }
+  pushSearchTokenFilters(conditions, params, filter.search);
 
   if (conditions.length > 0) {
     sql += " WHERE " + conditions.join(" AND ");

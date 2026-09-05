@@ -11287,7 +11287,8 @@
       "duration": "Duração",
       "time": "Hora",
       "conversation": "Conversa",
-      "ttft": "TTFT"
+      "ttft": "TTFT",
+      "ttftTitle": "Tempo até ao primeiro token (estimativa do lado do cliente)"
     },
     "loadingLogs": "A carregar registos...",
     "noLogs": "Ainda sem registos. Faz algumas chamadas de API para os veres aqui.",

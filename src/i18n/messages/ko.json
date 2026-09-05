@@ -11287,7 +11287,8 @@
       "duration": "Duration",
       "time": "Time",
       "conversation": "Conversation",
-      "ttft": "TTFT"
+      "ttft": "TTFT",
+      "ttftTitle": "첫 번째 토큰까지의 시간(클라이언트 측 추정치)"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",

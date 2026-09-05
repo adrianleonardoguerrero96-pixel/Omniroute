@@ -371,7 +371,7 @@ const SCHEMA_SQL = `
     provider TEXT,
     account TEXT,
     connection_id TEXT,
-    duration INTEGER DEFAULT 0,
+    duration INTEGER DEFAULT 0, ttft_ms INTEGER DEFAULT NULL,
     tokens_in INTEGER DEFAULT 0,
     tokens_out INTEGER DEFAULT 0,
     tokens_cache_read INTEGER DEFAULT NULL,
