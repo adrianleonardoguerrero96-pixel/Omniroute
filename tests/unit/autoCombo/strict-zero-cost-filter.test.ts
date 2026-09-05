@@ -126,6 +126,56 @@ test("dynamic Nous Portal :free model passes strict mode without a stale catalog
   );
 });
 
+test("live discovered-free evidence narrows strict mode to the proven connection", () => {
+  const candidate = {
+    provider: "example-provider",
+    model: "model-a",
+    connectionId: null,
+    allowedConnectionIds: ["free-account", "paid-account"],
+    freeConnectionIds: ["free-account"],
+  };
+  assert.deepEqual(
+    evaluateCandidateConnections(candidate, undefined, () => undefined, {
+      ...BASE_OPTIONS,
+      isDiscoveryEvidenceFresh: (_provider, connectionId) => connectionId === "free-account",
+    }),
+    ["free-account"]
+  );
+});
+
+test("stale discovered-free evidence does not bypass strict mode", () => {
+  const candidate = {
+    provider: "example-provider",
+    model: "model-a",
+    connectionId: REAL_CONN,
+    freeConnectionIds: [REAL_CONN],
+  };
+  assert.deepEqual(
+    evaluateCandidateConnections(candidate, undefined, () => undefined, {
+      ...BASE_OPTIONS,
+      isDiscoveryEvidenceFresh: () => false,
+    }),
+    []
+  );
+});
+
+test("explicit non-free policy vetoes otherwise-fresh discovered-free evidence", () => {
+  const candidate = {
+    provider: "example-provider",
+    model: "model-a",
+    connectionId: REAL_CONN,
+    freeConnectionIds: [REAL_CONN],
+  };
+  assert.deepEqual(
+    evaluateCandidateConnections(candidate, undefined, () => undefined, {
+      ...BASE_OPTIONS,
+      resolveOperatorTier: () => "premium",
+      isDiscoveryEvidenceFresh: () => true,
+    }),
+    []
+  );
+});
+
 // 5. quota SAFE + fresh + hardStop → PASS
 test("quota-based candidate with hardStopGuaranteed, fresh SAFE state above threshold passes", () => {
   const entry = FREE_MODEL_BUDGETS.find(
@@ -246,10 +296,20 @@ test("strict pool filter honors an explicit operator free declaration", () => {
   const result = filterStrictZeroCostCandidates([wandb, PAID], {
     enabled: true,
     resolveFreeAccessState: () => undefined,
-    isOperatorDeclaredFree: (provider) => provider === "wandb",
+    resolveOperatorTier: (provider) => (provider === "wandb" ? "free" : undefined),
     ...BASE_OPTIONS,
   });
   assert.deepEqual(result, [wandb]);
+});
+
+test("strict mode lets an explicit non-free override beat a Nous :free variant", () => {
+  const result = filterStrictZeroCostCandidates([NOUS_DYNAMIC_FREE], {
+    enabled: true,
+    resolveFreeAccessState: () => undefined,
+    resolveOperatorTier: () => "premium",
+    ...BASE_OPTIONS,
+  });
+  assert.deepEqual(result, []);
 });
 
 test("strict pool filter keeps only keyless(no-auth) + guaranteed-quota-SAFE candidates", () => {

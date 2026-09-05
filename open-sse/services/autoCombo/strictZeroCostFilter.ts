@@ -83,6 +83,7 @@ export interface StrictZeroCostCandidate {
   model: string;
   connectionId: string | null;
   allowedConnectionIds?: string[];
+  freeConnectionIds?: string[];
 }
 
 export interface StrictZeroCostOptions {
@@ -111,8 +112,13 @@ export interface StrictZeroCostOptions {
   maxStateAgeMs: number;
   /** `now` injection for deterministic tests; defaults to `Date.now`. */
   now?: () => number;
-  /** Explicit operator assertion that this provider/model is free. */
-  isOperatorDeclaredFree?: (provider: string, model: string) => boolean;
+  /** Explicit local policy wins over catalog/live inference in either direction. */
+  resolveOperatorTier?: (
+    provider: string,
+    model: string
+  ) => "free" | "cheap" | "premium" | undefined;
+  /** Whether this connection's model discovery was live-verified recently enough. */
+  isDiscoveryEvidenceFresh?: (provider: string, connectionId: string, maxAgeMs: number) => boolean;
   /**
    * The free-model catalog to look candidates up against. Defaults to the
    * real, live `FREE_MODEL_BUDGETS` — overridable so tests can prove the
@@ -179,12 +185,38 @@ export function evaluateCandidateConnections(
   candidate: StrictZeroCostCandidate,
   budgetEntry: FreeModelBudget | undefined,
   resolveFreeAccessState: StrictZeroCostOptions["resolveFreeAccessState"],
-  options: Pick<StrictZeroCostOptions, "minRemainingAllowance" | "maxStateAgeMs" | "now">
+  options: Pick<
+    StrictZeroCostOptions,
+    | "minRemainingAllowance"
+    | "maxStateAgeMs"
+    | "now"
+    | "resolveOperatorTier"
+    | "isDiscoveryEvidenceFresh"
+  >
 ): string[] {
-  if (isNousPortalFreeVariant(candidate)) {
-    return candidateConnectionIds(candidate).filter(
-      (connectionId) => connectionId !== SYNTHETIC_NOAUTH_CONNECTION_ID
+  const directConnectionIds = candidateConnectionIds(candidate).filter(
+    (connectionId) => connectionId !== SYNTHETIC_NOAUTH_CONNECTION_ID
+  );
+  const operatorTier = options.resolveOperatorTier?.(candidate.provider, candidate.model);
+  if (operatorTier !== undefined) {
+    return operatorTier === "free" ? directConnectionIds : [];
+  }
+
+  if ((candidate.freeConnectionIds?.length ?? 0) > 0) {
+    const liveFree = directConnectionIds.filter(
+      (connectionId) =>
+        candidate.freeConnectionIds!.includes(connectionId) &&
+        options.isDiscoveryEvidenceFresh?.(
+          candidate.provider,
+          connectionId,
+          options.maxStateAgeMs
+        ) === true
     );
+    if (liveFree.length > 0) return liveFree;
+  }
+
+  if (isNousPortalFreeVariant(candidate)) {
+    return directConnectionIds;
   }
 
   if (!budgetEntry) return []; // not in the catalog at all → paid, or genuinely unknown
@@ -239,15 +271,6 @@ export function filterStrictZeroCostCandidates<T extends StrictZeroCostCandidate
   const kept: T[] = [];
   let changed = false;
   for (const candidate of pool) {
-    if (options.isOperatorDeclaredFree?.(candidate.provider, candidate.model) === true) {
-      if (candidateConnectionIds(candidate).length > 0) {
-        kept.push(candidate);
-      } else {
-        changed = true;
-      }
-      continue;
-    }
-
     const budgetEntry = findBudgetEntry(candidate, options.catalog);
     const safeConnectionIds = evaluateCandidateConnections(
       candidate,

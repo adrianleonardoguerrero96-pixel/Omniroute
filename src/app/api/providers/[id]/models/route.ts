@@ -2124,7 +2124,7 @@ export async function GET(
         cachedDiscoveryModels.every((model, index) => model.id === cachedCatalogModels[index]?.id);
       const persistFilteredCacheIfNeeded = async () => {
         if (cachedIdsMatchFinalCatalog) return;
-        await persistDiscoveredModels(provider, connectionId, cachedCatalogModels);
+        await persistDiscoveredModels(provider, connectionId, cachedCatalogModels, false);
       };
 
       if (!refresh && cachedDiscoveryModels.length > 0) {
@@ -2364,6 +2364,11 @@ export async function GET(
       }
 
       const data = await response.json();
+      if (config.validateResponse && !config.validateResponse(data))
+        return (
+          buildDiscoveryFallbackResponse() ??
+          NextResponse.json({ error: "Invalid provider model payload" }, { status: 502 })
+        );
       let pageModels = config.parseResponse(data);
       if (provider === "alibaba" || provider === "alibaba-cn") {
         const { parseAlibabaModelStudioModelsForConnection } =

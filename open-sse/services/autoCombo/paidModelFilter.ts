@@ -12,22 +12,12 @@
  * isolation without seeding the DB-backed virtual factory.
  */
 import { isFreeModel } from "@/shared/utils/freeModels";
-import { isExplicitFreeTierOverride } from "../tierResolver";
 
 interface PaidFilterCandidate {
   provider: string;
   model: string;
   allowedConnectionIds?: string[];
   freeConnectionIds?: string[];
-}
-
-/** A candidate is globally free when the shared model predicate says so,
- * or when the operator explicitly overrode its tier to free. */
-function isGloballyFreeCandidate(candidate: PaidFilterCandidate): boolean {
-  return (
-    isFreeModel(candidate.provider, { id: candidate.model }) ||
-    isExplicitFreeTierOverride(candidate.provider, candidate.model)
-  );
 }
 
 /**
@@ -39,13 +29,22 @@ function isGloballyFreeCandidate(candidate: PaidFilterCandidate): boolean {
  */
 export function filterPaidOnlyCandidates<T extends PaidFilterCandidate>(
   pool: T[],
-  hidePaidModels: boolean
+  hidePaidModels: boolean,
+  resolveOperatorTier: (
+    provider: string,
+    model: string
+  ) => "free" | "cheap" | "premium" | undefined = () => undefined
 ): T[] {
   if (!hidePaidModels) return pool;
 
   const kept: T[] = [];
   for (const candidate of pool) {
-    if (isGloballyFreeCandidate(candidate)) {
+    const override = resolveOperatorTier(candidate.provider, candidate.model);
+    if (override !== undefined) {
+      if (override === "free") kept.push(candidate);
+      continue;
+    }
+    if (isFreeModel(candidate.provider, { id: candidate.model })) {
       kept.push(candidate);
       continue;
     }

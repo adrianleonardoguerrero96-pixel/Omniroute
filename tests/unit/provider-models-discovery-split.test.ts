@@ -25,6 +25,7 @@ import {
 } from "../../src/app/api/providers/[id]/models/discovery/providerSets.ts";
 import {
   PROVIDER_MODELS_CONFIG,
+  hasNousRecommendationPayloadShape,
   mergeNousRecommendedModelsWithCurated,
 } from "../../src/app/api/providers/[id]/models/discovery/providerModelsConfig.ts";
 import { isCodexDiscoveryModelExcluded as isSharedCodexDiscoveryModelExcluded } from "../../src/shared/services/codexDiscoveryPolicy.ts";
@@ -181,6 +182,19 @@ test("providerModelsConfig grok-cli.parseResponse preserves exact supported reas
   assert.equal(parsed[2].supportedThinkingEfforts, undefined);
 });
 
+test("providerModelsConfig recognizes valid empty Nous payloads but rejects malformed 200 bodies", () => {
+  assert.equal(hasNousRecommendationPayloadShape({ freeRecommendedModels: [] }), true);
+  assert.equal(hasNousRecommendationPayloadShape({ paidRecommendedModels: [] }), true);
+  assert.equal(hasNousRecommendationPayloadShape({ recommendedModels: [] }), true);
+  assert.equal(hasNousRecommendationPayloadShape({ freeRecommendedModels: "bad" }), false);
+  assert.equal(
+    hasNousRecommendationPayloadShape({ freeRecommendedModels: [], paidRecommendedModels: "bad" }),
+    false
+  );
+  assert.equal(hasNousRecommendationPayloadShape({}), false);
+  assert.equal(hasNousRecommendationPayloadShape(null), false);
+});
+
 test("providerModelsConfig nous-research keeps paid recommendations and marks the live free subset", () => {
   const config = PROVIDER_MODELS_CONFIG["nous-research"];
   assert.equal(config.url, "https://portal.nousresearch.com/api/nous/recommended-models");
@@ -215,11 +229,14 @@ test("providerModelsConfig Nous recommendations augment curated models without e
     { id: "shared", name: "Curated Shared" },
     { id: "curated-paid", name: "Curated Paid" },
   ];
-  assert.deepEqual(mergeNousRecommendedModelsWithCurated(live, curated), [
+  const merged = mergeNousRecommendedModelsWithCurated(live, curated);
+  assert.deepEqual(merged, [
     { id: "shared", name: "Live Shared", isFree: true },
     { id: "portal-only:free", name: "Portal Only", isFree: true },
     { id: "curated-paid", name: "Curated Paid" },
   ]);
+  assert.equal((merged[2] as Record<string, unknown>)._omnirouteDiscoveryFreeEvidence, false);
+  assert.equal(JSON.stringify(merged).includes("_omnirouteDiscoveryFreeEvidence"), false);
 });
 
 test("providerModelsConfig openrouter.parseResponse keeps the full catalog (LLMs not filtered out)", () => {

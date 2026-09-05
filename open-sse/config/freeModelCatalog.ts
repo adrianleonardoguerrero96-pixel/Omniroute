@@ -11,6 +11,21 @@ export type FreeModelFreeType =
   | "keyless"
   | "discontinued";
 
+/** Whether each catalog regime currently grants access without incremental spend. */
+const FREE_ACCESS_BY_TYPE: Record<FreeModelFreeType, boolean> = {
+  "recurring-daily": true,
+  "recurring-monthly": true,
+  "recurring-credit": true,
+  "recurring-uncapped": true,
+  "one-time-initial": true,
+  keyless: true,
+  discontinued: false,
+};
+
+export function grantsFreeAccess(freeType: FreeModelFreeType): boolean {
+  return FREE_ACCESS_BY_TYPE[freeType];
+}
+
 export interface FreeModelBudget {
   provider: string;
   modelId: string;

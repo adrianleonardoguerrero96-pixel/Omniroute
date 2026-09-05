@@ -20,6 +20,7 @@ import {
   buildAutoCandidateFilter,
   parseAutoSuffix,
 } from "../../../open-sse/services/autoCombo/suffixComposition";
+import { setTierConfig } from "../../../open-sse/services/tierResolver";
 
 describe("suffixComposition :free tier (#4517)", () => {
   const ORIGINAL_ENV = { ...process.env };
@@ -29,9 +30,9 @@ describe("suffixComposition :free tier (#4517)", () => {
   });
 
   beforeEach(() => {
-    // Reset env to a known state so OMNIROUTE_AUTO_FREE_FALLBACK_TO_FULL_POOL
-    // doesn't leak between cases.
+    // Reset env/config so neighboring Vitest files cannot leak tier policy here.
     process.env = { ...ORIGINAL_ENV };
+    setTierConfig({ providerOverrides: [], modelOverrides: [] });
   });
 
   afterAll(() => {
@@ -85,6 +86,23 @@ describe("suffixComposition :free tier (#4517)", () => {
       }),
       true
     );
+  });
+
+  it("buildAutoCandidateFilter lets an explicit non-free override beat discovery", () => {
+    setTierConfig({ providerOverrides: [{ provider: "example-provider", tier: "premium" }] });
+    try {
+      const filter = buildAutoCandidateFilter("coding", "free");
+      assert.equal(
+        filter!({
+          provider: "example-provider",
+          model: "provider-priced-zero-model",
+          freeConnectionIds: ["free-account"],
+        }),
+        false
+      );
+    } finally {
+      setTierConfig({ providerOverrides: [] });
+    }
   });
 
   it("buildAutoCandidateFilter rejects paid models under :free", () => {

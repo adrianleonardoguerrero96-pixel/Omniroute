@@ -20,8 +20,8 @@ import {
 import { NOAUTH_PROVIDERS } from "@/shared/constants/providers.ts";
 
 describe("TierResolver", () => {
-  // Reset cache between tests
-  beforeEach(() => clearTierCache());
+  // Reset both config and cache so override tests cannot leak into later cases.
+  beforeEach(() => setTierConfig(DEFAULT_TIER_CONFIG));
 
   describe("classifyTier - free providers", () => {
     it("classifies Kiro as free", () => {
@@ -123,6 +123,13 @@ describe("TierResolver", () => {
       const result = classifyTier("openai", "gpt-4o");
       expect(result.tier).toBe(PROVIDER_TIER.CHEAP);
       expect(result.reason.includes("override")).toBe(true);
+    });
+
+    it("lets an explicit non-free override beat default free-provider classification", () => {
+      setTierConfig({ providerOverrides: [{ provider: "groq", tier: "premium" }] });
+      const result = classifyTier("groq", "openai/gpt-oss-120b");
+      expect(result.tier).toBe(PROVIDER_TIER.PREMIUM);
+      expect(result.hasFreeTier).toBe(false);
     });
 
     it("respects model-level glob pattern override", () => {

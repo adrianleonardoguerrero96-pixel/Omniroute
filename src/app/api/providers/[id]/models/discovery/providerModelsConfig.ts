@@ -104,6 +104,15 @@ export function parsePerplexitySonarModels(data: any): any[] {
   );
 }
 
+/** Distinguish an authoritative (possibly empty) Nous payload from malformed HTTP 200 data. */
+export function hasNousRecommendationPayloadShape(data: unknown): boolean {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return false;
+  const record = data as Record<string, unknown>;
+  const fields = ["freeRecommendedModels", "paidRecommendedModels", "recommendedModels"] as const;
+  const present = fields.filter((field) => record[field] !== undefined);
+  return present.length > 0 && present.every((field) => Array.isArray(record[field]));
+}
+
 /** Preserve Nous Portal's full recommendation list while tagging the live free subset. */
 export function parseNousRecommendedModels(data: any): any[] {
   const free = Array.isArray(data?.freeRecommendedModels) ? data.freeRecommendedModels : [];
@@ -152,7 +161,13 @@ export function mergeNousRecommendedModelsWithCurated<T extends { id: string }>(
       .filter(Boolean)
   );
   for (const model of curated) {
-    if (!seen.has(model.id)) merged.push(model);
+    if (seen.has(model.id)) continue;
+    const fallback = { ...model } as T & Record<string, unknown>;
+    Object.defineProperty(fallback, "_omnirouteDiscoveryFreeEvidence", {
+      value: false,
+      enumerable: false,
+    });
+    merged.push(fallback);
   }
   return merged;
 }
@@ -175,6 +190,7 @@ export type ProviderModelsConfigEntry = {
     token: string,
     connection?: ProviderModelsHeaderContext
   ) => Record<string, string>;
+  validateResponse?: (data: unknown) => boolean;
   parseResponse: (data: any) => any;
 };
 
@@ -540,6 +556,7 @@ export const PROVIDER_MODELS_CONFIG: Record<string, ProviderModelsConfigEntry> =
     url: "https://portal.nousresearch.com/api/nous/recommended-models",
     method: "GET",
     headers: { Accept: "application/json" },
+    validateResponse: hasNousRecommendationPayloadShape,
     parseResponse: parseNousRecommendedModels,
   },
   openrouter: {

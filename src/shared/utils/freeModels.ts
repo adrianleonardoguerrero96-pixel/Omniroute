@@ -1,4 +1,4 @@
-import { FREE_MODEL_BUDGETS } from "@omniroute/open-sse/config/freeModelCatalog";
+import { FREE_MODEL_BUDGETS, grantsFreeAccess } from "@omniroute/open-sse/config/freeModelCatalog";
 import { resolveProviderId } from "@/shared/constants/providers";
 import { globToRegex } from "@/shared/utils/globPattern";
 import { AI_MODELS } from "@/shared/constants/models";
@@ -14,14 +14,15 @@ import { AI_MODELS } from "@/shared/constants/models";
  * free model for that provider in the catalog.
  */
 
+/** Catalogued entries whose regime still grants free access. */
+const FREE_BUDGETS = FREE_MODEL_BUDGETS.filter((m) => grantsFreeAccess(m.freeType));
+
 /** Provider ids that have at least one documented free model. */
-export const PROVIDERS_WITH_FREE_MODELS: Set<string> = new Set(
-  FREE_MODEL_BUDGETS.map((m) => m.provider)
-);
+export const PROVIDERS_WITH_FREE_MODELS: Set<string> = new Set(FREE_BUDGETS.map((m) => m.provider));
 
 const FREE_MODEL_IDS_BY_PROVIDER: Map<string, Set<string>> = (() => {
   const map = new Map<string, Set<string>>();
-  for (const m of FREE_MODEL_BUDGETS) {
+  for (const m of FREE_BUDGETS) {
     let set = map.get(m.provider);
     if (!set) {
       set = new Set<string>();

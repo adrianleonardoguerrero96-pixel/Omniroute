@@ -3,7 +3,7 @@ import { PROVIDER_TIER } from "./tierTypes";
 import { getModelPricing } from "./providerCostData";
 import { isExplicitlyFree } from "./providerCostData";
 import { mergeTierConfig, DEFAULT_TIER_CONFIG } from "./tierConfig";
-import { isFreeModel } from "@/shared/utils/freeModels";
+import { FREE_MODEL_BUDGETS, grantsFreeAccess } from "../config/freeModelCatalog";
 
 let dbPersistenceChecked = false;
 
@@ -19,29 +19,74 @@ function matchGlob(pattern: string, text: string): boolean {
   return new RegExp(`^${regexStr}$`, "i").test(text);
 }
 
-/**
- * Whether the operator explicitly declared this provider/model free through
- * the persisted tier-override surface. This intentionally excludes automatic
- * free-provider and pricing inference so callers can treat it as an explicit
- * administrative assertion.
- */
-export function isExplicitFreeTierOverride(provider: string, model: string): boolean {
+function ensurePersistedTierConfigLoaded(): void {
+  if (dbPersistenceChecked) return;
+  if (process.env.NODE_ENV === "test" || typeof window !== "undefined") {
+    currentConfig = DEFAULT_TIER_CONFIG;
+    dbPersistenceChecked = true;
+    tierCache.clear();
+    return;
+  }
+  try {
+    const { loadTierConfig } = require("../../src/lib/db/tierConfig");
+    currentConfig = loadTierConfig();
+    dbPersistenceChecked = true;
+    tierCache.clear();
+  } catch {
+    // Routing can be imported before DB initialization in tests/tools. Keep the
+    // default and retry on a later call rather than permanently masking SQLite.
+    currentConfig = DEFAULT_TIER_CONFIG;
+  }
+}
+
+/** Highest-precedence local tier assertion, excluding automatic catalog/pricing inference. */
+export function resolveExplicitTierOverride(
+  provider: string,
+  model: string
+): ProviderTier | undefined {
+  ensurePersistedTierConfigLoaded();
   const providerOverride = currentConfig.providerOverrides.find(
     (o) => o.provider.toLowerCase() === provider.toLowerCase()
   );
-  if (providerOverride) return providerOverride.tier === PROVIDER_TIER.FREE;
-
-  const modelOverride = currentConfig.modelOverrides.find(
+  if (providerOverride) return providerOverride.tier;
+  return currentConfig.modelOverrides.find(
     (o) => o.provider.toLowerCase() === provider.toLowerCase() && matchGlob(o.modelPattern, model)
+  )?.tier;
+}
+
+function isModelFreeByStaticEvidence(provider: string, model: string): boolean {
+  if (model.toLowerCase().endsWith(":free")) return true;
+  return FREE_MODEL_BUDGETS.some(
+    (entry) =>
+      entry.provider.toLowerCase() === provider.toLowerCase() &&
+      entry.modelId === model &&
+      grantsFreeAccess(entry.freeType)
   );
-  return modelOverride?.tier === PROVIDER_TIER.FREE;
 }
 
 export function classifyTier(provider: string, model: string): TierAssignment {
+  ensurePersistedTierConfigLoaded();
   const key = cacheKey(provider, model);
 
   if (tierCache.has(key)) {
     return tierCache.get(key)!;
+  }
+
+  const explicitOverride = resolveExplicitTierOverride(provider, model);
+  if (explicitOverride) {
+    const pricing = getModelPricing(provider, model);
+    const assignment: TierAssignment = {
+      provider,
+      model,
+      tier: explicitOverride,
+      reason: `Explicit tier override: '${provider}/${model}' → ${explicitOverride}`,
+      costPer1MInput: explicitOverride === PROVIDER_TIER.FREE ? 0 : pricing.inputCostPer1M,
+      costPer1MOutput: explicitOverride === PROVIDER_TIER.FREE ? 0 : pricing.outputCostPer1M,
+      hasFreeTier: explicitOverride === PROVIDER_TIER.FREE,
+      freeQuotaLimit: pricing.freeQuotaLimit,
+    };
+    tierCache.set(key, assignment);
+    return assignment;
   }
 
   if (isExplicitlyFree(provider, currentConfig)) {
@@ -58,50 +103,12 @@ export function classifyTier(provider: string, model: string): TierAssignment {
     return assignment;
   }
 
-  const providerOverride = currentConfig.providerOverrides.find(
-    (o) => o.provider.toLowerCase() === provider.toLowerCase()
-  );
-  if (providerOverride) {
-    const pricing = getModelPricing(provider, model);
-    const assignment: TierAssignment = {
-      provider,
-      model,
-      tier: providerOverride.tier,
-      reason: `Provider-level override: '${provider}' → ${providerOverride.tier}`,
-      costPer1MInput: pricing.inputCostPer1M,
-      costPer1MOutput: pricing.outputCostPer1M,
-      hasFreeTier: pricing.isFree,
-      freeQuotaLimit: pricing.freeQuotaLimit,
-    };
-    tierCache.set(key, assignment);
-    return assignment;
-  }
-
-  const modelOverride = currentConfig.modelOverrides.find(
-    (o) => o.provider.toLowerCase() === provider.toLowerCase() && matchGlob(o.modelPattern, model)
-  );
-  if (modelOverride) {
-    const pricing = getModelPricing(provider, model);
-    const assignment: TierAssignment = {
-      provider,
-      model,
-      tier: modelOverride.tier,
-      reason: `Model-level override: '${provider}/${model}' matches '${modelOverride.modelPattern}' → ${modelOverride.tier}`,
-      costPer1MInput: pricing.inputCostPer1M,
-      costPer1MOutput: pricing.outputCostPer1M,
-      hasFreeTier: pricing.isFree,
-      freeQuotaLimit: pricing.freeQuotaLimit,
-    };
-    tierCache.set(key, assignment);
-    return assignment;
-  }
-
-  if (isFreeModel(provider, { id: model })) {
+  if (isModelFreeByStaticEvidence(provider, model)) {
     const assignment: TierAssignment = {
       provider,
       model,
       tier: PROVIDER_TIER.FREE,
-      reason: "Model is explicitly identified as free by the shared free-model classifier",
+      reason: "Model is explicitly identified as free by static model-level evidence",
       costPer1MInput: 0,
       costPer1MOutput: 0,
       hasFreeTier: true,
@@ -142,19 +149,17 @@ export function classifyTier(provider: string, model: string): TierAssignment {
 
 export function setTierConfig(config?: Partial<TierConfig> | null): void {
   if (config === null || config === undefined) {
-    try {
-      const { loadTierConfig } = require("../../src/lib/db/tierConfig");
-      currentConfig = loadTierConfig();
-    } catch {
-      currentConfig = DEFAULT_TIER_CONFIG;
-    }
+    dbPersistenceChecked = false;
+    ensurePersistedTierConfigLoaded();
   } else {
     currentConfig = mergeTierConfig(config);
+    dbPersistenceChecked = true;
   }
   tierCache.clear();
 }
 
 export function getTierConfig(): TierConfig {
+  ensurePersistedTierConfigLoaded();
   return { ...currentConfig };
 }
 

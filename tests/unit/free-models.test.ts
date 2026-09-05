@@ -56,9 +56,14 @@ test("isFreeModel: a model with no pricing and no :free suffix is NOT free", () 
   assert.equal(isFreeModel("openrouter", { id: "some/paid-model" }), false);
 });
 
-test("isFreeModel: a model id listed in the free catalog for that provider is free", () => {
-  const sample = FREE_MODEL_BUDGETS[0];
+test("isFreeModel: a model id listed in an active free catalog regime is free", () => {
+  const sample = FREE_MODEL_BUDGETS.find((entry) => entry.freeType !== "discontinued");
+  assert.ok(sample);
   assert.equal(isFreeModel(sample.provider, { id: sample.modelId }), true);
+});
+
+test("isFreeModel: discontinued catalog rows do not grant free access", () => {
+  assert.equal(isFreeModel("pollinations", { id: "gemini" }), false);
 });
 
 test("isFreeModel: NVIDIA GLM 5.2 is included in the reviewed trial catalog", () => {

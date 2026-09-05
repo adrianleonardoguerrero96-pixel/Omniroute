@@ -22,7 +22,7 @@ import {
   type AutoCategory,
   type AutoTier,
 } from "./suffixComposition";
-import { isExplicitFreeTierOverride } from "../tierResolver";
+import { resolveExplicitTierOverride } from "../tierResolver";
 import {
   clonePreparedCandidates,
   narrowConnectionScopedFreeCandidates,
@@ -31,6 +31,7 @@ import type { AutoVariant } from "./autoPrefix";
 import { buildFamilyCandidateFilter, type ModelFamily } from "./modelFamily";
 import { getHiddenModelsByProvider } from "@/models";
 import { getSyncedAvailableModelsByConnection, getCustomModels } from "@/lib/db/models";
+import { isProviderModelDiscoveryFresh } from "@/lib/providerModels/discoveryFreshness";
 import { filterPaidOnlyCandidates } from "./paidModelFilter";
 import { filterStrictZeroCostCandidates, filterTosAvoidCandidates } from "./strictZeroCostFilter";
 import { resolveFreeAccessState } from "./freeAccessQuota";
@@ -635,7 +636,11 @@ export async function prepareVirtualAutoComboInputs(
 
     // #6512 (follow-up to #6328/#6495): when the operator opts into `hidePaidModels`,
     // exclude paid-only backends from EVERY `auto/*` candidate pool.
-    const paidFilteredPool = filterPaidOnlyCandidates(pool, settings.hidePaidModels === true);
+    const paidFilteredPool = filterPaidOnlyCandidates(
+      pool,
+      settings.hidePaidModels === true,
+      resolveExplicitTierOverride
+    );
     if (paidFilteredPool !== pool) pool = paidFilteredPool;
 
     // STRICT_ZERO_COST: opt-in, off by default (`settings.freeAccessPolicy !== "strict"`
@@ -653,8 +658,10 @@ export async function prepareVirtualAutoComboInputs(
       // let a reading of e.g. 0.3% (rounding noise, not real headroom) pass.
       minRemainingAllowance: 1,
       maxStateAgeMs: toNumber(settings.autoRefreshProviderQuotaInterval, 180) * 1000,
-      // Explicit operator economics are authoritative for this deployment.
-      isOperatorDeclaredFree: isExplicitFreeTierOverride,
+      // Explicit operator economics are authoritative in either direction.
+      resolveOperatorTier: resolveExplicitTierOverride,
+      // Live discovery only authorizes a connection while that evidence remains fresh.
+      isDiscoveryEvidenceFresh: isProviderModelDiscoveryFresh,
     });
     if (strictFilteredPool !== pool) pool = strictFilteredPool;
 
