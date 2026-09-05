@@ -45,9 +45,8 @@ import {
 } from "./resilienceCandidateFilter";
 import type { ChaosTuning } from "./chaosEngine";
 
-/** #4235 Phase B: optional category/tier overlay for `auto/<category>:<tier>` combos.
- * #6453: optional `family` overlay for `auto/<family>` combos (e.g. `auto/glm`) —
- * mutually exclusive with category/tier, applied instead of them when present. */
+/** #4235 category/tier overlay; #6453 optional `family` overlay for `auto/<family>`.
+ * Family is mutually exclusive with category/tier and applied instead when present. */
 export interface AutoComboSpec {
   category?: AutoCategory;
   tier?: AutoTier;
