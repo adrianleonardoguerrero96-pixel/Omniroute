@@ -87,3 +87,10 @@ test("compression meta present → compression header set to that value", () => 
   );
   assert.ok(Object.values(h).includes("engine:x; source=header"));
 });
+
+test("meta receives fallbackAttempts when provided", () => {
+  const { deps, metaCalls } = makeDeps(1000);
+  buildNonStreamingResponseHeaders(baseArgs({ fallbackAttempts: 3 }), deps);
+  assert.equal(metaCalls.length, 1);
+  assert.equal(metaCalls[0].meta.fallbackAttempts, 3);
+});

@@ -60,8 +60,9 @@ export type SingleModelTarget =
       modelAbortSignal?: AbortSignal | null;
       /** True when this target was selected via context-cache session pinning. */
       modelPinned?: boolean;
+      fallbackAttempts?: number;
     })
-  | { modelAbortSignal: AbortSignal };
+  | { modelAbortSignal: AbortSignal; fallbackAttempts?: number };
 
 export type HandleSingleModel = (
   body: Record<string, unknown>,

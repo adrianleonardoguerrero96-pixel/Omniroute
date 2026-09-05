@@ -1753,6 +1753,7 @@ async function handleComboChatInner({
             ...targetForAttempt,
             effectiveComboStrategy: strategy,
             failoverBeforeRetry: config.failoverBeforeRetry,
+            fallbackAttempts: fallbackCount,
           });
 
           // Success — validate response quality before returning
@@ -3531,6 +3532,7 @@ async function handleRoundRobinCombo({
               ...targetForAttempt,
               effectiveComboStrategy: "round-robin",
               failoverBeforeRetry: config.failoverBeforeRetry,
+              fallbackAttempts: fallbackCount,
             }),
             rrSafetyPromise,
           ]);
