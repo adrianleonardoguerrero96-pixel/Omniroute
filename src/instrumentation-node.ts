@@ -437,9 +437,11 @@ export async function registerNodejs(): Promise<void> {
     console.log("[STARTUP] Quota cache background refresh started");
     startProviderLimitsSyncScheduler();
     console.log("[STARTUP] Provider limits sync scheduler started");
-    const { startQuotaAutoPing } = await import("@/lib/services/quotaAutoPing");
-    startQuotaAutoPing();
-    console.log("[STARTUP] Quota auto-ping scheduler started (opt-in, no-op until enabled)");
+    // Boot-lazy (#perf-lazy-boot): only arm the auto-ping scheduler when at least
+    // one connection opted in (9router #27b37705 parity). Dashboard opt-in
+    // changes re-arm it via the settings PATCH path.
+    const { bootQuotaAutoPingIfOptedIn } = await import("@/lib/services/quotaAutoPing");
+    await bootQuotaAutoPingIfOptedIn();
     const cloudSyncInitialized = await ensureCloudSyncInitialized();
     console.log(
       `[STARTUP] Cloud/model sync background bootstrap ${cloudSyncInitialized ? "initialized" : "skipped"}`

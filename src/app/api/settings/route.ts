@@ -18,6 +18,7 @@ import {
   getUpstreamProxyConfig,
 } from "@/lib/db/upstreamProxy";
 import { getProviderConnections } from "@/lib/db/providers";
+import { rearmQuotaAutoPingAfterSettingsPatch } from "@/lib/services/quotaAutoPing";
 import { clearCliproxyapiUrlCache } from "@omniroute/open-sse/executors/cliproxyapi.ts";
 import {
   ensurePersistentManagementPasswordHash,
@@ -512,6 +513,10 @@ export async function PATCH(request: Request) {
         ...(cpaModelMapping !== undefined ? { cliproxyapiModelMapping: cpaModelMapping } : {}),
       });
     }
+
+    // Boot-lazy parity with instrumentation-node (#perf-lazy-boot): re-arm the
+    // scheduler when this PATCH touches quota auto-ping opt-ins.
+    rearmQuotaAutoPingAfterSettingsPatch(rawBody, settings as Record<string, unknown>);
 
     // Audit success — diff of changed keys only. Idempotent PATCH (no diff)
     // intentionally writes NO row (spec §Observability + AC-9/AC-11).

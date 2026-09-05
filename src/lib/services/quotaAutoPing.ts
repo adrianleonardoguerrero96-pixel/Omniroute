@@ -63,7 +63,12 @@ export interface QuotaAutoPingConnection {
 
 export interface QuotaAutoPingDeps {
   getSettings: () => Promise<JsonRecord>;
-  getProviderConnections: (filter: JsonRecord) => Promise<QuotaAutoPingConnection[]>;
+  getProviderConnections: (
+    filter: JsonRecord,
+    limit?: number,
+    offset?: number,
+    columns?: string[]
+  ) => Promise<QuotaAutoPingConnection[]>;
   updateProviderConnection: (id: string, data: JsonRecord) => Promise<unknown>;
   refreshAndUpdateCredentials: (
     connection: QuotaAutoPingConnection
@@ -146,7 +151,13 @@ export async function resolveQuotaAutoPingModel(
 export function createDefaultQuotaAutoPingDeps(): QuotaAutoPingDeps {
   return {
     getSettings,
-    getProviderConnections,
+    // The db module returns generic row records; the scheduler's dep contract
+    // narrows them to the fields it reads. Cast the IMPORTED BINDING once here —
+    // do NOT wrap it in a second call expression: the hard-lease inventory test
+    // counts getProviderConnections AST call sites per file, and the tick's
+    // existing call must stay the only one in this file.
+    getProviderConnections:
+      getProviderConnections as unknown as QuotaAutoPingDeps["getProviderConnections"],
     updateProviderConnection,
     refreshAndUpdateCredentials: async (connection) =>
       refreshAndUpdateCredentialsWithResolver(connection, loadQuotaAutoPingExecutor),
@@ -539,6 +550,66 @@ export async function runQuotaAutoPingTick(
 
 let schedulerInterval: ReturnType<typeof setInterval> | null = null;
 const schedulerState = createQuotaAutoPingState();
+
+/**
+ * True when at least one provider connection has opted in to quota auto-ping
+ * (`settings.codexAutoPing.connections[id] === true`).
+ *
+ * Boot-lazy gate (#perf-lazy-boot): the scheduler interval is only armed when some
+ * connection actually opted in, mirroring decolua/9router#27b37705 ("skip inactive
+ * background services on startup"). With zero opt-ins the timer previously still
+ * woke every tick to read settings and find nothing to do.
+ */
+export function hasQuotaAutoPingOptIns(settings: JsonRecord): boolean {
+  return Object.values(QUOTA_AUTOPING_PROVIDERS).some((providerConfig) =>
+    Object.values(getEnabledConnectionIds(settings, providerConfig)).some(
+      (enabled) => enabled === true
+    )
+  );
+}
+
+/** True when a settings PATCH body touches the quota auto-ping opt-in keys. */
+export function settingsPatchTouchesQuotaAutoPing(rawBody: Record<string, unknown>): boolean {
+  return Object.keys(rawBody).some(
+    (key) => key === "codexAutoPing" || key.startsWith("codexAutoPing.")
+  );
+}
+
+/**
+ * Boot-lazy arm (#perf-lazy-boot): start the scheduler only when at least one
+ * connection opted in. Returns whether the interval was armed. `settings` is
+ * injectable so instrumentation can reuse a snapshot already in hand.
+ */
+export async function bootQuotaAutoPingIfOptedIn(settings?: JsonRecord): Promise<boolean> {
+  const resolved = settings ?? (await getSettings());
+  if (!hasQuotaAutoPingOptIns(resolved)) {
+    console.log("[STARTUP] Quota auto-ping scheduler skipped (no connections opted in)");
+    return false;
+  }
+  startQuotaAutoPing();
+  console.log("[STARTUP] Quota auto-ping scheduler started (opt-in, no-op until enabled)");
+  return true;
+}
+
+/**
+ * Re-arm (start/stop) the scheduler after a settings PATCH so a first opt-in
+ * after boot starts it without a server restart. No-op when the body did not
+ * touch auto-ping keys. Failures are non-fatal (same as other startup schedulers).
+ */
+export function rearmQuotaAutoPingAfterSettingsPatch(
+  rawBody: Record<string, unknown>,
+  settings: JsonRecord
+): void {
+  if (!settingsPatchTouchesQuotaAutoPing(rawBody)) return;
+  try {
+    if (hasQuotaAutoPingOptIns(settings)) startQuotaAutoPing();
+    else stopQuotaAutoPing();
+  } catch (err) {
+    log.warn("re-arm after settings PATCH failed", {
+      error: sanitizeErrorMessage((err as Error)?.message ?? String(err)),
+    });
+  }
+}
 
 /** Start the in-process scheduler. Idempotent — a second call is a no-op. */
 export function startQuotaAutoPing(): void {

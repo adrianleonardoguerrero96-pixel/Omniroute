@@ -1,0 +1,1 @@
+- **perf(boot):** lazy-arm the quota auto-ping scheduler only when a connection has opted in, re-arm it from settings PATCH, and replace inherited `NODE_OPTIONS --max-old-space-size` below the 8 GB build heap floor ([#12333](https://github.com/diegosouzapw/OmniRoute/pull/12333)) — thanks @linhdmn

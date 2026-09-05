@@ -36,7 +36,11 @@ test("sanitizeErrorMessage terminates on long adversarial input (ReDoS guard)", 
       const start = process.hrtime.bigint();
       sanitizeErrorMessage("a".repeat(len) + "@" + "b".repeat(len) + ".com " + "1".repeat(len));
       const ms = Number(process.hrtime.bigint() - start) / 1e6;
-      assert.ok(ms < 250, `too slow: ${ms}ms for len=${len}`);
+      // Linear-time behavior on this input measures ~66ms locally for len=10961. The
+      // ceiling is 4× that: generous enough for shared-CI-runner jitter (one observed
+      // 268ms cold-JIT outlier), still two orders of magnitude below catastrophic
+      // backtracking, which would take minutes at this length.
+      assert.ok(ms < 1000, `too slow: ${ms}ms for len=${len}`);
     })
   );
 });

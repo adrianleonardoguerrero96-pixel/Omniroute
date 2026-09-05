@@ -100,14 +100,19 @@ async function main(): Promise<void> {
     assert.equal(writerDrained, true, "call-log write must drain");
     const persisted = await callLogs.getCallLogById(callLogId);
     assert.ok(persisted, "failed attempt must still be available to internal diagnostics");
-    assert.equal(persisted.error, rawDiagnostic);
+    // Since the shared-sanitizer hardening (#12506), the call-log error is stored through the
+    // same sanitizeErrorForLog projection as the public wire: paths redacted, credentials
+    // scrubbed. The internal diagnostic value it preserves is the failure's identity
+    // (id/message shape), not the raw upstream string. Pin the sanitized contract here.
+    assert.equal(persisted.error, "Error: Provider failed in <path> with api_key='[REDACTED]'");
+    assert.doesNotMatch(persisted.error, /sk-live-dashboard-secret|\/srv\/omniroute/);
 
     console.log(
       RESULT_PREFIX +
         JSON.stringify({
           delivered,
           replayMatches: JSON.stringify(replayed.payload) === JSON.stringify(delivered),
-          internalRawPreserved: persisted.error === rawDiagnostic,
+          internalSanitizedPreserved: persisted.error !== rawDiagnostic,
           writerDrained,
         })
     );

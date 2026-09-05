@@ -93,7 +93,7 @@ async function readJsonResponse(response: Response): Promise<{
   if (!body.trim()) {
     return {
       data: {},
-      parseError: "Empty response body from /models",
+      parseError: "Empty response body from GET /models",
     };
   }
 
@@ -105,7 +105,7 @@ async function readJsonResponse(response: Response): Promise<{
   } catch {
     return {
       data: {},
-      parseError: "Invalid JSON response from /models",
+      parseError: "Invalid JSON response from GET /models",
     };
   }
 }
