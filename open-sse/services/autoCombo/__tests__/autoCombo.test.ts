@@ -242,6 +242,47 @@ describe("Mode Packs", () => {
   it("undefined pack should return undefined", () => {
     expect(getModePack("nonexistent")).toBeUndefined();
   });
+
+  it("every pack carries quality>0 and reliability>0 and sums to 0.9999", () => {
+    for (const name of getModePackNames()) {
+      const w = getModePack(name)!;
+      expect(Number(w.quality)).toBeGreaterThan(0);
+      expect(Number(w.reliability)).toBeGreaterThan(0);
+      const sum = Object.values(w).reduce((a, b) => a + Number(b), 0);
+      expect(sum).toBeCloseTo(0.9999, 3);
+    }
+  });
+});
+
+
+describe("Mode pack ranking gates (cold/warm/health)", () => {
+  function scoreOne(candidate: any, pack: any): number {
+    const factors = calculateFactors(candidate, [candidate], "coding", () => 0.5);
+    return calculateScore(factors, pack);
+  }
+  it("cold pool ranking unchanged (reliability 1, quality 0.5 neutrals)", () => {
+    const a: any = { circuitBreakerState: "CLOSED", failureRate: undefined, quality: undefined, quotaRemaining: 50, quotaTotal: 100, costPer1MTokens: 1, p95LatencyMs: 100, accountTier: "pro", latencyStdDev: 10 };
+    const b: any = { circuitBreakerState: "CLOSED", failureRate: undefined, quality: undefined, quotaRemaining: 50, quotaTotal: 100, costPer1MTokens: 1, p95LatencyMs: 100, accountTier: "pro", latencyStdDev: 10 };
+    const pack = MODE_PACKS["reliability-first"];
+    expect(scoreOne(a, pack)).toBeCloseTo(scoreOne(b, pack), 5);
+  });
+  it("warm reliability 0.01 vs 0.4 flips winner at health tie", () => {
+    const highFail: any = { circuitBreakerState: "CLOSED", failureRate: 0.4, quality: 0.5, quotaRemaining: 50, quotaTotal: 100, costPer1MTokens: 1, p95LatencyMs: 100, accountTier: "pro", latencyStdDev: 10 };
+    const lowFail: any = { circuitBreakerState: "CLOSED", failureRate: 0.01, quality: 0.5, quotaRemaining: 50, quotaTotal: 100, costPer1MTokens: 1, p95LatencyMs: 100, accountTier: "pro", latencyStdDev: 10 };
+    const pack = MODE_PACKS["reliability-first"];
+    expect(scoreOne(lowFail, pack)).toBeGreaterThan(scoreOne(highFail, pack));
+  });
+  it("boundedRate NaN yields reliability 1", () => {
+    const c: any = { circuitBreakerState: "CLOSED", failureRate: NaN, quotaRemaining: 50, quotaTotal: 100, costPer1MTokens: 1, p95LatencyMs: 100, accountTier: "pro", latencyStdDev: 10 };
+    const factors = calculateFactors(c, [c], "coding", () => 0.5);
+    expect(factors.reliability).toBe(1);
+  });
+  it("health CLOSED vs HALF_OPEN still outweighs reliability gap", () => {
+    const healthyHighFail: any = { circuitBreakerState: "CLOSED", failureRate: 0.4, quality: 0.5, quotaRemaining: 50, quotaTotal: 100, costPer1MTokens: 1, p95LatencyMs: 100, accountTier: "pro", latencyStdDev: 10 };
+    const halfOpenLowFail: any = { circuitBreakerState: "HALF_OPEN", failureRate: 0.01, quality: 0.5, quotaRemaining: 50, quotaTotal: 100, costPer1MTokens: 1, p95LatencyMs: 100, accountTier: "pro", latencyStdDev: 10 };
+    const pack = MODE_PACKS["reliability-first"];
+    expect(scoreOne(healthyHighFail, pack)).toBeGreaterThan(scoreOne(halfOpenLowFail, pack));
+  });
 });
 
 describe("SLA-aware Strategy", () => {
