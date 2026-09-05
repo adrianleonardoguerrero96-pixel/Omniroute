@@ -8,7 +8,7 @@ import { copyToClipboard } from "@/shared/utils/clipboard";
 import RequestLoggerDetail from "@/shared/components/RequestLoggerDetail";
 import useEmailPrivacyStore from "@/store/emailPrivacyStore";
 import { ChatBubble } from "@/app/(dashboard)/dashboard/tools/traffic-inspector/components/chat/ChatBubble";
-import type { NormalizedBlock, NormalizedTurn } from "@/mitm/inspector/types";
+import { toTurn, type ConversationTurn } from "./toTurn";
 
 interface ConversationRow {
   id: string;
@@ -45,17 +45,6 @@ function ActiveSpinner() {
       <span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-amber-500 border-t-transparent animate-spin" />
     </span>
   );
-}
-
-interface ConversationTurn {
-  seq: number;
-  id: string;
-  parentId: string | null;
-  role: string;
-  textPreview: string;
-  blockKind: string;
-  toolName: string | null;
-  firstSeenAt: string;
 }
 
 interface ConversationTurnsPage {
@@ -121,45 +110,6 @@ function ContinuationBadge({ isGenuine }: { isGenuine: boolean }) {
       continuation
     </span>
   );
-}
-
-/**
- * Builds the exact NormalizedBlock (src/mitm/inspector/types.ts) the
- * request-detail panel already builds from buildRequestTurns/
- * buildResponseTurns, so a tool call/result renders through the very same
- * ChatBubble → MessageContent → ToolCallBlock/ToolResultBlock pipeline as
- * the detail view — not a parallel implementation. `textPreview` round-
- * tripped through JSON for a structured tool_use/tool_result turn; parse it
- * best-effort so the block gets a real object, not a JSON string.
- */
-function toTurn(node: ConversationTurn): NormalizedTurn {
-  const role: NormalizedTurn["role"] =
-    node.role === "system" || node.role === "user" || node.role === "assistant"
-      ? node.role
-      : "tool";
-
-  let block: NormalizedBlock;
-  if (node.blockKind === "tool_use") {
-    let input: unknown = node.textPreview;
-    try {
-      input = JSON.parse(node.textPreview);
-    } catch {
-      // Arguments weren't valid JSON — show the raw string.
-    }
-    block = { type: "tool_use", id: node.id.slice(0, 12), name: node.toolName ?? "tool", input };
-  } else if (node.blockKind === "tool_result") {
-    let content: unknown = node.textPreview;
-    try {
-      content = JSON.parse(node.textPreview);
-    } catch {
-      // Not JSON — show the raw string.
-    }
-    block = { type: "tool_result", tool_use_id: node.id.slice(0, 12), content };
-  } else {
-    block = { type: "text", text: node.textPreview || "_(empty)_" };
-  }
-
-  return { role, blocks: [block], timestamp: node.firstSeenAt };
 }
 
 /**
