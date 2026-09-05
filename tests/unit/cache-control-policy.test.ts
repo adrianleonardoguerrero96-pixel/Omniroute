@@ -45,6 +45,46 @@ describe("Cache Control Policy", () => {
       assert.equal(providerSupportsCaching("openai"), true);
       assert.equal(providerSupportsCaching("codex"), true);
       assert.equal(providerSupportsCaching("azure"), true);
+      assert.equal(
+        providerSupportsCaching("antigravity", "gemini", null, "gemini-3.7-flash"),
+        true
+      );
+      assert.equal(providerSupportsCaching("agy", "gemini", null, "gemini-3.7-flash"), true);
+      assert.equal(
+        providerSupportsCaching(
+          "antigravity",
+          "gemini",
+          { supportsPromptCaching: true },
+          "claude-opus-4-6"
+        ),
+        false
+      );
+      assert.equal(
+        providerSupportsCaching(
+          "antigravity",
+          "gemini",
+          null,
+          "antigravity/gemini-3.7-flash-tiered"
+        ),
+        true
+      );
+      assert.equal(
+        providerSupportsCaching(
+          "antigravity",
+          "gemini",
+          null,
+          "antigravity/antigravity/gemini-3.8-flash-tiered"
+        ),
+        true
+      );
+      assert.equal(
+        providerSupportsCaching("antigravity", "claude", null, "claude-opus-4-6"),
+        false
+      );
+      assert.equal(
+        providerSupportsCaching("antigravity", "openai", null, "gpt-oss-120b-medium"),
+        false
+      );
     });
 
     test("rejects non-caching providers", () => {

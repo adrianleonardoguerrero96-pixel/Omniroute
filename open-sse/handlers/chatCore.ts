@@ -996,6 +996,13 @@ export async function handleChatCore({
   const noLogEnabled = apiKeyInfo?.noLog === true;
   // Consolidate settings reads — fetch once, reuse throughout the request
   const settings = cachedSettings ?? (await getCachedSettings());
+  const geminiPromptCacheMode = settings.geminiPromptCacheMode === "implicit" ? "implicit" : "off";
+  const isScopedGeminiCacheTarget =
+    (provider === "antigravity" || provider === "agy") &&
+    effectiveModel
+      .toLowerCase()
+      .split("/")
+      .some((segment) => segment.startsWith("gemini-"));
   // Opt-in tool-source diagnostics (#1825): summarize the request's tool definitions
   // (count + MCP/hosted/client source breakdown + first names) as a single debug line.
   if (settings.logToolSources === true) {
@@ -1064,8 +1071,16 @@ export async function handleChatCore({
     : null;
   // persistAttemptLogs extracted to chatCore/attemptLogging.ts (#3501); bind the per-request context
   // once so the 16 call sites keep passing only the per-attempt args (byte-identical).
-  const persistAttemptLogs = (args: PersistAttemptLogsArgs) =>
-    persistAttemptLogsFor(args, {
+  const persistAttemptLogs = (args: PersistAttemptLogsArgs) => {
+    if (isScopedGeminiCacheTarget && args.geminiPromptCache === undefined) {
+      args.geminiPromptCache = buildCacheUsageLogMeta(
+        args.tokens && typeof args.tokens === "object"
+          ? (args.tokens as Record<string, unknown>)
+          : null,
+        { mode: geminiPromptCacheMode, compressionTokens: tokensCompressed || undefined }
+      )?.geminiPromptCache;
+    }
+    return persistAttemptLogsFor(args, {
       traceId,
       provider,
       connectionId,
@@ -1098,6 +1113,7 @@ export async function handleChatCore({
       // to before this param existed) — see applyVideoBridgeLogRedaction.
       videoBridgeLogRedaction: (videoBridgeLog as VideoBridgeLogParam | undefined)?.redaction,
     });
+  };
 
   // Primary path: merge client model id + alias target so config on either key applies; resolved
   // id wins on same header name. T5 family fallback uses only (nextModel, resolveModelAlias(next))
@@ -1563,7 +1579,13 @@ export async function handleChatCore({
         compressionComboKey,
         estimatedTokens,
         body as Record<string, unknown>,
-        { provider, targetFormat, model: effectiveModel, connectionCacheOverride },
+        {
+          provider,
+          targetFormat,
+          model: effectiveModel,
+          geminiPromptCacheMode: isScopedGeminiCacheTarget ? geminiPromptCacheMode : null,
+          connectionCacheOverride,
+        },
         namedCombos,
         compressionHeader
       );
@@ -1662,7 +1684,13 @@ export async function handleChatCore({
         compressionComboKey,
         estimatedTokens,
         compressionInputBody,
-        { provider, targetFormat, model: effectiveModel, connectionCacheOverride },
+        {
+          provider,
+          targetFormat,
+          model: effectiveModel,
+          geminiPromptCacheMode: isScopedGeminiCacheTarget ? geminiPromptCacheMode : null,
+          connectionCacheOverride,
+        },
         namedCombos,
         compressionHeader,
         {
@@ -1701,7 +1729,13 @@ export async function handleChatCore({
         // #3890: in a caching context, never compress the system prompt (cacheable prefix)
         // even if the operator disabled preserveSystemPrompt — honors the cache-aware flag
         // that selectCompressionStrategy can only partially apply via the mode string.
-        const cacheCtx = { provider, targetFormat, model: effectiveModel, connectionCacheOverride };
+        const cacheCtx = {
+          provider,
+          targetFormat,
+          model: effectiveModel,
+          geminiPromptCacheMode: isScopedGeminiCacheTarget ? geminiPromptCacheMode : null,
+          connectionCacheOverride,
+        };
         const compressionConfig = resolveCacheAwareConfig(config, compressionInputBody, cacheCtx);
         const compressionPrincipalId = apiKeyInfo?.id ? String(apiKeyInfo.id) : undefined;
         const compressionOptions = {
@@ -2242,6 +2276,7 @@ export async function handleChatCore({
     comboStrategy,
     targetProvider: provider,
     targetFormat,
+    targetModel: effectiveModel,
     settings: { alwaysPreserveClientCache: cacheControlMode },
     connectionCacheOverride,
   });
@@ -5040,7 +5075,15 @@ export async function handleChatCore({
     }).catch(() => {});
 
     // Save structured call log with full payloads
-    const cacheUsageLogMeta = buildCacheUsageLogMeta(usage);
+    const cacheUsageLogMeta = buildCacheUsageLogMeta(
+      usage,
+      isScopedGeminiCacheTarget
+        ? {
+            mode: geminiPromptCacheMode,
+            compressionTokens: tokensCompressed || undefined,
+          }
+        : undefined
+    );
     recordNonStreamingUsageStats(usage, {
       traceEnabled,
       provider,
@@ -5237,6 +5280,7 @@ export async function handleChatCore({
         clientResponse: buildErrorBody(HTTP_STATUS.BAD_REQUEST, guardrailMessage),
         claudeCacheMeta: claudePromptCacheLogMeta,
         claudeCacheUsageMeta: cacheUsageLogMeta,
+        geminiPromptCache: cacheUsageLogMeta?.geminiPromptCache,
         cacheSource: "upstream",
       });
       if (apiKeyInfo?.id && estimatedCost > 0) {
@@ -5306,6 +5350,7 @@ export async function handleChatCore({
         clientResponse: malformedClientBody,
         claudeCacheMeta: claudePromptCacheLogMeta,
         claudeCacheUsageMeta: cacheUsageLogMeta,
+        geminiPromptCache: cacheUsageLogMeta?.geminiPromptCache,
         cacheSource: "upstream",
       });
       persistFailureUsage(HTTP_STATUS.BAD_GATEWAY, "malformed_translated_response");
@@ -5372,6 +5417,7 @@ export async function handleChatCore({
       clientResponse: translatedResponse,
       claudeCacheMeta: claudePromptCacheLogMeta,
       claudeCacheUsageMeta: cacheUsageLogMeta,
+      geminiPromptCache: cacheUsageLogMeta?.geminiPromptCache,
       cacheSource: "upstream",
     });
     if (apiKeyInfo?.id && estimatedCost > 0) {
@@ -5591,6 +5637,7 @@ export async function handleChatCore({
     ttft,
     itlMs: streamItlMs,
     interrupted: streamInterrupted,
+    cacheEvidence: streamCacheEvidence,
   }) => {
     const normalizedStreamStatus = streamStatus || 200;
     if (streamCompletionRecorded) return;
@@ -5599,7 +5646,17 @@ export async function handleChatCore({
       if (streamFailureCompletionRecorded) return;
       streamFailureCompletionRecorded = true;
     }
-    const cacheUsageLogMeta = buildCacheUsageLogMeta(streamUsage);
+    const cacheUsageLogMeta = buildCacheUsageLogMeta(
+      streamUsage,
+      isScopedGeminiCacheTarget
+        ? {
+            mode: geminiPromptCacheMode,
+            evidence: streamCacheEvidence,
+            compressionTokens: tokensCompressed || undefined,
+            timing: { ttftMs: ttft, itlMs: streamItlMs },
+          }
+        : undefined
+    );
     const streamConnectionId = getCurrentConnectionId();
 
     if (normalizedStreamStatus === 200) {
@@ -5754,6 +5811,7 @@ export async function handleChatCore({
       clientResponse: clientPayload ?? streamResponseBody ?? undefined,
       claudeCacheMeta: claudePromptCacheLogMeta,
       claudeCacheUsageMeta: cacheUsageLogMeta,
+      geminiPromptCache: cacheUsageLogMeta?.geminiPromptCache,
       cacheSource: "upstream",
     });
 

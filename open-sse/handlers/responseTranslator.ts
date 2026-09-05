@@ -15,6 +15,7 @@ import { restoreClaudeToolName } from "../services/claudeCodeToolRemapper.ts";
 import { extractReplayableResponsesReasoningText } from "../services/reasoningInputPolicy.ts";
 import { sanitizeToolId } from "../translator/helpers/schemaCoercion.ts";
 import { stripEmptyOptionalToolArgs } from "../translator/response/openai-responses/pureHelpers.ts";
+import { toNumber as toFiniteNumber } from "../../src/shared/utils/numeric.ts";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -26,19 +27,9 @@ function toString(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value : fallback;
 }
 
-function toNumber(value: unknown, fallback = 0): number {
-  const parsed =
-    typeof value === "number"
-      ? value
-      : typeof value === "string" && value.trim().length > 0
-        ? Number(value)
-        : Number.NaN;
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
 function firstPositiveNumber(...values: unknown[]): number {
   for (const value of values) {
-    const parsed = toNumber(value, 0);
+    const parsed = toFiniteNumber(value, 0);
     if (parsed > 0) {
       return parsed;
     }
@@ -290,7 +281,7 @@ export function translateNonStreamingResponse(
       console.log(`  → Final text content length: ${textContent.length}`);
     }
 
-    const createdAt = toNumber(response.created_at, Math.floor(Date.now() / 1000));
+    const createdAt = toFiniteNumber(response.created_at, Math.floor(Date.now() / 1000));
     const model = toString(response.model || responseRoot.model, "openai-responses");
     const finishReason = toolCalls.length > 0 ? "tool_calls" : "stop";
 
@@ -309,8 +300,8 @@ export function translateNonStreamingResponse(
     };
 
     if (Object.keys(usage).length > 0) {
-      const inputTokens = toNumber(usage.input_tokens, 0);
-      const outputTokens = toNumber(usage.output_tokens, 0);
+      const inputTokens = toFiniteNumber(usage.input_tokens, 0);
+      const outputTokens = toFiniteNumber(usage.output_tokens, 0);
       const inputTokensDetails = toRecord(usage.input_tokens_details);
       const outputTokensDetails = toRecord(usage.output_tokens_details);
       const promptTokensDetails = toRecord(usage.prompt_tokens_details);
@@ -517,23 +508,24 @@ export function translateNonStreamingResponse(
       };
 
       if (Object.keys(usage).length > 0) {
-        const promptTokens = toNumber(usage.promptTokenCount, 0);
-        const reasoningTokens = toNumber(usage.thoughtsTokenCount, 0);
-        const completionTokens = toNumber(usage.candidatesTokenCount, 0) + reasoningTokens;
+        const promptTokens = toFiniteNumber(usage.promptTokenCount, 0);
+        const reasoningTokens = toFiniteNumber(usage.thoughtsTokenCount, 0);
+        const completionTokens = toFiniteNumber(usage.candidatesTokenCount, 0) + reasoningTokens;
 
         result.usage = {
           prompt_tokens: promptTokens,
           completion_tokens: completionTokens,
-          total_tokens: toNumber(usage.totalTokenCount, 0),
+          total_tokens: toFiniteNumber(usage.totalTokenCount, 0),
         };
         if (reasoningTokens > 0) {
           (result.usage as JsonRecord).completion_tokens_details = {
             reasoning_tokens: reasoningTokens,
           };
         }
-        if (toNumber(usage.cachedContentTokenCount, 0) > 0) {
+        const cachedTokens = toFiniteNumber(usage.cachedContentTokenCount, -1);
+        if (cachedTokens >= 0 && cachedTokens <= promptTokens) {
           (result.usage as JsonRecord).prompt_tokens_details = {
-            cached_tokens: toNumber(usage.cachedContentTokenCount, 0),
+            cached_tokens: cachedTokens,
           };
         }
       }
@@ -622,10 +614,10 @@ export function translateNonStreamingResponse(
         // cache_read folds into prompt_tokens (it is billed prompt input);
         // cache_creation stays out of prompt_tokens and is exposed via
         // prompt_tokens_details, alongside cached_tokens (OpenAI field name).
-        const cachedTokens = toNumber(usage.cache_read_input_tokens, 0);
-        const cacheCreationTokens = toNumber(usage.cache_creation_input_tokens, 0);
-        const promptTokens = toNumber(usage.input_tokens, 0) + cachedTokens;
-        const completionTokens = toNumber(usage.output_tokens, 0);
+        const cachedTokens = toFiniteNumber(usage.cache_read_input_tokens, 0);
+        const cacheCreationTokens = toFiniteNumber(usage.cache_creation_input_tokens, 0);
+        const promptTokens = toFiniteNumber(usage.input_tokens, 0) + cachedTokens;
+        const completionTokens = toFiniteNumber(usage.output_tokens, 0);
         const reasoningTokens = firstPositiveNumber(
           toRecord(usage.output_tokens_details).thinking_tokens,
           toRecord(usage.completion_tokens_details).reasoning_tokens,
@@ -763,19 +755,26 @@ function convertOpenAINonStreamingToClaude(
   if (stopReason === "tool_calls") stopReason = "tool_use";
 
   const usageSrc = toRecord(openaiResponse.usage);
-  const promptTokens = toNumber(usageSrc.prompt_tokens, 0);
-  const outputTokens = toNumber(usageSrc.completion_tokens, 0);
+  const promptTokens = toFiniteNumber(usageSrc.prompt_tokens, 0);
+  const outputTokens = toFiniteNumber(usageSrc.completion_tokens, 0);
 
   // Extract cache tokens from prompt_tokens_details (mirrors the streaming
   // translator in open-sse/translator/response/openai-to-claude.ts lines 119-148).
   const promptDetails = toRecord(usageSrc.prompt_tokens_details);
-  const cachedTokens = toNumber(promptDetails.cached_tokens, 0);
-  const cacheCreationTokens = toNumber(promptDetails.cache_creation_tokens, 0);
+  const flatCachedTokens = toFiniteNumber(usageSrc.cached_tokens, 0);
+  const cachedTokens = Math.max(
+    0,
+    Math.min(promptTokens, toFiniteNumber(promptDetails.cached_tokens, flatCachedTokens))
+  );
+  const cacheCreationTokens = Math.max(
+    0,
+    Math.min(promptTokens - cachedTokens, toFiniteNumber(promptDetails.cache_creation_tokens, 0))
+  );
 
   // OpenAI's prompt_tokens includes all prompt-side tokens (cached + non-cached).
   // Claude expects input_tokens to be only non-cached tokens, with cached tokens
   // exposed separately as cache_read_input_tokens.
-  const inputTokens = promptTokens - cachedTokens - cacheCreationTokens;
+  const inputTokens = Math.max(0, promptTokens - cachedTokens - cacheCreationTokens);
 
   const usage: JsonRecord = {
     input_tokens: inputTokens,
@@ -870,8 +869,8 @@ function convertOpenAINonStreamingToGeminiFamily(openaiResponse: JsonRecord): Js
     OPENAI_TO_GEMINI_FINISH_REASON[toString(choice.finish_reason, "stop")] ?? "STOP";
 
   const usageSrc = toRecord(openaiResponse.usage);
-  const promptTokens = toNumber(usageSrc.prompt_tokens, 0);
-  const completionTokens = toNumber(usageSrc.completion_tokens, 0);
+  const promptTokens = toFiniteNumber(usageSrc.prompt_tokens, 0);
+  const completionTokens = toFiniteNumber(usageSrc.completion_tokens, 0);
 
   const geminiResponse: JsonRecord = {
     response: {
@@ -885,7 +884,7 @@ function convertOpenAINonStreamingToGeminiFamily(openaiResponse: JsonRecord): Js
       usageMetadata: {
         promptTokenCount: promptTokens,
         candidatesTokenCount: completionTokens,
-        totalTokenCount: toNumber(usageSrc.total_tokens, promptTokens + completionTokens),
+        totalTokenCount: toFiniteNumber(usageSrc.total_tokens, promptTokens + completionTokens),
       },
       modelVersion: toString(openaiResponse.model, "unknown"),
       responseId: toString(openaiResponse.id, `resp_${Date.now()}`),
