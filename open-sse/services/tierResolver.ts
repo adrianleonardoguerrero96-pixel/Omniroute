@@ -3,7 +3,7 @@ import { PROVIDER_TIER } from "./tierTypes";
 import { getModelPricing } from "./providerCostData";
 import { isExplicitlyFree } from "./providerCostData";
 import { mergeTierConfig, DEFAULT_TIER_CONFIG } from "./tierConfig";
-import { isFreeModel } from "@/shared/utils/freeModels";
+import { FREE_MODEL_BUDGETS, grantsFreeAccess } from "../config/freeModelCatalog";
 
 let dbPersistenceChecked = false;
 
@@ -54,6 +54,16 @@ export function resolveExplicitTierOverride(
   )?.tier;
 }
 
+function isModelFreeByStaticEvidence(provider: string, model: string): boolean {
+  if (model.toLowerCase().endsWith(":free")) return true;
+  return FREE_MODEL_BUDGETS.some(
+    (entry) =>
+      entry.provider.toLowerCase() === provider.toLowerCase() &&
+      entry.modelId === model &&
+      grantsFreeAccess(entry.freeType)
+  );
+}
+
 export function classifyTier(provider: string, model: string): TierAssignment {
   ensurePersistedTierConfigLoaded();
   const key = cacheKey(provider, model);
@@ -93,12 +103,12 @@ export function classifyTier(provider: string, model: string): TierAssignment {
     return assignment;
   }
 
-  if (isFreeModel(provider, { id: model })) {
+  if (isModelFreeByStaticEvidence(provider, model)) {
     const assignment: TierAssignment = {
       provider,
       model,
       tier: PROVIDER_TIER.FREE,
-      reason: "Model is explicitly identified as free by the shared free-model classifier",
+      reason: "Model is explicitly identified as free by static model-level evidence",
       costPer1MInput: 0,
       costPer1MOutput: 0,
       hasFreeTier: true,
