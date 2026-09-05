@@ -178,6 +178,43 @@ describe("CompressionWorkerPool spawn-failure queue drain", () => {
     }
   });
 
+  it("keeps an existing healthy worker usable after structural capacity spawn failure", async () => {
+    const first = fakeWorker();
+    const { factory, spawns } = workerFactoryThatThrowsAfter(first);
+    const pool = new CompressionWorkerPool({ size: 2, workerFactory: factory });
+    try {
+      const active = pool.run({ ...body, model: "active" }, "stacked");
+      const failedCapacity = pool.run({ ...body, model: "capacity" }, "stacked");
+      assert.equal(spawns(), 2, "second job must attempt to add pool capacity");
+      assert.deepEqual(await failedCapacity, {
+        body: { ...body, model: "capacity" },
+        compressed: false,
+        stats: null,
+      });
+
+      const firstWireJob = first.messages[0] as { id: number };
+      first.emit("message", {
+        type: "result",
+        id: firstWireJob.id,
+        result: { body: { ...body, model: "active-result" }, compressed: true, stats: null },
+      });
+      assert.equal((await active).compressed, true);
+
+      const reused = pool.run({ ...body, model: "reuse" }, "stacked");
+      const reusedWireJob = first.messages[1] as { id: number };
+      assert.ok(reusedWireJob, "the existing worker must receive a later job");
+      first.emit("message", {
+        type: "result",
+        id: reusedWireJob.id,
+        result: { body: { ...body, model: "reuse-result" }, compressed: true, stats: null },
+      });
+      assert.equal((await reused).compressed, true, "the pool must not be permanently broken");
+      assert.equal(spawns(), 2, "reusing an idle worker must not respawn");
+    } finally {
+      await pool.close();
+    }
+  });
+
   it("fails open immediately for jobs submitted after the pool broke", async () => {
     const pool = new CompressionWorkerPool({
       size: 1,

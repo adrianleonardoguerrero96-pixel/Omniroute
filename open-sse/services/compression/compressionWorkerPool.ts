@@ -208,9 +208,11 @@ export class CompressionWorkerPool {
       // A synchronous spawn failure (bundler module-context miss, bad worker
       // path, …) must fail-open the queue before its request bodies are retained.
       const structural = isStructuralSpawnFailure(error);
-      this.broken = structural;
+      // A structural failure is only pool-wide when no worker was ever created.
+      // Existing workers remain usable even if an attempt to add capacity fails.
+      this.broken = structural && this.workers.size === 0;
       notifyCompressionFailOpen(
-        `worker spawn failed — pool failing open${structural ? " permanently" : " for this wave"}: ${errorText(error)}`
+        `worker spawn failed — pool failing open${this.broken ? " permanently" : " for this wave"}: ${errorText(error)}`
       );
       for (const job of this.queue.splice(0)) job.resolve(unchanged(job.originalBody));
       return null;
