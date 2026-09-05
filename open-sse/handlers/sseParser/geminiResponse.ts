@@ -100,13 +100,55 @@ function applyFinishReason(
 /** Extract usageMetadata into the OpenAI-shaped usage object, if present. */
 function applyUsageMetadata(parsed: Record<string, unknown>, acc: GeminiSSEAccumulator): void {
   const response = parsed.response as Record<string, unknown> | undefined;
-  const um = response?.usageMetadata as Record<string, unknown> | undefined;
+  const um = (response?.usageMetadata ?? parsed.usageMetadata) as
+    Record<string, unknown> | undefined;
   if (!um) return;
-  acc.usage = {
-    prompt_tokens: um.promptTokenCount || 0,
-    completion_tokens: um.candidatesTokenCount || 0,
-    total_tokens: um.totalTokenCount || 0,
-  };
+
+  const previousUsage = acc.usage ?? {};
+  const promptTokens =
+    typeof um.promptTokenCount === "number" &&
+    Number.isFinite(um.promptTokenCount) &&
+    um.promptTokenCount >= 0
+      ? um.promptTokenCount
+      : previousUsage.prompt_tokens;
+  const completionTokens =
+    typeof um.candidatesTokenCount === "number" &&
+    Number.isFinite(um.candidatesTokenCount) &&
+    um.candidatesTokenCount >= 0
+      ? um.candidatesTokenCount
+      : previousUsage.completion_tokens;
+  const totalTokens =
+    typeof um.totalTokenCount === "number" &&
+    Number.isFinite(um.totalTokenCount) &&
+    um.totalTokenCount >= 0
+      ? um.totalTokenCount
+      : previousUsage.total_tokens;
+  const hasCachedCount = Object.prototype.hasOwnProperty.call(um, "cachedContentTokenCount");
+  const reportedCachedTokens = um.cachedContentTokenCount;
+  const cachedTokens =
+    typeof reportedCachedTokens === "number" &&
+    Number.isFinite(reportedCachedTokens) &&
+    reportedCachedTokens >= 0 &&
+    typeof promptTokens === "number" &&
+    reportedCachedTokens <= promptTokens
+      ? reportedCachedTokens
+      : !hasCachedCount
+        ? previousUsage.cached_tokens
+        : undefined;
+
+  const nextUsage = {
+    ...previousUsage,
+    ...(typeof promptTokens === "number" ? { prompt_tokens: promptTokens } : {}),
+    ...(typeof completionTokens === "number" ? { completion_tokens: completionTokens } : {}),
+    ...(typeof totalTokens === "number" ? { total_tokens: totalTokens } : {}),
+  } as Record<string, unknown>;
+  if (typeof cachedTokens === "number") {
+    nextUsage.cached_tokens = cachedTokens;
+  } else if (hasCachedCount) {
+    delete nextUsage.cached_tokens;
+    nextUsage.cache_evidence = "invalid";
+  }
+  acc.usage = nextUsage;
 }
 
 /** Parse one `data:` line's JSON payload and fold it into the accumulator (best-effort). */

@@ -208,6 +208,7 @@ export type PersistAttemptLogsArgs = {
   clientResponse?: unknown;
   claudeCacheMeta?: Record<string, unknown>;
   claudeCacheUsageMeta?: Record<string, unknown>;
+  geminiPromptCache?: Record<string, unknown> | null;
   cacheSource?: "upstream" | "semantic";
 };
 
@@ -340,6 +341,7 @@ export function persistAttemptLogs(args: PersistAttemptLogsArgs, ctx: PersistAtt
     clientResponse,
     claudeCacheMeta,
     claudeCacheUsageMeta,
+    geminiPromptCache,
     cacheSource,
   } = args;
   const {
@@ -467,6 +469,7 @@ export function persistAttemptLogs(args: PersistAttemptLogsArgs, ctx: PersistAtt
         {
           ...accountRotationMeta,
           claudePromptCache: claudeCacheMeta,
+          geminiPromptCache,
         }
       )
     ),
@@ -481,6 +484,7 @@ export function persistAttemptLogs(args: PersistAttemptLogsArgs, ctx: PersistAtt
             }
           : null,
         claudePromptCacheUsage: claudeCacheUsageMeta,
+        geminiPromptCache,
       })
     ),
     error: error || null,

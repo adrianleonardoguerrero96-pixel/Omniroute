@@ -166,7 +166,7 @@ async function injectPromptCacheKey(
 ): Promise<Body> {
   if (
     targetFormat === FORMATS.OPENAI &&
-    providerSupportsCaching(provider, undefined, connectionCacheOverride) &&
+    providerSupportsCaching(provider, undefined, connectionCacheOverride, bodyToSend.model as string) &&
     !bodyToSend.prompt_cache_key &&
     Array.isArray(bodyToSend.messages) &&
     !["nvidia", "xai"].includes(provider)
