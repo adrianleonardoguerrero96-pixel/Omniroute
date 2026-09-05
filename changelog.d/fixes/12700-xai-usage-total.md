@@ -1,0 +1,1 @@
+- **fix(xai):** usage totals now include legacy `prompt_tokens` / `completion_tokens` names instead of reporting 0 ([#12700](https://github.com/diegosouzapw/OmniRoute/issues/12700))

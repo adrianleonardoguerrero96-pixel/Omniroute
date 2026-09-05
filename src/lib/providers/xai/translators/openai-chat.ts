@@ -303,7 +303,9 @@ export function xaiCompletedToChatJson(
     out.usage = {
       prompt_tokens: u.input_tokens ?? u.prompt_tokens ?? 0,
       completion_tokens: u.output_tokens ?? u.completion_tokens ?? 0,
-      total_tokens: u.total_tokens ?? (u.input_tokens ?? 0) + (u.output_tokens ?? 0),
+      total_tokens:
+        u.total_tokens ??
+        (u.input_tokens ?? u.prompt_tokens ?? 0) + (u.output_tokens ?? u.completion_tokens ?? 0),
     };
   }
   return out;

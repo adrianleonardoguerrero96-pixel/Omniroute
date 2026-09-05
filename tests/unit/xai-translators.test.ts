@@ -521,3 +521,19 @@ test("xaiCompletedToGeminiJson: maps usage to usageMetadata", () => {
   assert.equal(meta.candidatesTokenCount, 20);
   assert.equal(meta.totalTokenCount, 30);
 });
+
+test("#12700: legacy usage names still sum the total (chat)", () => {
+  const res = xaiCompletedToChatJson({
+    output: [{ type: "message", content: [{ type: "output_text", text: "hi" }] }],
+    usage: { prompt_tokens: 10, completion_tokens: 5 },
+  } as never);
+  assert.equal(res.usage?.total_tokens, 15);
+});
+
+test("#12700: legacy usage names still sum the total (gemini)", () => {
+  const out = xaiCompletedToGeminiJson({
+    output: [{ type: "message", content: [{ type: "output_text", text: "hi" }] }],
+    usage: { prompt_tokens: 10, completion_tokens: 5 },
+  } as never);
+  assert.equal(out.usageMetadata?.totalTokenCount, 15);
+});
