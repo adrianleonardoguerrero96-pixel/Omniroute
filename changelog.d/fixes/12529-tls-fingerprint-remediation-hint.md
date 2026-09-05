@@ -1,0 +1,1 @@
+- When a provider response is classified as a Cloudflare fingerprint rejection (1010 / browser-signature ban), emit a throttled remediation hint pointing at the optional wreq-js dependency and ENABLE_TLS_FINGERPRINT=true instead of leaving repeated 1010s unexplained (#12529).
